@@ -1,8 +1,8 @@
 # ============================================================
 # KNN Functions
 # ============================================================
-
-from sklearn.model_selection import cross_val_score
+import numpy as np
+from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve
 from sklearn.neighbors import KNeighborsClassifier
 from matplotlib import pyplot as plt
 
@@ -98,3 +98,48 @@ def knn_introspection(cv_scores: list) -> (int, float, float):
     print("Std:", best_std)
 
     return best_k, best_mean, best_std
+
+
+def plot_knn_learning_curve(
+    X, y,
+    k,
+    n_splits=5,
+    random_state=42
+):
+    y_np = np.asarray(y).ravel()
+
+    cv = StratifiedKFold(
+        n_splits=n_splits,
+        shuffle=True,
+        random_state=random_state
+    )
+
+    model = KNeighborsClassifier(
+        n_neighbors=k,
+        weights="uniform",
+        metric="euclidean"
+    )
+
+    train_sizes, train_scores, val_scores = learning_curve(
+        model,
+        X, y_np,
+        cv=cv,
+        scoring="accuracy",
+        train_sizes=np.linspace(0.1, 1.0, 15),
+        shuffle=True,
+        random_state=random_state
+    )
+
+    train_mean = train_scores.mean(axis=1)
+    val_mean = val_scores.mean(axis=1)
+
+    plt.figure()
+    plt.plot(train_sizes, train_mean, label="Training accuracy")
+    plt.plot(train_sizes, val_mean, label="CV accuracy")
+
+    plt.xlabel("Training set size")
+    plt.ylabel("Accuracy")
+    plt.title(f"K-NN learning curve (k={k})")
+    plt.legend()
+    plt.grid(True)
+    plt.show()

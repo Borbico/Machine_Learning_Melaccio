@@ -317,6 +317,7 @@ def regression_report(y_true, y_pred):
 
     return
 
+
 def plot_true_vs_preds_svr(y_true, y_pred):
 
     plt.figure(figsize=(6,6))
@@ -332,3 +333,4 @@ def plot_true_vs_preds_svr(y_true, y_pred):
     plt.title("SVR – Cross-validated predictions")
     plt.grid(True)
     plt.show()
+

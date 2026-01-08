@@ -49,7 +49,7 @@ def _load_set() -> (DataFrame, DataFrame):
     return df_red_orig, df_white_orig
 
 
-def stratified_split(class_col="type", test_size=0.2, seed=42, type: str = "join"):
+def stratified_split(class_col="type", test_size=0.2, seed=42, type: str = "join", quality_filter: list=None):
     """
     Stratified train/test split for Wine Quality dataset.
 
@@ -89,6 +89,9 @@ def stratified_split(class_col="type", test_size=0.2, seed=42, type: str = "join
 
     else:
         raise ValueError("type must be one of: 'join', 'red', 'white'")
+
+    if quality_filter is not None:
+        df_full = df_full[~df_full["quality"].isin(quality_filter)]
 
     # If only one type is selected, stratification on `type` is meaningless
     if type in ("red", "white"):

@@ -96,7 +96,7 @@ def _make_loaders(X_tr: torch.Tensor, y_tr: torch.Tensor, X_vl: torch.Tensor, y_
     :return:
     """
 
-    # Given a set of features and labels asdociated with them
+    # Given a set of features and labels associated with them
     # the TensorDataset function aggregates in a single object
     # allowing to retrieve a sample with a single index
     # i.e. dataset[i]  →  (X[i], y[i])
@@ -158,6 +158,10 @@ def epoch_loss(model: MLP, dataloader: DataLoader, loss_algorithm: nn.Module) ->
     :return: the average loss
     """
 
+    # Store training mode to restore later
+    was_training = model.training
+    model.eval()
+
     model.train(False) # set model to evaluation only
     total_loss = 0.0
     total_n = 0
@@ -180,6 +184,10 @@ def epoch_loss(model: MLP, dataloader: DataLoader, loss_algorithm: nn.Module) ->
             # and then average the entire dataset, that's why we multiply for the nr of labels
             total_loss += loss * number_of_labels
             total_n += number_of_labels
+
+    # Restore previous state
+    if was_training:
+        model.train()
 
     return total_loss / total_n
 
@@ -210,10 +218,16 @@ def predict(model: 'MLP', X_test: pd.DataFrame):
 def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algorithm, batch_size: int | str = DEFAULT_TRAIN_BATCH_SIZE,
           epochs:int=DEFAULT_TRAIN_EPOCHS, val_ratio:float=DEFAULT_TRAIN_VAL_RATIO, seed:int=DEFAULT_TRAIN_SEED,
           patience:int=DEFAULT_TRAIN_PATIENCE, min_delta:float=DEFAULT_TRAIN_DELTA,
-          scheduler_template= None,silence_output:bool=False):
+          scheduler_template= None,silence_output:bool=False) -> {}:
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
-    while monitoring performance on a validation set to track generalization and detect overfitting
+    while monitoring performance on a validation set to track generalization and detect overfitting.
+    It returns a dictionary containing:
+            - record_tr_loss Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.\n
+            - record_vl_loss: Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
+            - record_tr_acc: Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks. (Note: in regression tasks this quantity is not used.)
+            - record_vl_acc: Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
+            - record_grad_norm: Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
     :param model: the model to be trained
     :param X: training features as a pandas DataFrame
     :param y: training labels as ndarray
@@ -226,7 +240,7 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
     :param min_delta: the delta between epochs for early stopping. Ignored if patience < 1
     :param scheduler: learning rate scheduler
     :param silence_output: True/False if we want to display the train params
-    :return:
+    :return: tuple(record_tr_loss,record_vl_loss,record_tr_acc,record_vl_acc)
     """
 
     # Data container for later
@@ -327,7 +341,15 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
         if best_state is not None:
             model.load_state_dict(best_state)
 
-    return record_tr_loss, record_vl_loss, record_tr_acc, record_vl_acc, record_grad_norm
+    train_results = {
+        "hist_tr": record_tr_loss,
+        "hist_vl": record_vl_loss,
+        "hist_tr_acc": record_tr_acc,
+        "hist_vl_acc": record_vl_acc,
+        "hist_grad": record_grad_norm
+    }
+
+    return train_results
 
 
 def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_template, loss_function, fold_strategy, inner_train_params: dict):
@@ -339,6 +361,7 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
     :param X: training data
     :param y: training labels
     :param optimizer_template: the weight update algorithm
+    :param scheduler_template: the learning rate decay scheduler
     :param loss_function: the chosen loss function (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :param fold_strategy: the fold strategy (i.e. KFold, StratifiedKfold,...)
     :param inner_train_params: the parameters for the inner trainer
@@ -368,7 +391,8 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
         fold_model = copy.deepcopy(untrained_base_model)
 
         # Training
-        tr_loss_hist, vl_loss_hist, tr_hist_acc, vl_hist_acc, grad_norm = train(
+        #tr_loss_hist, vl_loss_hist, tr_hist_acc, vl_hist_acc, grad_norm
+        train_result = train(
             fold_model, X_subset, y_subset, optimizer_template, loss_function,
             epochs=inner_epochs,
             patience=inner_patience,
@@ -379,25 +403,31 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
             scheduler_template=scheduler_template
         )
 
+        hist_tr = train_result["hist_tr"]
+        hist_vl = train_result["hist_vl"]
+        tr_hist_acc = train_result["hist_tr_acc"]
+        vl_hist_acc = train_result["hist_vl_acc"]
+        hist_grad = train_result["hist_grad"]
+
         # Data gathering
         fold_histories.append({
-            "tr_loss": np.mean(tr_loss_hist),
-            "tr_loss_std": np.std(tr_loss_hist),
-            "vl_loss": np.mean(vl_loss_hist),
-            "vl_loss_std": np.std(vl_loss_hist),
+            "tr_loss": np.mean(hist_tr),
+            "tr_loss_std": np.std(hist_tr),
+            "vl_loss": np.mean(hist_vl),
+            "vl_loss_std": np.std(hist_vl),
             "tr_acc": np.mean(tr_hist_acc),
             "tr_acc_std": np.std(tr_hist_acc),
             "vl_acc": np.mean(vl_hist_acc),
             "vl_acc_std": np.std(vl_hist_acc),
 
-            "best_tr_loss": float(min(tr_loss_hist)),
+            "best_tr_loss": float(min(hist_tr)),
             "best_tr_acc": float(max(tr_hist_acc)),
-            "last_tr_loss": float(tr_loss_hist[-1]),
+            "last_tr_loss": float(hist_tr[-1]),
             "last_tr_acc": float(tr_hist_acc[-1]),
 
-            "best_vl_loss": float(min(vl_loss_hist)),
+            "best_vl_loss": float(min(hist_vl)),
             "best_vl_acc": float(max(vl_hist_acc)),
-            "last_vl_loss": float(vl_loss_hist[-1]),
+            "last_vl_loss": float(hist_vl[-1]),
             "last_vl_acc": float(vl_hist_acc[-1]),
         })
 
@@ -562,7 +592,7 @@ def plot_gradient_norm_bars(grad_norms, step=10):
     plt.figure(figsize=(7, 4))
     plt.bar(epochs, values, width=step * 0.6)
     plt.xlabel("Epoch")
-    plt.ylabel("||∇L||")
+    plt.ylabel("||nabla L||")
     plt.title("Gradient norm (one bar every {} epochs)".format(step))
     plt.grid(axis="y")
     plt.tight_layout()
@@ -677,3 +707,162 @@ def plot_kfold_bar_acc(fold_histories, use="best"):
     plt.legend()
     plt.tight_layout()
     plt.show()
+
+
+def plot_kfold_bar_regression(
+    fold_histories,
+    metric="rmse",
+    use="best"
+):
+    """
+    Bar plot of validation regression metric per fold + mean line.
+
+    Parameters
+    ----------
+    fold_histories : list[dict]
+        Each dict must contain keys like:
+        - "best_vl_rmse", "last_vl_rmse"
+        - or "best_vl_mse", "last_vl_mse"
+    metric : {"rmse", "mse", "mae"}
+        Regression metric to plot.
+    use : {"best","last"}
+        Whether to use best or last epoch metric.
+    """
+    if use not in {"best", "last"}:
+        raise ValueError("use must be 'best' or 'last'")
+
+    metric = metric.lower()
+    if metric not in {"rmse", "mse", "mae"}:
+        raise ValueError("metric must be 'rmse', 'mse' or 'mae'")
+
+    key = f"{use}_vl_{metric}"
+    values = np.array([h[key] for h in fold_histories], dtype=float)
+
+    folds = np.arange(1, len(values) + 1)
+    mean_val = values.mean()
+
+    plt.figure(figsize=(7, 4))
+    plt.bar(folds, values)
+    plt.axhline(
+        mean_val,
+        linestyle="--",
+        linewidth=2,
+        label=f"Mean = {mean_val:.3f}"
+    )
+
+    plt.xticks(folds)
+    plt.xlabel("Fold")
+    plt.ylabel(metric.upper())
+    plt.title(f"K-Fold validation {metric.upper()} per fold ({use})")
+    plt.grid(axis="y", alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_kfold_bar_vl_loss(fold_histories, use="best", ylabel="Validation loss (MSE)"):
+    """
+    Bar plot of validation loss per fold + mean line.
+    Uses keys: best_vl_loss / last_vl_loss.
+    """
+    if use not in {"best", "last"}:
+        raise ValueError("use must be 'best' or 'last'")
+
+    key = f"{use}_vl_loss"
+    vals = np.array([h[key] for h in fold_histories], dtype=float)
+    folds = np.arange(1, len(vals) + 1)
+    mean_val = vals.mean()
+
+    plt.figure(figsize=(7, 4))
+    plt.bar(folds, vals)
+    plt.axhline(mean_val, linestyle="--", linewidth=2, label=f"Mean = {mean_val:.4f}")
+    plt.xticks(folds)
+    plt.xlabel("Fold")
+    plt.ylabel(ylabel)
+    plt.title(f"K-Fold validation loss per fold ({use})")
+    plt.grid(axis="y", alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_kfold_bar_vl_rmse(fold_histories, use="best"):
+    """
+    Bar plot of validation RMSE per fold + mean line.
+    Assumes vl_loss stored is MSE (from MSELoss).
+    """
+    if use not in {"best", "last"}:
+        raise ValueError("use must be 'best' or 'last'")
+
+    key = f"{use}_vl_loss"
+    mse = np.array([h[key] for h in fold_histories], dtype=float)
+    rmse = np.sqrt(mse)
+
+    folds = np.arange(1, len(rmse) + 1)
+    mean_rmse = rmse.mean()
+
+    plt.figure(figsize=(7, 4))
+    plt.bar(folds, rmse)
+    plt.axhline(mean_rmse, linestyle="--", linewidth=2, label=f"Mean = {mean_rmse:.4f}")
+    plt.xticks(folds)
+    plt.xlabel("Fold")
+    plt.ylabel("Validation RMSE")
+    plt.title(f"K-Fold validation RMSE per fold ({use})")
+    plt.grid(axis="y", alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def kfold_regression_table(fold_histories, use="best", derive_rmse=True):
+    """
+    Build a K-Fold summary table for regression.
+
+    Parameters
+    ----------
+    fold_histories : list[dict]
+        Output histories from training (one per fold).
+    use : {"best", "last"}
+        Whether to use best or last validation loss.
+    derive_rmse : bool
+        If True, derive RMSE from MSE (sqrt).
+
+    Returns
+    -------
+    pandas.DataFrame
+        Table with per-fold metrics + mean/std.
+    """
+    if use not in {"best", "last"}:
+        raise ValueError("use must be 'best' or 'last'")
+
+    rows = []
+
+    for i, h in enumerate(fold_histories, start=1):
+        tr_loss = h[f"{use}_tr_loss"]
+        vl_loss = h[f"{use}_vl_loss"]
+
+        row = {
+            "Fold": i,
+            "TR_MSE": tr_loss,
+            "VL_MSE": vl_loss,
+            "Gap(TR-VL)": vl_loss - tr_loss
+        }
+
+        if derive_rmse:
+            row["TR_RMSE"] = np.sqrt(tr_loss)
+            row["VL_RMSE"] = np.sqrt(vl_loss)
+
+        rows.append(row)
+
+    df = pd.DataFrame(rows).set_index("Fold")
+
+    # Add mean and std rows
+    mean_row = df.mean()
+    std_row = df.std()
+
+    df.loc["MEAN"] = mean_row
+    df.loc["STD"] = std_row
+
+    print(df)
+
+    return df

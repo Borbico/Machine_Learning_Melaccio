@@ -49,12 +49,22 @@ def _to_tensors(X: ndarray, y: ndarray) -> (ndarray, ndarray):
     Convert X and y to tensor for use with PyTorch
     :param X: The features
     :param y: The labels
-    :return: X and y as tensors
+    :return: X and y as tensors (X: (N,D), y: (N,1) for scalar targets or (N,K) for multi-output targets)
     """
 
     # Forcing array to float
     X = np.asarray(X, dtype=np.float32)
-    y = np.asarray(y, dtype=np.float32).reshape(-1, 1)  # (N,1)
+    y = np.asarray(y, dtype=np.float32)
+
+    # Ensure y has shape (N, K)
+    # - For scalar targets: (N,)  -> (N,1)
+    # - For multi-output targets: (N,K) stays (N,K)
+    if y.ndim == 1:
+        y = y.reshape(-1, 1)
+    elif y.ndim == 2:
+        pass
+    else:
+        raise ValueError(f"y must be 1D or 2D array, got shape {y.shape}")
 
     # X and y torched
     return torch.from_numpy(X), torch.from_numpy(y)
@@ -128,6 +138,37 @@ def compute_loss(model:MLP, X:torch.Tensor, y: torch.Tensor, loss_function: nn.M
     # which is being compared with the output
     loss = loss_function(output, y)
     return loss
+
+
+def epoch_mee(model: MLP, dataloader: DataLoader) -> float:
+    """
+    Computes the Mean Euclidean Error (MEE) over an entire dataset.
+    MEE is defined as the average Euclidean distance between
+    predicted and target vectors (multi-output regression).
+    """
+
+    was_training = model.training
+    model.eval()
+
+    total_mee = 0.0
+    total_n = 0
+
+    with torch.no_grad():
+        for X, y in dataloader:
+            # Model output: shape (batch_size, 4)
+            output = model.forward(X)
+
+            # Euclidean distance per sample
+            # shape: (batch_size,)
+            distances = torch.norm(output - y, dim=1)
+
+            total_mee += distances.sum().item()
+            total_n += y.size(0)
+
+    if was_training:
+        model.train()
+
+    return total_mee / total_n
 
 
 def epoch_accuracy(model, dataloader):
@@ -251,6 +292,8 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
     record_vl_acc = []
     record_tr_mae = []
     record_vl_mae = []
+    record_tr_mee = []
+    record_vl_mee = []
     record_grad_norm = []
     epoch_grad_norms = []
 
@@ -313,6 +356,12 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
         record_tr_mae.append(tr_mae)
         record_vl_mae.append(vl_mae)
 
+        tr_mee = epoch_mee(model, dl_tr)
+        vl_mee = epoch_mee(model, dl_vl)
+
+        record_tr_mee.append(tr_mee)
+        record_vl_mee.append(vl_mee)
+
         # Applying learning rate decay
         if scheduler is not None:
             scheduler.step(vl_l)
@@ -358,6 +407,8 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
         "hist_vl_acc": record_vl_acc,
         "hist_tr_mae": record_tr_mae,
         "hist_vl_mae": record_vl_mae,
+        "hist_tr_mee": record_tr_mee,
+        "hist_vl_mee": record_vl_mee,
         "hist_grad": record_grad_norm
     }
 
@@ -421,6 +472,8 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
         vl_hist_acc = train_result["hist_vl_acc"]
         hist_tr_mae = train_result["hist_tr_mae"]
         hist_vl_mae = train_result["hist_vl_mae"]
+        hist_tr_mee = train_result["hist_tr_mee"]
+        hist_vl_mee = train_result["hist_vl_mee"]
         hist_grad = train_result["hist_grad"]
 
         # Data gathering
@@ -437,6 +490,10 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
             "tr_mae_std": np.std(hist_tr_mae),
             "vl_mae": np.mean(hist_vl_mae),
             "vl_mae_std": np.std(hist_vl_mae),
+            "tr_mee": np.mean(hist_tr_mee),
+            "tr_mee_std": np.std(hist_tr_mee),
+            "vl_mee": np.mean(hist_vl_mee),
+            "vl_mee_std": np.std(hist_vl_mee),
 
             "best_tr_loss": float(min(hist_tr)),
             "best_tr_acc": float(max(tr_hist_acc)),
@@ -447,6 +504,9 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
             "best_vl_acc": float(max(vl_hist_acc)),
             "last_vl_loss": float(hist_vl[-1]),
             "last_vl_acc": float(vl_hist_acc[-1]),
+
+            "best_tr_mee": float(min(hist_tr_mee)),
+            "best_vl_mee": float(max(hist_vl_mee))
         })
 
     return fold_histories
@@ -739,6 +799,32 @@ def plot_kfold_bar_vl_loss(fold_histories, use="best", ylabel="Validation loss (
     plt.show()
 
 
+def plot_kfold_bar_vl_mee(fold_histories, use="best", ylabel="Validation MEE"):
+    """
+    Bar plot of validation MEE per fold + mean line.
+    Uses keys: best_vl_mee / last_vl_mee.
+    """
+    if use not in {"best", "last"}:
+        raise ValueError("use must be 'best' or 'last'")
+
+    key = f"{use}_vl_mee"
+    vals = np.array([h[key] for h in fold_histories], dtype=float)
+    folds = np.arange(1, len(vals) + 1)
+    mean_val = vals.mean()
+
+    plt.figure(figsize=(7, 4))
+    plt.bar(folds, vals)
+    plt.axhline(mean_val, linestyle="--", linewidth=2, label=f"Mean = {mean_val:.4f}")
+    plt.xticks(folds)
+    plt.xlabel("Fold")
+    plt.ylabel(ylabel)
+    plt.title(f"K-Fold validation MEE per fold ({use})")
+    plt.grid(axis="y", alpha=0.3)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
 def plot_kfold_bar_vl_rmse(fold_histories, use="best"):
     """
     Bar plot of validation RMSE per fold + mean line.
@@ -819,3 +905,14 @@ def kfold_regression_table(fold_histories, use="best", derive_rmse=True):
     print(df)
 
     return df
+
+
+def plot_epoch_mee(hist_tr_mee, hist_vl_mee):
+    plt.figure(figsize=(8, 4))
+    plt.plot(hist_tr_mee, label="TR MEE")
+    plt.plot(hist_vl_mee, label="VL MEE")
+    plt.xlabel("Epoch")
+    plt.ylabel("MEE")
+    plt.legend()
+    plt.tight_layout()
+    plt.show()

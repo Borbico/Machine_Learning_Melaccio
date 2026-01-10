@@ -249,6 +249,8 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
     record_vl_loss = []
     record_tr_acc = []
     record_vl_acc = []
+    record_tr_mae = []
+    record_vl_mae = []
     record_grad_norm = []
     epoch_grad_norms = []
 
@@ -294,6 +296,7 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
 
             # Calculating the loss and applying the backpropagation
             loss = compute_loss(model, X, y, loss_algorithm)
+
             loss.backward()
             # Take gradient measurement before update
             epoch_grad_norms.append(gradient_norm(model))
@@ -302,6 +305,13 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
         # Loss estimation
         tr_l = epoch_loss(model, dl_tr, loss_algorithm)
         vl_l = epoch_loss(model, dl_vl, loss_algorithm)
+
+        # Calculate Mean Absolute Error (MAE)
+        tr_mae = epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean"))
+        vl_mae = epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean"))
+
+        record_tr_mae.append(tr_mae)
+        record_vl_mae.append(vl_mae)
 
         # Applying learning rate decay
         if scheduler is not None:
@@ -346,6 +356,8 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
         "hist_vl": record_vl_loss,
         "hist_tr_acc": record_tr_acc,
         "hist_vl_acc": record_vl_acc,
+        "hist_tr_mae": record_tr_mae,
+        "hist_vl_mae": record_vl_mae,
         "hist_grad": record_grad_norm
     }
 
@@ -407,6 +419,8 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
         hist_vl = train_result["hist_vl"]
         tr_hist_acc = train_result["hist_tr_acc"]
         vl_hist_acc = train_result["hist_vl_acc"]
+        hist_tr_mae = train_result["hist_tr_mae"]
+        hist_vl_mae = train_result["hist_vl_mae"]
         hist_grad = train_result["hist_grad"]
 
         # Data gathering
@@ -419,6 +433,10 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
             "tr_acc_std": np.std(tr_hist_acc),
             "vl_acc": np.mean(vl_hist_acc),
             "vl_acc_std": np.std(vl_hist_acc),
+            "tr_mae": np.mean(hist_tr_mae),
+            "tr_mae_std": np.std(hist_tr_mae),
+            "vl_mae": np.mean(hist_vl_mae),
+            "vl_mae_std": np.std(hist_vl_mae),
 
             "best_tr_loss": float(min(hist_tr)),
             "best_tr_acc": float(max(tr_hist_acc)),
@@ -571,20 +589,6 @@ def plot_epoch_accuracy(hist_tr_acc, hist_vl_acc):
     plt.show()
 
 
-def plot_gradient_norm(grad_norms):
-    epochs = range(len(grad_norms))
-
-    plt.figure(figsize=(8,4))
-    #plt.scatter(epochs, grad_norms, s=2)  # ← punti, non linee
-    plt.plot(grad_norms, label="TR loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("||∇L||")
-    plt.title("Gradient norm per epoch")
-    plt.grid(True)
-    plt.tight_layout()
-    plt.show()
-
-
 def plot_gradient_norm_bars(grad_norms, step=10):
     epochs = np.arange(0, len(grad_norms), step)
     values = [grad_norms[i] for i in epochs]
@@ -703,57 +707,6 @@ def plot_kfold_bar_acc(fold_histories, use="best"):
     plt.xlabel("Fold")
     plt.ylabel("Validation accuracy")
     plt.title(f"K-Fold validation accuracy per fold ({use})")
-    plt.grid(axis="y", alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_kfold_bar_regression(
-    fold_histories,
-    metric="rmse",
-    use="best"
-):
-    """
-    Bar plot of validation regression metric per fold + mean line.
-
-    Parameters
-    ----------
-    fold_histories : list[dict]
-        Each dict must contain keys like:
-        - "best_vl_rmse", "last_vl_rmse"
-        - or "best_vl_mse", "last_vl_mse"
-    metric : {"rmse", "mse", "mae"}
-        Regression metric to plot.
-    use : {"best","last"}
-        Whether to use best or last epoch metric.
-    """
-    if use not in {"best", "last"}:
-        raise ValueError("use must be 'best' or 'last'")
-
-    metric = metric.lower()
-    if metric not in {"rmse", "mse", "mae"}:
-        raise ValueError("metric must be 'rmse', 'mse' or 'mae'")
-
-    key = f"{use}_vl_{metric}"
-    values = np.array([h[key] for h in fold_histories], dtype=float)
-
-    folds = np.arange(1, len(values) + 1)
-    mean_val = values.mean()
-
-    plt.figure(figsize=(7, 4))
-    plt.bar(folds, values)
-    plt.axhline(
-        mean_val,
-        linestyle="--",
-        linewidth=2,
-        label=f"Mean = {mean_val:.3f}"
-    )
-
-    plt.xticks(folds)
-    plt.xlabel("Fold")
-    plt.ylabel(metric.upper())
-    plt.title(f"K-Fold validation {metric.upper()} per fold ({use})")
     plt.grid(axis="y", alpha=0.3)
     plt.legend()
     plt.tight_layout()

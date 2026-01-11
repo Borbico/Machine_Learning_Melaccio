@@ -142,11 +142,6 @@ def grid_introspection(grid):
     print("Best CV accuracy:", grid.best_score_)
     print("Best model:", grid.best_estimator_)
 
-    svm = grid.best_estimator_.named_steps["svm"]
-    n_sv = svm.n_support_.sum()
-    print("Total support vectors:", n_sv)
-    print("Support vectors per class:", svm.n_support_)
-
 
 def label_row(r):
     k = r.get("param_svm__kernel", "")
@@ -169,7 +164,7 @@ def label_row(r):
 def plot_results_svc(results, TOP_N=10, scoring_name="balanced_accuracy"):
     res = pd.DataFrame(results)
 
-    # Ordina: migliore → peggiore
+    # Sort: best -> worst
     res_sorted = res.sort_values(["mean_test_score", "rank_test_score"], ascending=[False, True]).reset_index(drop=True)
 
     # Top e Worst
@@ -334,3 +329,29 @@ def plot_true_vs_preds_svr(y_true, y_pred):
     plt.grid(True)
     plt.show()
 
+
+def plot_residuals_hist(y_true, y_pred, bins=40, title="Residuals distribution"):
+    """
+    Plot histogram of residuals (y_true - y_pred).
+
+    Parameters
+    ----------
+    y_true : array-like, shape (n_samples,) or (n_samples, n_targets)
+    y_pred : array-like, same shape as y_true
+    bins   : int, number of histogram bins
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+
+    # Gestione multi-output: flatten
+    residuals = (y_true - y_pred).ravel()
+
+    plt.figure(figsize=(7, 4))
+    plt.hist(residuals, bins=bins, density=True, alpha=0.7)
+    plt.axvline(0, linestyle="--", linewidth=2)
+
+    plt.xlabel("Residual (y - ŷ)")
+    plt.ylabel("Density")
+    plt.title(title)
+    plt.tight_layout()
+    plt.show()

@@ -56,7 +56,7 @@ def load_set() -> (DataFrame, DataFrame):
 
 
 
-def split_and_prepare_dataset(df_train: DataFrame, ratio: float = 0.2, random_state:int = 42) -> (DataFrame, ndarray,DataFrame, ndarray, DataFrame, ndarray, DataFrame, ndarray):
+def split_and_prepare_dataset(df_train: DataFrame, ratio: float = 0.2, random_state:int = 42, scaler=None) -> (DataFrame, ndarray,DataFrame, ndarray, DataFrame, ndarray, DataFrame, ndarray):
     """
     Split dataset into training and testing sets eventually applying one-hot encoding
     :param df_orig: the original dataset
@@ -78,32 +78,32 @@ def split_and_prepare_dataset(df_train: DataFrame, ratio: float = 0.2, random_st
 
     # Drop class and id columns to extract our set of features
     X_tr_unscaled = df_80.drop(columns=["id"] + output_columns) # The features
-    # Transform features with MinMaxScaler
-    X_tr = pd.DataFrame(
-        scaler.fit_transform(X_tr_unscaled),
-        columns=X_tr_unscaled.columns,
-        index=X_tr_unscaled.index
-    )
+    # Transform features with a scaler
+    if scaler is not None:
+        X_tr = pd.DataFrame(
+            scaler.fit_transform(X_tr_unscaled),
+            columns=X_tr_unscaled.columns,
+            index=X_tr_unscaled.index
+        )
 
-    # Extract 'class' column which will be our labels
     y_tr = df_80[output_columns].to_numpy()
 
     # Drop class and id columns to extract our set of features
-    X_ts_unscaled = df_20.drop(columns=["id"] + output_columns) # The features
+    X_ts = df_20.drop(columns=["id"] + output_columns) # The features
+
     # Transform features with MinMaxScaler
-    X_ts = pd.DataFrame(
-        scaler.fit_transform(X_ts_unscaled),
-        columns=X_ts_unscaled.columns,
-        index=X_ts_unscaled.index
-    )
+    if scaler is not None:
+        X_ts = pd.DataFrame(
+            scaler.fit_transform(X_ts),
+            columns=X_ts.columns,
+            index=X_ts.index
+        )
+
     y_ts = df_20[output_columns].to_numpy()
 
     # Index realignment and reset
     X_tr = X_tr.reset_index(drop=True)
-    #y_tr = y_tr.reset_index(drop=True)
-
     X_ts = X_ts.reset_index(drop=True)
-    #y_ts = y_ts.reset_index(drop=True)
 
     return X_tr, y_tr, X_ts, y_ts
 

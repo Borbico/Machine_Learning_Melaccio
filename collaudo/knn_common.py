@@ -1,10 +1,25 @@
 # ============================================================
 # KNN Functions
 # ============================================================
+import warnings
+
 import numpy as np
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve
 from sklearn.neighbors import KNeighborsClassifier
 from matplotlib import pyplot as plt
+
+
+def extract_best_knn_metrics_from_grid(gs):
+
+    best_model = gs.best_estimator_.named_steps["knn"]
+    clean_params = {
+        param.split("__")[-1]: value
+        for param, value in gs.best_params_.items()
+    }
+
+    return best_model, clean_params
+
 
 def extract_best_knn_metrics(cv_scores: list) -> tuple:
     """
@@ -28,6 +43,13 @@ def find_best_knn_model(X, y, cv, k_range: list, scoring:str = "accuracy", weigh
     :param metric:
     :return:
     """
+
+    warnings.warn(
+        "old_function is deprecated and will be removed in a future release. "
+        "Use new_function instead.",
+        category=DeprecationWarning,
+        stacklevel=2
+    )
 
     train_scores = [] # Train scores
     cv_scores = [] # Cross validation scores
@@ -69,6 +91,105 @@ def find_best_knn_model(X, y, cv, k_range: list, scoring:str = "accuracy", weigh
     return best_model, cv_scores, train_scores
 
 
+def plot_knn_validation_curve_from_gs_old(gs):
+    """
+    Plot training vs CV accuracy from a fitted GridSearchCV object
+    """
+
+    results = gs.cv_results_
+
+    k_values = results["param_knn__n_neighbors"]
+    train_scores = results["mean_train_score"]
+    cv_scores = results["mean_test_score"]
+
+
+    plt.figure(figsize=(7, 4))
+    plt.plot(k_values, train_scores, label="Training accuracy")
+    plt.plot(k_values, cv_scores, label="CV mean accuracy")
+
+    plt.xlabel("k (n_neighbors)")
+    plt.ylabel("Accuracy")
+    plt.title("K-NN validation curve (training vs CV)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+import numpy as np
+import matplotlib.pyplot as plt
+
+def plot_knn_validation_curve_from_gs(gs, agg:str="max"):
+
+    r = gs.cv_results_
+    best_k = gs.best_params_["knn__n_neighbors"]
+
+    # 1) Estrai k (qui tieni la tua chiave esplicita; se vuoi la rendo automatica)
+    k_vals = np.array(r["param_knn__n_neighbors"], dtype=int)
+
+    test_scores = np.array(r["mean_test_score"], dtype=float)
+    train_scores = np.array(r.get("mean_train_score", np.full_like(test_scores, np.nan)), dtype=float)
+
+    # 2) Aggrega per k
+    uniq_k = np.unique(k_vals)
+    agg_test = []
+    agg_train = []
+
+    for k in uniq_k:
+        mask = (k_vals == k)
+
+        if agg == "max":
+            agg_test.append(np.max(test_scores[mask]))
+            agg_train.append(np.max(train_scores[mask]) if not np.isnan(train_scores[mask]).all() else np.nan)
+        elif agg == "mean":
+            agg_test.append(np.mean(test_scores[mask]))
+            agg_train.append(np.mean(train_scores[mask]) if not np.isnan(train_scores[mask]).all() else np.nan)
+        else:
+            raise ValueError("agg must be 'max' or 'mean'")
+
+    uniq_k = np.array(uniq_k, dtype=int)
+    agg_test = np.array(agg_test, dtype=float)
+    agg_train = np.array(agg_train, dtype=float)
+
+    # 3) accuracy vs neg_*
+    scoring = gs.scoring
+    y_label = "Score"
+    plot_train = not np.isnan(agg_train).all()
+
+    # Change Y axes according to scoring
+    if isinstance(scoring, str):
+        if scoring == "accuracy":
+            y_label = "Accuracy"
+        elif scoring.startswith("neg_"):
+            # Loss switched to positive for better readability
+            agg_test = -agg_test
+            agg_train = -agg_train
+
+            if "mean_squared_error" in scoring:
+                y_label = "MSE"
+            elif "mean_absolute_error" in scoring:
+                y_label = "MAE"
+            elif "root_mean_squared_error" in scoring:
+                y_label = "RMSE"
+            else:
+                y_label = scoring.replace("neg_", "").replace("_", " ").upper()
+
+    # 4) Plot
+    plt.figure()
+
+    if plot_train:
+        plt.plot(uniq_k, agg_train, label=f"Training ({agg})")
+
+    plt.plot(uniq_k, agg_test, label=f"CV mean ({agg})")
+    plt.axvline(int(best_k), linestyle="--", alpha=0.7, label=f"Best k = {best_k}")
+    plt.xlabel("k (n_neighbors)")
+    plt.ylabel(y_label)
+    plt.title(f"K-NN validation curve ({y_label}, aggregated by k, {agg})")
+
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
 def plot_knn_validation_curve(cv_scores, train_scores):
 
     k_values = [k[0] for k in cv_scores]
@@ -85,45 +206,37 @@ def plot_knn_validation_curve(cv_scores, train_scores):
     plt.show()
 
 
-def knn_introspection(cv_scores: list) -> (int, float, float):
+def plot_knn_validation_curve_regression(k_values, train_mse, cv_mse):
+    plt.figure()
+    plt.plot(k_values, train_mse, marker="o", ms=3, label="Training MSE")
+    plt.plot(k_values, cv_mse, marker="o", ms=3, label="CV mean MSE")
+    plt.xlabel("k (n_neighbors)")
+    plt.ylabel("MSE")
+    plt.title("K-NN Regressor: training vs CV (overfitting check)")
+    plt.grid(True)
+    plt.legend()
+    plt.show()
+
+
+def plot_knn_learning_curve(model, X, y, cv, ax=None, scoring: str = "accuracy"):
     """
-    Print and return the best k value and its mean and standard deviation.
-    This function is basically a wrapper of extract_best_knn_metrics
-    :param cv_scores: the cross validation scores
-    :return: best_k, best_mean, best_std
-    """
-
-    best_k, best_mean, best_std = extract_best_knn_metrics(cv_scores)
-    print("Best k:", best_k)
-    print("Best mean accuracy:", best_mean)
-    print("Std:", best_std)
-
-    return best_k, best_mean, best_std
-
-
-def plot_knn_learning_curve(model, X, y, cv, ax=None):
-    """
-    Plot a learning curve for a given KNN model.
-    Can be reused inside subplot grids if ax is provided.
+    Plot a learning curve for a given KNN model (classifier or regressor).
+    If scoring is a neg_* loss, the curve is plotted as the corresponding positive loss.
     """
     k = model.n_neighbors
-    random_state = cv.random_state
+    random_state = getattr(cv, "random_state", None)
 
-    y_np = np.asarray(y).ravel()
-
-    # compute safe train sizes
+    # compute safe train sizes (avoid k > n_train_fold)
     frac_train_fold = 1 - 1 / cv.get_n_splits()
-    min_frac = (k + 1) / (frac_train_fold * len(y_np))
-    min_frac = max(min_frac, 0.1)
-    min_frac = min(min_frac, 0.9)
-
+    min_frac = (k + 1) / (frac_train_fold * len(y))
+    min_frac = min(max(min_frac, 0.1), 0.9)
     train_sizes = np.linspace(min_frac, 1.0, 15)
 
     train_sizes_abs, train_scores, val_scores = learning_curve(
         model,
-        X, y_np,
+        X, y,
         cv=cv,
-        scoring="accuracy",
+        scoring=scoring,
         train_sizes=train_sizes,
         shuffle=True,
         random_state=random_state
@@ -132,27 +245,65 @@ def plot_knn_learning_curve(model, X, y, cv, ax=None):
     train_mean = train_scores.mean(axis=1)
     val_mean = val_scores.mean(axis=1)
 
-    # use provided axis or create one
-    if ax is None:
-        fig, ax = plt.subplots()
+    # Decide label + possible sign flip
+    y_label = "Score"
+    train_label = "Training score"
+    val_label = "CV score"
+    title_metric = scoring
 
-    ax.plot(train_sizes_abs, train_mean, label="Training accuracy")
-    ax.plot(train_sizes_abs, val_mean, label="CV accuracy")
+    if isinstance(scoring, str) and scoring.startswith("neg_"):
+        # Convert from negative score to positive loss for readability
+        train_mean = -train_mean
+        val_mean = -val_mean
+
+        if scoring == "neg_mean_absolute_error":
+            y_label = "MAE"
+            title_metric = "MAE"
+        elif scoring == "neg_mean_squared_error":
+            y_label = "MSE"
+            title_metric = "MSE"
+        elif scoring == "neg_root_mean_squared_error":
+            y_label = "RMSE"
+            title_metric = "RMSE"
+        else:
+            y_label = scoring.replace("neg_", "").replace("_", " ").upper()
+            title_metric = y_label
+
+        train_label = f"Training {y_label}"
+        val_label = f"CV {y_label}"
+    elif scoring == "accuracy":
+        y_label = "Accuracy"
+        train_label = "Training accuracy"
+        val_label = "CV accuracy"
+        title_metric = "Accuracy"
+
+    # plot
+    if ax is None:
+        _, ax = plt.subplots()
+
+    ax.plot(train_sizes_abs, train_mean, label=train_label)
+    ax.plot(train_sizes_abs, val_mean, label=val_label)
 
     ax.set_xlabel("Training set size")
-    ax.set_ylabel("Accuracy")
-    ax.set_title(f"K-NN learning curve (k={k})")
+    ax.set_ylabel(y_label)
+    ax.set_title(f"K-NN learning curve (k={k}) – {title_metric}")
     ax.legend()
     ax.grid(True)
 
 
-def plot_knn_learning_curves_grid(models, X, y, cv, n_cols=2, highlight_k=None):
+def plot_knn_learning_curves_grid(model, X, y, cv, n_cols=2, scoring="accuracy"):
     """
     Plot learning curves for multiple KNN models in a grid layout.
     Optionally highlight the subplot whose model.n_neighbors == highlight_k.
     """
-    import numpy as np
-    import matplotlib.pyplot as plt
+    models = []
+    model_params = model.get_params()
+    Estimator = type(model)
+
+    kn=model_params["n_neighbors"]
+    for k in k_neighborhood(kn, len(y)):
+        params = {**model_params, "n_neighbors": k}
+        models.append(Estimator(**params))
 
     n_plots = len(models)
     n_rows = int(np.ceil(n_plots / n_cols))
@@ -168,10 +319,10 @@ def plot_knn_learning_curves_grid(models, X, y, cv, n_cols=2, highlight_k=None):
         ax = axes[i]
 
         # draw the learning curve on this axis
-        plot_knn_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax)
+        plot_knn_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax, scoring=scoring)
 
         # highlight if requested
-        if highlight_k is not None and model.n_neighbors == highlight_k:
+        if model.n_neighbors == kn:
             for spine in ax.spines.values():
                 spine.set_linewidth(3.0)   # bordo più spesso
             ax.set_title(f"K-NN learning curve (k={model.n_neighbors})  ★")
@@ -190,7 +341,7 @@ def k_neighborhood(best_k: int,n_samples: int,step: int = 2,min_k: int = 1) -> l
     for analysis purposes.
 
     The returned list:
-    - always includes best_k
+    - always includes best_k as a central value when applicable
     - contains only odd k (step=2)
     - is clipped to [min_k, n_samples]
     """
@@ -234,3 +385,22 @@ def k_neighborhood(best_k: int,n_samples: int,step: int = 2,min_k: int = 1) -> l
     return k_values
 
 
+def regression_report(y_true, y_pred, name="Model"):
+    mae = mean_absolute_error(y_true, y_pred)
+    mse = mean_squared_error(y_true, y_pred)
+    rmse = np.sqrt(mse)
+    r2 = r2_score(y_true, y_pred)
+
+    print(f"Regression report — {name}")
+    print("-" * 40)
+    print(f"MAE  : {mae:.4f}")
+    print(f"RMSE : {rmse:.4f}")
+    print(f"MSE  : {mse:.4f}")
+    print(f"R²   : {r2:.4f}")
+
+    return {
+        "mae": mae,
+        "rmse": rmse,
+        "mse": mse,
+        "r2": r2
+    }

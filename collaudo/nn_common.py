@@ -256,22 +256,32 @@ def predict(model: 'MLP', X_test: pd.DataFrame):
     return preds_t
 
 
-def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algorithm, batch_size: int | str = DEFAULT_TRAIN_BATCH_SIZE,
+def pack_dataset(datasets: tuple) -> dict:
+
+    if len(datasets) == 2:
+        return {"ho": (datasets[0], datasets[1])}
+    else:
+        return {"kf": (datasets[0], datasets[1], datasets[2], datasets[3])}
+
+
+def train(model: MLP, datasets: tuple, optimizer_template, loss_algorithm, batch_size: int | str = DEFAULT_TRAIN_BATCH_SIZE,
           epochs:int=DEFAULT_TRAIN_EPOCHS, val_ratio:float=DEFAULT_TRAIN_VAL_RATIO, seed:int=DEFAULT_TRAIN_SEED,
-          patience:int=DEFAULT_TRAIN_PATIENCE, min_delta:float=DEFAULT_TRAIN_DELTA,
+          patience:int = DEFAULT_TRAIN_PATIENCE, min_delta:float=DEFAULT_TRAIN_DELTA,
           scheduler_template= None,silence_output:bool=False) -> {}:
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
     while monitoring performance on a validation set to track generalization and detect overfitting.
+    Depending on the input parameter datasets the train will perform in two ways:
+        - if len(dataset) == 2 the dataset is split in two datasets X_tr + y_tr for training and X_vl + y_vl for testing, the split depends on the val_ratio parameter
+        - if len(dataset) == 4 the dataset remains untouched
     It returns a dictionary containing:
-            - record_tr_loss Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.\n
-            - record_vl_loss: Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
-            - record_tr_acc: Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks. (Note: in regression tasks this quantity is not used.)
-            - record_vl_acc: Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
-            - record_grad_norm: Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
+        - record_tr_loss Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.\n
+        - record_vl_loss: Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
+        - record_tr_acc: Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks. (Note: in regression tasks this quantity is not used.)
+        - record_vl_acc: Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
+        - record_grad_norm: Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
     :param model: the model to be trained
-    :param X: training features as a pandas DataFrame
-    :param y: training labels as ndarray
+    :param datasets: a tuple containing X_tr, y_tr or X_tr, y_tr, X_vl, y_vl
     :param optimizer_template:
     :param loss_algorithm: the loss algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :param batch_size: "batch", "online" or the mini-batch size for training
@@ -308,10 +318,26 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
     else:
         scheduler = None
 
-    # Prepare tensors from TR dataset
-    X_tr_t, y_tr_t, X_vl_t, y_vl_t = _prepare_for_torch(
-        X.astype(np.float32).to_numpy(), y, val_ratio=val_ratio, seed=seed
-    )
+    # Hold-out
+    if len(datasets) == 2:
+        X=datasets[0].astype(np.float32).to_numpy()
+        y=datasets[1]
+        X_tr, y_tr, X_vl, y_vl = _make_split(X, y, val_ratio=val_ratio, seed=seed)
+
+        # Convert each sets to tensor for use with PyTorch
+        X_tr_t, y_tr_t = _to_tensors(X_tr, y_tr) # TR sets
+        X_vl_t, y_vl_t = _to_tensors(X_vl, y_vl) # VL sets
+
+    # KFold
+    else:  # "kf" in datasets:
+        X_tr=datasets[0].astype(np.float32).to_numpy()
+        y_tr=datasets[1]
+        X_vl=datasets[2].astype(np.float32).to_numpy()
+        y_vl=datasets[3]
+
+        X_tr_t, y_tr_t = _to_tensors(X_tr, y_tr)
+        X_vl_t, y_vl_t = _to_tensors(X_vl, y_vl)
+
 
     # Build DataLoader (or the batch as it is known in ML)
     if batch_size=="batch":
@@ -393,8 +419,9 @@ def train(model: MLP, X: pd.DataFrame, y: ndarray, optimizer_template, loss_algo
         record_vl_acc.append(vl_acc)
 
         # Gradient mean
-        gn = np.mean(epoch_grad_norms)
-        record_grad_norm.append(gn)
+        #gn = np.mean(epoch_grad_norms)
+        #record_grad_norm.append(gn)
+        record_grad_norm.append(float(np.mean(epoch_grad_norms)) if len(epoch_grad_norms) else 0.0)
 
         # In case early stopping is enabled
         if best_state is not None:
@@ -444,11 +471,17 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
     for fold_nr, (tr_idx, vl_idx) in enumerate(fold_strategy.split(X, y)):
 
         # X, y subset
-        X_subset = X.iloc[tr_idx]
-        y_subset = y[tr_idx]
+        # X_subset = X.iloc[tr_idx]
+        # y_subset = y[tr_idx]
+
+        X_tr = X.iloc[tr_idx];
+        y_tr = y[tr_idx]
+        X_vl = X.iloc[vl_idx];
+        y_vl = y[vl_idx]
+
 
         print(f"  ")
-        print(f"Perform fold: {fold_nr}, train size: {len(X_subset)}, val size: {len(vl_idx)}")
+        print(f"Perform fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
 
         # Model cloning
         fold_model = copy.deepcopy(untrained_base_model)
@@ -456,7 +489,9 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
         # Training
         #tr_loss_hist, vl_loss_hist, tr_hist_acc, vl_hist_acc, grad_norm
         train_result = train(
-            fold_model, X_subset, y_subset, optimizer_template, loss_function,
+            fold_model,
+            (X_tr, y_tr, X_vl, y_vl),
+            optimizer_template, loss_function,
             epochs=inner_epochs,
             patience=inner_patience,
             min_delta=inner_min_delta,
@@ -630,7 +665,7 @@ def regression_mse_adapter() -> OutputAdapter:
 
 
 def plot_epoch_loss(hist_tr, hist_vl):
-    plt.figure(figsize=(8,4))
+    plt.figure()
     plt.plot(hist_tr, label="TR loss")
     plt.plot(hist_vl, label="VL loss")
     plt.xlabel("Epoch")
@@ -640,7 +675,7 @@ def plot_epoch_loss(hist_tr, hist_vl):
 
 
 def plot_epoch_accuracy(hist_tr_acc, hist_vl_acc):
-    plt.figure(figsize=(8,4))
+    plt.figure()
     plt.plot(hist_tr_acc, label="TR Accuracy")
     plt.plot(hist_vl_acc, label="VL Accuracy")
     plt.xlabel("Epoch")
@@ -908,7 +943,7 @@ def kfold_regression_table(fold_histories, use="best", derive_rmse=True):
 
 
 def plot_epoch_mee(hist_tr_mee, hist_vl_mee):
-    plt.figure(figsize=(8, 4))
+    plt.figure()
     plt.plot(hist_tr_mee, label="TR MEE")
     plt.plot(hist_vl_mee, label="VL MEE")
     plt.xlabel("Epoch")

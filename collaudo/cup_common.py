@@ -58,9 +58,12 @@ def load_set() -> (DataFrame, DataFrame):
 
 def split_and_prepare_dataset(df_train: DataFrame, ratio: float = 0.2, random_state:int = 42, scaler=None) -> (DataFrame, ndarray,DataFrame, ndarray, DataFrame, ndarray, DataFrame, ndarray):
     """
-    Split dataset into training and testing sets eventually applying one-hot encoding
+    Split dataset into training and testing sets eventually applying a scaler if present
     :param df_orig: the original dataset
-    :return: A tuple (X, y) representing the features and the labels
+    :param ratio: the ratio of training and testing sets (i.e 0.2 -> TR 80% VL 20%)
+    :param random_state: the random state for shuffling
+    :param scaler: the scaler to use for scaling
+    :return: A tuple (X_tr, y_tr, X_ts, y_ts) representing the training and testing set
     """
     # The scaler
     scaler = MinMaxScaler()

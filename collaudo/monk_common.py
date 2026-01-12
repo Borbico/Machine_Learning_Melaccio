@@ -1,11 +1,7 @@
-import numpy as np
+
 import pandas as pd
-from matplotlib import pyplot as plt
 from numpy import ndarray
 from pandas import DataFrame
-from scipy.spatial.distance import euclidean
-from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve
-from sklearn.neighbors import KNeighborsClassifier
 
 
 columns = [
@@ -41,11 +37,6 @@ def load_set(nr: int) -> (DataFrame, DataFrame):
     monk_ts_path = set_base_path.format(nr, "test")
 
     return read_file(monk_tr_path), read_file(monk_ts_path)
-
-
-def _read_TR_TS_datasets(monk_TR_path: str, monk_TS_path: str) -> [DataFrame]:
-
-    return read_file(monk_TR_path), read_file(monk_TS_path)
 
 
 def split_and_prepare_dataset(df_orig: DataFrame) -> (DataFrame, ndarray):

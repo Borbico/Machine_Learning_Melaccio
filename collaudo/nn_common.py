@@ -16,7 +16,6 @@ DEFAULT_TRAIN_BATCH_SIZE = 32
 DEFAULT_TRAIN_DELTA = 1e-4
 DEFAULT_TRAIN_VAL_RATIO = 0.2
 DEFAULT_TRAIN_SEED = 1
-DEFAULT_TRAIN_BATCH_SIZE = 32
 
 
 def _make_split(X:ndarray, y:ndarray, val_ratio, seed) -> (ndarray, ndarray, ndarray, ndarray):
@@ -256,14 +255,6 @@ def predict(model: 'MLP', X_test: pd.DataFrame):
     return preds_t
 
 
-def pack_dataset(datasets: tuple) -> dict:
-
-    if len(datasets) == 2:
-        return {"ho": (datasets[0], datasets[1])}
-    else:
-        return {"kf": (datasets[0], datasets[1], datasets[2], datasets[3])}
-
-
 def train(model: MLP, datasets: tuple, optimizer_template, loss_algorithm, batch_size: int | str = DEFAULT_TRAIN_BATCH_SIZE,
           epochs:int=DEFAULT_TRAIN_EPOCHS, val_ratio:float=DEFAULT_TRAIN_VAL_RATIO, seed:int=DEFAULT_TRAIN_SEED,
           patience:int = DEFAULT_TRAIN_PATIENCE, min_delta:float=DEFAULT_TRAIN_DELTA,
@@ -296,15 +287,15 @@ def train(model: MLP, datasets: tuple, optimizer_template, loss_algorithm, batch
 
     # Data container for later
     # visual representation
-    record_tr_loss = []
-    record_vl_loss = []
-    record_tr_acc = []
-    record_vl_acc = []
-    record_tr_mae = []
-    record_vl_mae = []
-    record_tr_mee = []
-    record_vl_mee = []
-    record_grad_norm = []
+    hist_tr_loss = []
+    hist_vl_loss = []
+    hist_tr_acc = []
+    hist_vl_acc = []
+    hist_tr_mae = []
+    hist_vl_mae = []
+    hist_tr_mee = []
+    hist_vl_mee = []
+    hist_grad_norm = []
     epoch_grad_norms = []
 
     best_vl = float("inf")
@@ -374,19 +365,22 @@ def train(model: MLP, datasets: tuple, optimizer_template, loss_algorithm, batch
         # Loss estimation
         tr_l = epoch_loss(model, dl_tr, loss_algorithm)
         vl_l = epoch_loss(model, dl_vl, loss_algorithm)
+        hist_tr_loss.append(tr_l)
+        hist_vl_loss.append(vl_l)
 
         # Calculate Mean Absolute Error (MAE)
-        tr_mae = epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean"))
-        vl_mae = epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean"))
+        hist_tr_mae.append(epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean")))
+        hist_vl_mae.append(epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean")))
 
-        record_tr_mae.append(tr_mae)
-        record_vl_mae.append(vl_mae)
+        hist_tr_mee.append(epoch_mee(model, dl_tr))
+        hist_vl_mee.append(epoch_mee(model, dl_vl))
 
-        tr_mee = epoch_mee(model, dl_tr)
-        vl_mee = epoch_mee(model, dl_vl)
+        hist_tr_acc.append(epoch_accuracy(model, dl_tr))
+        hist_vl_acc.append(epoch_accuracy(model, dl_vl))
 
-        record_tr_mee.append(tr_mee)
-        record_vl_mee.append(vl_mee)
+        # Gradient mean
+        hist_grad_norm.append(float(np.mean(epoch_grad_norms)) if len(epoch_grad_norms) else 0.0)
+
 
         # Applying learning rate decay
         if scheduler is not None:
@@ -409,34 +403,20 @@ def train(model: MLP, datasets: tuple, optimizer_template, loss_algorithm, batch
                 break
         # -----------------------------
 
-        record_tr_loss.append(tr_l)
-        record_vl_loss.append(vl_l)
-
-        tr_acc = epoch_accuracy(model, dl_tr)
-        vl_acc = epoch_accuracy(model, dl_vl)
-
-        record_tr_acc.append(tr_acc)
-        record_vl_acc.append(vl_acc)
-
-        # Gradient mean
-        #gn = np.mean(epoch_grad_norms)
-        #record_grad_norm.append(gn)
-        record_grad_norm.append(float(np.mean(epoch_grad_norms)) if len(epoch_grad_norms) else 0.0)
-
         # In case early stopping is enabled
         if best_state is not None:
             model.load_state_dict(best_state)
 
     train_results = {
-        "hist_tr": record_tr_loss,
-        "hist_vl": record_vl_loss,
-        "hist_tr_acc": record_tr_acc,
-        "hist_vl_acc": record_vl_acc,
-        "hist_tr_mae": record_tr_mae,
-        "hist_vl_mae": record_vl_mae,
-        "hist_tr_mee": record_tr_mee,
-        "hist_vl_mee": record_vl_mee,
-        "hist_grad": record_grad_norm
+        "hist_tr_loss": hist_tr_loss,
+        "hist_vl_loss": hist_vl_loss,
+        "hist_tr_acc": hist_tr_acc,
+        "hist_vl_acc": hist_vl_acc,
+        "hist_tr_mae": hist_tr_mae,
+        "hist_vl_mae": hist_vl_mae,
+        "hist_tr_mee": hist_tr_mee,
+        "hist_vl_mee": hist_vl_mee,
+        "hist_grad": hist_grad_norm
     }
 
     return train_results
@@ -501,8 +481,8 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
             scheduler_template=scheduler_template
         )
 
-        hist_tr = train_result["hist_tr"]
-        hist_vl = train_result["hist_vl"]
+        hist_tr_loss = train_result["hist_tr_loss"]
+        hist_vl_loss = train_result["hist_vl_loss"]
         tr_hist_acc = train_result["hist_tr_acc"]
         vl_hist_acc = train_result["hist_vl_acc"]
         hist_tr_mae = train_result["hist_tr_mae"]
@@ -513,10 +493,10 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
 
         # Data gathering
         fold_histories.append({
-            "tr_loss": np.mean(hist_tr),
-            "tr_loss_std": np.std(hist_tr),
-            "vl_loss": np.mean(hist_vl),
-            "vl_loss_std": np.std(hist_vl),
+            "tr_loss": np.mean(hist_tr_loss),
+            "tr_loss_std": np.std(hist_tr_loss),
+            "vl_loss": np.mean(hist_vl_loss),
+            "vl_loss_std": np.std(hist_vl_loss),
             "tr_acc": np.mean(tr_hist_acc),
             "tr_acc_std": np.std(tr_hist_acc),
             "vl_acc": np.mean(vl_hist_acc),
@@ -530,18 +510,22 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
             "vl_mee": np.mean(hist_vl_mee),
             "vl_mee_std": np.std(hist_vl_mee),
 
-            "best_tr_loss": float(min(hist_tr)),
+            "best_tr_loss": float(min(hist_tr_loss)),
             "best_tr_acc": float(max(tr_hist_acc)),
-            "last_tr_loss": float(hist_tr[-1]),
+            "last_tr_loss": float(hist_tr_loss[-1]),
             "last_tr_acc": float(tr_hist_acc[-1]),
 
-            "best_vl_loss": float(min(hist_vl)),
+            "best_vl_loss": float(min(hist_vl_loss)),
             "best_vl_acc": float(max(vl_hist_acc)),
-            "last_vl_loss": float(hist_vl[-1]),
+            "last_vl_loss": float(hist_vl_loss[-1]),
             "last_vl_acc": float(vl_hist_acc[-1]),
 
             "best_tr_mee": float(min(hist_tr_mee)),
-            "best_vl_mee": float(max(hist_vl_mee))
+            "best_vl_mee": float(min(hist_vl_mee)),
+            "last_vl_mee": float(hist_vl_mee[-1]),
+
+            # return original metric
+            #"train_result": train_result
         })
 
     return fold_histories

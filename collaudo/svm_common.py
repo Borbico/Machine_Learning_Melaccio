@@ -1,7 +1,9 @@
 import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
+from sklearn import clone
 from sklearn.inspection import permutation_importance
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.model_selection import learning_curve
 
 
@@ -355,3 +357,120 @@ def plot_residuals_hist(y_true, y_pred, bins=40, title="Residuals distribution")
     plt.title(title)
     plt.tight_layout()
     plt.show()
+
+
+def run_kfold(model, X, y, folder_strategy):
+    """
+    Build a NN-like fold history dictionary for models without epochs (e.g., SVR, KNN).
+
+    Produces the same keys style you use in NN:
+    - tr_mee, tr_mee_std, vl_mee, vl_mee_std
+    - tr_mae, tr_mae_std, vl_mae, vl_mae_std
+    - tr_loss, vl_loss (here loss = MSE by default)
+    - best_*, last_* are meaningful but trivial (best == last because 1 value per fold list).
+
+    Notes:
+    - Accuracy fields are set to None (not defined for regression).
+    - If you want a different "loss", change loss_fn section.
+    """
+
+    # raw per-fold lists
+    hist_tr_loss, hist_vl_loss = [], []
+    hist_tr_rmse, hist_vl_rmse = [], []
+    hist_tr_mae, hist_vl_mae = [], []
+    hist_tr_mee, hist_vl_mee = [], []
+
+    # loop folds
+    for fold_nr, (tr_idx, vl_idx) in enumerate(folder_strategy.split(X)):
+        X_tr, X_vl = X[tr_idx], X[vl_idx]
+        y_tr, y_vl = y[tr_idx], y[vl_idx]
+
+        m = clone(model)
+        m.fit(X_tr, y_tr)
+
+        yhat_tr = m.predict(X_tr)
+        yhat_vl = m.predict(X_vl)
+
+        # --- choose "loss": here MSE (scalar) computed by flattening all outputs
+        tr_mse = mean_squared_error(y_tr, yhat_tr)
+        vl_mse = mean_squared_error(y_vl, yhat_vl)
+
+        tr_rmse = np.sqrt(tr_mse)
+        vl_rmse = np.sqrt(vl_mse)
+
+        hist_tr_loss.append(float(tr_mse))
+        hist_vl_loss.append(float(vl_mse))
+
+        hist_tr_rmse.append(float(tr_rmse))
+        hist_vl_rmse.append(float(vl_rmse))
+
+        # MAE (flattening multi-output)
+        hist_tr_mae.append(float(mean_absolute_error(y_tr, yhat_tr)))
+        hist_vl_mae.append(float(mean_absolute_error(y_vl, yhat_vl)))
+
+        # MEE (vector error per sample)
+        hist_tr_mee.append(np.mean(np.linalg.norm(y_tr - yhat_tr, axis=1)))
+        hist_vl_mee.append(np.mean(np.linalg.norm(y_vl - yhat_vl, axis=1)))
+
+    # helper
+    def _agg(vals, decimals=4):
+        vals = np.asarray(vals, dtype=float)
+
+        return (
+            round(np.mean(vals), decimals),
+            round(np.std(vals), decimals),
+            round(np.min(vals), decimals),
+            round(vals[-1], decimals),
+        )
+
+    tr_loss, tr_loss_std, best_tr_loss, last_tr_loss = _agg(hist_tr_loss)
+    vl_loss, vl_loss_std, best_vl_loss, last_vl_loss = _agg(hist_vl_loss)
+
+    tr_mae, tr_mae_std, best_tr_mae, last_tr_mae = _agg(hist_tr_mae)
+    vl_mae, vl_mae_std, best_vl_mae, last_vl_mae = _agg(hist_vl_mae)
+
+    tr_mee, tr_mee_std, best_tr_mee, last_tr_mee = _agg(hist_tr_mee)
+    vl_mee, vl_mee_std, best_vl_mee, last_vl_mee = _agg(hist_vl_mee)
+
+    return {
+        "tr_loss": tr_loss,
+        "tr_loss_std": tr_loss_std,
+        "vl_loss": vl_loss,
+        "vl_loss_std": vl_loss_std,
+
+        # classification-only fields: not meaningful here
+        "tr_acc": None,
+        "tr_acc_std": None,
+        "vl_acc": None,
+        "vl_acc_std": None,
+
+        "tr_mae": tr_mae,
+        "tr_mae_std": tr_mae_std,
+        "vl_mae": vl_mae,
+        "vl_mae_std": vl_mae_std,
+
+        "tr_mee": tr_mee,
+        "tr_mee_std": tr_mee_std,
+        "vl_mee": vl_mee,
+        "vl_mee_std": vl_mee_std,
+
+        "best_tr_loss": best_tr_loss,
+        "last_tr_loss": last_tr_loss,
+        "best_vl_loss": best_vl_loss,
+        "last_vl_loss": last_vl_loss,
+
+        # acc not defined
+        "best_tr_acc": None,
+        "last_tr_acc": None,
+        "best_vl_acc": None,
+        "last_vl_acc": None,
+
+        "best_tr_mee": best_tr_mee,
+        "best_vl_mee": best_vl_mee,
+        "last_vl_mee": last_vl_mee,
+
+        "hist_vl_mee": hist_vl_mee,
+        "hist_vl_mae": hist_vl_mae,
+        "hist_vl_loss": hist_vl_loss,
+        "hist_vl_rmse": hist_vl_rmse
+    }

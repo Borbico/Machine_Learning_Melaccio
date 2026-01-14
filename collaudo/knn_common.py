@@ -4,6 +4,7 @@
 import warnings
 
 import numpy as np
+from sklearn import clone
 from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve
 from sklearn.neighbors import KNeighborsClassifier
@@ -404,3 +405,94 @@ def regression_report(y_true, y_pred, name="Model"):
         "mse": mse,
         "r2": r2
     }
+
+
+def mee(y_true, y_pred):
+    return np.mean(np.linalg.norm(y_true - y_pred, axis=1))
+
+
+import numpy as np
+import pandas as pd
+from sklearn.base import clone
+
+def mee(y_true, y_pred):
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    return float(np.mean(np.linalg.norm(y_true - y_pred, axis=1)))
+
+import numpy as np
+import pandas as pd
+from sklearn.base import clone
+from sklearn.metrics import mean_squared_error
+
+def mee(y_true, y_pred):
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+    return float(np.mean(np.linalg.norm(y_true - y_pred, axis=1)))
+
+
+def run_kfold(untrained_base_model,X,y,fold_strategy):
+    """
+    K-Fold CV for sklearn models (multi-output regression) collecting:
+    - MEE
+    - MSE (averaged over outputs)
+    - RMSE
+
+    'best' and 'last' are defined over folds (no epochs in sklearn KNN):
+    - best = fold with minimum MEE
+    - last = last fold executed
+    """
+
+    # Convert to numpy once
+    Xn = X.to_numpy() if hasattr(X, "to_numpy") else np.asarray(X)
+    yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
+
+    fold_rows = []
+
+    for fold_nr, (tr_idx, vl_idx) in enumerate(fold_strategy.split(Xn), start=1):
+        model = clone(untrained_base_model)
+
+        X_tr, y_tr = Xn[tr_idx], yn[tr_idx]
+        X_vl, y_vl = Xn[vl_idx], yn[vl_idx]
+
+        model.fit(X_tr, y_tr)
+        pred = model.predict(X_vl)
+
+        fold_mee = mee(y_vl, pred)
+        fold_mse = float(mean_squared_error(y_vl, pred))   # avg over 4 outputs
+        fold_rmse = float(np.sqrt(fold_mse))
+
+        fold_rows.append({
+            "fold": fold_nr,
+            "mee": fold_mee,
+            "mse": fold_mse,
+            "rmse": fold_rmse
+        })
+
+    per_fold = pd.DataFrame(fold_rows)
+
+    # Choose "best" fold based on MEE (you can switch criterion if you prefer)
+    best_idx = int(per_fold["mee"].idxmin())
+
+    results = {
+        "per_fold": per_fold,
+
+        "mee_mean": float(per_fold["mee"].mean()),
+        "mee_std":  float(per_fold["mee"].std(ddof=0)),
+        "mse_mean": float(per_fold["mse"].mean()),
+        "mse_std":  float(per_fold["mse"].std(ddof=0)),
+        "rmse_mean": float(per_fold["rmse"].mean()),
+        "rmse_std":  float(per_fold["rmse"].std(ddof=0)),
+
+        "best_fold": int(per_fold.loc[best_idx, "fold"]),
+        "mee_best":  float(per_fold.loc[best_idx, "mee"]),
+        "mse_best":  float(per_fold.loc[best_idx, "mse"]),
+        "rmse_best": float(per_fold.loc[best_idx, "rmse"]),
+
+        "last_fold": int(per_fold.iloc[-1]["fold"]),
+        "mee_last":  float(per_fold.iloc[-1]["mee"]),
+        "mse_last":  float(per_fold.iloc[-1]["mse"]),
+        "rmse_last": float(per_fold.iloc[-1]["rmse"]),
+    }
+
+    return results

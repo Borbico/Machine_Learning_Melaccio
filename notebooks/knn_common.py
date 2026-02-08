@@ -1,15 +1,13 @@
 # ============================================================
 # KNN Functions
 # ============================================================
-import warnings
+
 
 import numpy as np
-from sklearn import clone
-from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
-from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve
-from sklearn.neighbors import KNeighborsClassifier
+from networkx.classes import non_neighbors
+from sklearn.model_selection import learning_curve
 from matplotlib import pyplot as plt
-import cup_common as cc
+
 
 
 def extract_best_knn_metrics_from_grid(gs):
@@ -22,106 +20,22 @@ def extract_best_knn_metrics_from_grid(gs):
 
     return best_model, clean_params
 
-
-def extract_best_knn_metrics(cv_scores: list) -> tuple:
-    """
-    Find the best scores
-    :param cv_scores: the cross validation scores
-    :return: a tuple containing the best K, score, and standard deviation
-    """
-
-    return max(cv_scores, key=lambda x: x[1])
+N_NEIGHBORS = "n_neighbors"
 
 
-def find_best_knn_model(X, y, cv, k_range: list, scoring:str = "accuracy", weights:str = "uniform", metric:str = "euclidean") -> (KNeighborsClassifier, list):
-    """
-    Find the best KNN model using cross validation
-    :param X:
-    :param y:
-    :param cv:
-    :param k_range:
-    :param scoring:
-    :param weights:
-    :param metric:
-    :return:
-    """
-
-    warnings.warn(
-        "old_function is deprecated and will be removed in a future release. "
-        "Use new_function instead.",
-        category=DeprecationWarning,
-        stacklevel=2
-    )
-
-    train_scores = [] # Train scores
-    cv_scores = [] # Cross validation scores
-
-    # iterate over K
-    for k in k_range:
-
-        # 1.Instantiate our KNN classifier
-        model_k = KNeighborsClassifier(
-            n_neighbors=k,
-            weights=weights,
-            metric=metric
-        )
-
-        # 2. Calculate the mean accuracy on the given test data and labels.
-        model_k.fit(X, y)
-        score = model_k.score(X, y)
-        train_scores.append((k, score))
-
-        # 3. Evaluate the scores by cross-validation.
-        # Note: as stated in scikit-learn documentation
-        # at each fold iteration the function creates a brand-new model
-        # based on model_k passed in input to the function
-        scores = cross_val_score(model_k, X, y, cv=cv, scoring=scoring)
-        mean = scores.mean() # Mean accuracy
-        std = scores.std() # Standard deviation
-        cv_scores.append((k,mean,std))
-
-    # Retrieve the best classifier
-    best_k, best_mean, best_std = extract_best_knn_metrics(cv_scores)
-
-    # Finally build a classifier with best K
-    best_model = KNeighborsClassifier(
-        n_neighbors=best_k,
-        weights=weights,
-        metric=metric
-    )
-
-    return best_model, cv_scores, train_scores
+def label_row(r, step_name:str="model"):
+    k = r.get(f"param_{step_name}__n_neighbors", "")
+    w = r.get(f"param_{step_name}__weights", "")
+    m = r.get(f"param_{step_name}__metric", "")
+    p = r.get(f"param_{step_name}__p", "")
+    return f"k={k} | w={w}, m={m}, p={p}"
 
 
-def plot_knn_validation_curve_from_gs_old(gs):
-    """
-    Plot training vs CV accuracy from a fitted GridSearchCV object
-    """
-
-    results = gs.cv_results_
-
-    k_values = results["param_knn__n_neighbors"]
-    train_scores = results["mean_train_score"]
-    cv_scores = results["mean_test_score"]
-
-
-    plt.figure(figsize=(7, 4))
-    plt.plot(k_values, train_scores, label="Training accuracy")
-    plt.plot(k_values, cv_scores, label="CV mean accuracy")
-
-    plt.xlabel("k (n_neighbors)")
-    plt.ylabel("Accuracy")
-    plt.title("K-NN validation curve (training vs CV)")
-    plt.grid(True)
-    plt.legend()
-    plt.show()
-
-
-def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1):
+def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1, step_name:str="model"):
 
     r = gs.cv_results_
-    best_k = gs.best_params_["regressor__n_neighbors"] # best K
-    k_vals = np.array(r["param_regressor__n_neighbors"], dtype=int) # all tried K
+    best_k = gs.best_params_[f"{step_name}__{N_NEIGHBORS}"] # best K
+    k_vals = np.array(r[f"param_{step_name}__{N_NEIGHBORS}"], dtype=int) # all tried K
 
     test_scores = np.array(score_correction * r["mean_test_score"], dtype=float)
     train_scores = np.array(score_correction * r.get("mean_train_score", np.full_like(test_scores, np.nan)), dtype=float)
@@ -380,138 +294,3 @@ def k_neighborhood(best_k: int,n_samples: int,step: int = 2,min_k: int = 1) -> l
             break
 
     return k_values
-
-
-def regression_report(y_true, y_pred, name="Model"):
-    mae = mean_absolute_error(y_true, y_pred)
-    mse = mean_squared_error(y_true, y_pred)
-    rmse = np.sqrt(mse)
-    r2 = r2_score(y_true, y_pred)
-
-    print(f"Regression report — {name}")
-    print("-" * 40)
-    print(f"MAE  : {mae:.4f}")
-    print(f"RMSE : {rmse:.4f}")
-    print(f"MSE  : {mse:.4f}")
-    print(f"R²   : {r2:.4f}")
-
-    return {
-        "mae": mae,
-        "rmse": rmse,
-        "mse": mse,
-        "r2": r2
-    }
-
-
-def mee(y_true, y_pred):
-    return np.mean(np.linalg.norm(y_true - y_pred, axis=1))
-
-
-import numpy as np
-import pandas as pd
-from sklearn.base import clone
-
-def mee(y_true, y_pred):
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
-    return float(np.mean(np.linalg.norm(y_true - y_pred, axis=1)))
-
-import numpy as np
-import pandas as pd
-from sklearn.base import clone
-from sklearn.metrics import mean_squared_error
-
-
-# def mee(y_true, y_pred):
-#     y_true = np.asarray(y_true)
-#     y_pred = np.asarray(y_pred)
-#     return float(np.mean(np.linalg.norm(y_true - y_pred, axis=1)))
-
-
-def run_kfold(untrained_base_model, X, y, fold_strategy, fill_value=np.nan) -> cc.FoldResults:
-    """
-    K-Fold CV for sklearn multi-output regression model (e.g., Pipeline+KNN).
-    Returns fold_histories in a format aligned with your NN logs.
-
-    Notes:
-    - No epochs => per-epoch histories do not exist.
-      We store single-point metrics per fold; mean/best/last coincide.
-    - 'acc' fields are not defined for regression => filled with fill_value.
-    - 'loss' fields: we map them to MSE (quadratic loss) for consistency.
-    """
-
-    Xn = X.to_numpy() if hasattr(X, "to_numpy") else np.asarray(X)
-    yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
-
-    fold_results = cc.FoldResults()
-
-    for fold_nr, (tr_idx, vl_idx) in enumerate(fold_strategy.split(Xn), start=1):
-
-        X_tr, y_tr = Xn[tr_idx], yn[tr_idx] # Train set
-        X_vl, y_vl = Xn[vl_idx], yn[vl_idx] # Validation set
-
-        # Clone model and fit
-        model = clone(untrained_base_model)
-        model.fit(X_tr, y_tr)
-
-        # Predict on train-fold and val-fold
-        pred_tr = model.predict(X_tr)
-        pred_vl = model.predict(X_vl)
-
-        # Mean squared error and root mean squared error
-        tr_mse = float(mean_squared_error(y_tr, pred_tr))
-        tr_rmse = float(np.sqrt(tr_mse))
-        vl_mse = float(mean_squared_error(y_vl, pred_vl))
-        vl_rmse = float(np.sqrt(vl_mse))
-        # Mean euclidean error
-        tr_mee, vl_mee = cc.mee(y_tr, pred_tr), cc.mee(y_vl, pred_vl)
-
-        # Compared with NN we have no epochs, "history" is a single point.
-        # std across epochs is 0.0, and best == last == that point.
-        fold_results.append(cc.FoldResult({
-            "fold_nr": fold_nr,
-
-            # Map "loss" to MSE for regression (quadratic loss)
-            "tr_loss": tr_mse, "tr_loss_std": 0.0,
-            "vl_loss": vl_mse, "vl_loss_std": 0.0,
-            "tr_rmse": tr_rmse, "vl_rmse": vl_rmse,
-
-            # accuracy not defined in regression
-            "tr_acc": fill_value, "tr_acc_std": fill_value,
-            "vl_acc": fill_value, "vl_acc_std": fill_value,
-
-            "tr_mae": fill_value, "tr_mae_std": fill_value,
-            "vl_mae": fill_value, "vl_mae_std": fill_value,
-
-            "tr_mee": tr_mee, "tr_mee_std": 0.0,
-            "vl_mee": vl_mee, "vl_mee_std": 0.0,
-
-            "best_tr_loss": tr_mse, "best_vl_loss": vl_mse,
-            "best_tr_acc": fill_value, "best_vl_acc": fill_value,
-            "best_tr_mee": tr_mee, "best_vl_mee": vl_mee
-        }))
-
-        # fold_results.append(cc.FoldResult({
-        #     "fold_nr": fold_nr,
-        #     "tr_loss": np.mean(hist_tr_loss), "tr_loss_std": np.std(hist_tr_loss),
-        #     "vl_loss": np.mean(hist_vl_loss), "vl_loss_std": np.std(hist_vl_loss),
-        #     "tr_acc": np.mean(tr_hist_acc), "tr_acc_std": np.std(tr_hist_acc),
-        #     "vl_acc": np.mean(vl_hist_acc), "vl_acc_std": np.std(vl_hist_acc),
-        #     "tr_mae": np.mean(hist_tr_mae), "tr_mae_std": np.std(hist_tr_mae),
-        #     "vl_mae": np.mean(hist_vl_mae), "vl_mae_std": np.std(hist_vl_mae),
-        #     "tr_mee": np.mean(hist_tr_mee), "tr_mee_std": np.std(hist_tr_mee),
-        #     "vl_mee": np.mean(hist_vl_mee), "vl_mee_std": np.std(hist_vl_mee),
-        #
-        #     "best_tr_loss": float(min(hist_tr_loss)),
-        #     "best_tr_acc": float(max(tr_hist_acc)),
-        #
-        #     "best_vl_loss": float(min(hist_vl_loss)),
-        #     "best_vl_acc": float(max(vl_hist_acc)),
-        #
-        #     "best_tr_mee": float(min(hist_tr_mee)),
-        #     "best_vl_mee": float(min(hist_vl_mee))
-        # }))
-
-    #return pd.DataFrame(fold_histories)
-    return fold_results
-

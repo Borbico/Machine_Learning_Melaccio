@@ -1,5 +1,4 @@
 import copy
-from abc import abstractmethod
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -8,14 +7,10 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from numpy import ndarray
 from sklearn import clone
-from sklearn.preprocessing import StandardScaler
 from torch import nn, Tensor
 from torch.nn import MSELoss
-from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
 from torch.utils.data import TensorDataset, DataLoader
 import cup_common as cc
-
-#from cup_common import FoldResult, FoldResults
 
 # Default train params
 DEFAULT_TRAIN_EPOCHS = 500
@@ -125,37 +120,6 @@ def _compute_loss(model:MLP, X:torch.Tensor, y: torch.Tensor, loss_function: nn.
     # to be compared with the output
     loss = loss_function(output, y)
     return loss
-
-
-# def _epoch_mee(model: MLP, dataloader: DataLoader) -> float:
-#     """
-#     Computes the Mean Euclidean Error (MEE) over an entire dataset.
-#     MEE is defined as the average Euclidean distance between
-#     predicted and target vectors (multi-output regression).
-#     """
-#
-#     was_training = model.training
-#     model.eval()
-#
-#     total_mee = 0.0
-#     total_n = 0
-#
-#     with torch.no_grad():
-#         for X, y in dataloader:
-#             # Model output: shape (batch_size, 4)
-#             output = model.forward(X)
-#
-#             # Euclidean distance per sample
-#             # shape: (batch_size,)
-#             distances = torch.norm(output - y, dim=1)
-#
-#             total_mee += distances.sum().item()
-#             total_n += y.size(0)
-#
-#     if was_training:
-#         model.train()
-#
-#     return total_mee / total_n
 
 
 def epoch_accuracy(model, dataloader):
@@ -501,7 +465,7 @@ def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function
     })
 
 
-def kfold(untrained_base_model: MLP, X, y, fold_strategy, scaler_template, inner_train_params: dict) -> cc.FoldResults:
+def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: dict, scaler_template=None) -> cc.FoldResults:
     """
     Runs K-Fold cross-validation by reusing existing training/evaluation code.
     Returns per-fold histories and final validation metrics.
@@ -511,6 +475,7 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, scaler_template, inner
     :param y: training labels
     :param fold_strategy: the fold strategy (i.e. KFold, StratifiedKfold,...)
     :param inner_train_params: the parameters for the inner trainer
+    :param scaler_template: The scaler if needed
     """
 
     fold_results = cc.FoldResults()
@@ -1024,4 +989,4 @@ class MEELoss(nn.Module):
         return self.__str__()
 
     def __str__(self):
-        return f"{type(self).__name__}(reduction='{self.reduction}' custom function)"
+        return f"{type(self).__name__}(reduction='{self.reduction}') - custom function"

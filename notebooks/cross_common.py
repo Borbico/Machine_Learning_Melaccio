@@ -15,23 +15,16 @@ from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_c
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
+from sympy.physics.control import Series
 
 FOLD_NR = "fold_nr"
-
 FOLD_TR_MSE = "fold_tr_mse"
-
 FOLD_VL_MSE = "fold_vl_mse"
-
 FOLD_TR_ACC = "fold_tr_acc"
-
 FOLD_VL_ACC = "fold_vl_acc"
-
 FOLD_TR_MAE = "fold_tr_mae"
-
 FOLD_VL_MAE = "fold_vl_mae"
-
 FOLD_TR_MEE = "fold_tr_mee"
-
 FOLD_VL_MEE = "fold_vl_mee"
 
 output_columns = ["t1", "t2", "t3", "t4"]
@@ -150,13 +143,20 @@ def _class_counts_str(df, target="quality") -> str:
     return ", ".join([f"quality {k} = {v}" for k, v in vc.items()])
 
 
-def dataset_introspection(df_TR: DataFrame, df_TS: DataFrame) -> DataFrame:
+def dataset_introspection(df_TR: DataFrame, df_TS: DataFrame, class_introspection:bool=False) -> DataFrame:
     """
     Print a summary of the dataset introspection
     :param df_TR: the training dataframe
     :param df_TS: the testing dataframe
     :return: a summary of the dataset introspection in form of a DataFrame
     """
+
+    if class_introspection:
+        class_values = sorted(df_TR["quality"].unique().tolist()),
+        class_balance = _class_counts_str(df_TR)
+    else:
+        class_values = []
+        class_balance = []
 
     dataset_overview = pd.DataFrame({
         "Property": [
@@ -168,8 +168,8 @@ def dataset_introspection(df_TR: DataFrame, df_TS: DataFrame) -> DataFrame:
         "Training": [
             df_TR.shape[0],
             df_TR.shape[1] - 2,
-            [],#sorted(df_TR["quality"].unique().tolist()),
-            [],#_class_counts_str(df_TR)
+            class_values,
+            class_balance
         ],
         "Test": [
             df_TS.shape[0],
@@ -182,7 +182,7 @@ def dataset_introspection(df_TR: DataFrame, df_TS: DataFrame) -> DataFrame:
     return dataset_overview
 
 
-def common_fold_strategy(n_split:int=5, shuffle:bool=True, random_state:int=42) -> KFold:
+def common_fold_strategy(stratified:bool=False, n_split:int=5, shuffle:bool=True, random_state:int=42) -> KFold:
     """
     K-Fold cross-validation with shuffling is being used to obtain representative folds.
     A fixed random seed ensures reproducibility, and the same splitting strategy is applied to all models for fair comparison.
@@ -191,8 +191,25 @@ def common_fold_strategy(n_split:int=5, shuffle:bool=True, random_state:int=42) 
     :param random_state:
     :return:
     """
+    if stratified:
+        return StratifiedKFold(n_splits=n_split, shuffle=shuffle, random_state=random_state)
+    else:
+        return KFold(n_splits=n_split, shuffle=shuffle, random_state=random_state)
 
-    return KFold(n_splits=n_split, shuffle=shuffle, random_state=random_state)
+
+def model_baseline(X, y, cv=common_fold_strategy(), baseline=DummyRegressor(strategy='mean'), scorer_name:str="mee"):
+
+    scorer = common_scoring(scorer_name)
+
+    baseline_scores = cross_val_score(baseline, X, y, cv=cv, scoring=scorer)
+
+    print("-"*40)
+    print(f"Baseline: {baseline}")
+    print(f"Mean baseline: {-baseline_scores.mean()}")
+    print(f"Scorer: {scorer}")
+    print("Raw scores:", baseline_scores[:5])
+
+    return -baseline_scores.mean()
 
 
 def plot_kfold_mee(kf_result):
@@ -516,6 +533,10 @@ def common_scoring(name:str= "mae"):
         return "neg_median_absolute_error"
     elif name == "mee":
         return mee_scorer()
+    elif name == "acc":
+        return "accuracy"
+    elif name == "bacc":
+        return "balanced_accuracy"
     else:
         raise ValueError("Unknown scorer")
 
@@ -524,6 +545,59 @@ def mee_scorer():
     mee.__name__ = "neg_mean_eclidean_error"
     ms = make_scorer(mee, greater_is_better=False)
     return ms
+
+
+def assess_cv_robustness(cv, model, X, y, scoring:str, seeds:list=[10, 20, 30, 40, 50]):
+
+    params = cv.__dict__.copy()
+    for seed in seeds:
+        params["random_state"] = seed
+        cv_copy = cv.__class__(**params)
+        scores = cross_val_score(
+            model,
+            X, y,
+            cv=cv_copy,
+            scoring=scoring,
+        )
+
+        print('seed: {} - mean {:.3f} ± {:.3f}'.format(seed, scores.mean(), scores.std()))
+
+
+def plot_top_models(results, scoring_name:str, label_row:Series, TOP_N=10):
+    res = pd.DataFrame(results)
+
+    # Sort: best -> worst
+    res_sorted = res.sort_values(["mean_test_score", "rank_test_score"], ascending=[False, True]).reset_index(drop=True)
+
+    # Top e Worst
+    top = res_sorted.head(TOP_N).copy()
+    worst = res_sorted.tail(TOP_N).copy().iloc[::-1].copy()  # inverti: peggiore in alto
+
+    # Etichette (richiede che label_row esista già)
+    top["model_label"] = top.apply(label_row, axis=1)
+    worst["model_label"] = worst.apply(label_row, axis=1)
+
+    # --- Plot TOP ---
+    plt.figure(figsize=(9, 3))
+    scores = top["mean_test_score"].astype(float).values
+    errs = top["std_test_score"].astype(float).values
+    plt.barh(top["model_label"], scores, xerr=errs)
+    plt.gca().invert_yaxis()
+    plt.xlabel(f"Mean CV score ({scoring_name})")
+    plt.title(f"Top {TOP_N} models")
+    plt.tight_layout()
+    plt.show()
+
+    # --- Plot WORST ---
+    plt.figure(figsize=(9, 3))
+    scores = worst["mean_test_score"].astype(float).values
+    errs = worst["std_test_score"].astype(float).values
+    plt.barh(worst["model_label"], scores, xerr=errs)
+    plt.gca().invert_yaxis()  # peggiore in alto
+    plt.xlabel(f"Mean CV score ({scoring_name})")
+    plt.title(f"Worst {TOP_N} models from GridSearchCV")
+    plt.tight_layout()
+    plt.show()
 
 
 class SklearnRegressorRunner:
@@ -564,9 +638,9 @@ class TorchNNRunner:
         return self.predict_fn(model, X)
 
 
-def extract_best_pipeline_metrics_from_grid(gs):
+def extract_best_pipeline_metrics_from_grid(gs, step_name:str="model"):
 
-    best_model = gs.best_estimator_.named_steps["regressor"]
+    best_model = gs.best_estimator_.named_steps[step_name]
     clean_params = {
         param.split("__")[-1]: value
         for param, value in gs.best_params_.items()
@@ -600,7 +674,6 @@ def kfold(runner, X, y, folder_strategy, scaler=None) -> FoldResults:
 
     Xn = X.to_numpy() if hasattr(X, "to_numpy") else np.asarray(X)
     yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
-
 
     # loop folds
     fold_results = FoldResults()
@@ -749,3 +822,19 @@ def kfold_regression_table(fold_results: FoldResults, use: str="mee", derive_rms
     #print(df)
 
     return df
+
+
+def assess_sklearn_cv_robustness(cv, model, X, y, scoring="accuracy", seeds:list=[10, 20, 30, 40, 50]):
+
+    params = cv.__dict__.copy()
+    for seed in seeds:
+        params["random_state"] = seed
+        cv_copy = cv.__class__(**params)
+        scores = cross_val_score(
+            model,
+            X, y,
+            cv=cv_copy,
+            scoring=scoring,
+        )
+
+        print('seed: {} - mean {:.3f} ± {:.3f}'.format(seed, scores.mean(), scores.std()))

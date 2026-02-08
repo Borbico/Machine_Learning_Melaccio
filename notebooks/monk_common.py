@@ -98,7 +98,3 @@ def dataset_introspection(df_TR: DataFrame, df_TS: DataFrame) -> DataFrame:
     })
 
     return dataset_overview
-
-
-def extract_fold_history(fold_histories, key):
-    return np.array([getattr(fold_history, key) for fold_history in fold_histories])

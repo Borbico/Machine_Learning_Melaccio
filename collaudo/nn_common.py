@@ -1,13 +1,21 @@
 import copy
+from abc import abstractmethod
+import seaborn as sns
 import numpy as np
 import pandas as pd
 import torch
 from matplotlib import pyplot as plt
+from matplotlib.ticker import MaxNLocator
 from numpy import ndarray
+from sklearn import clone
+from sklearn.preprocessing import StandardScaler
 from torch import nn, Tensor
+from torch.nn import MSELoss
 from torch.optim.lr_scheduler import LRScheduler, ReduceLROnPlateau
 from torch.utils.data import TensorDataset, DataLoader
+import cup_common as cc
 
+#from cup_common import FoldResult, FoldResults
 
 # Default train params
 DEFAULT_TRAIN_EPOCHS = 500
@@ -18,17 +26,19 @@ DEFAULT_TRAIN_VAL_RATIO = 0.2
 DEFAULT_TRAIN_SEED = 1
 
 
-def _make_split(X:ndarray, y:ndarray, val_ratio, seed) -> (ndarray, ndarray, ndarray, ndarray):
+def _make_split(dataset: TrainSet, val_ratio, seed) -> (ndarray, ndarray, ndarray, ndarray):
     """
-    Split a given set into training and validation sets to perform a hold-out validation.
+    Split a given set into training and validation sets according to val_ration and seed.
     Features and labels are often referred as X (uppercase) and y in NN literature,
     so we kept the same naming convention for function input variables.
-    :param X: the features
-    :param y: the labels
+    :param dataset: the TrainSet
     :param val_ratio: how many samples we want to reserve for validation. i.e. 0.2 = 20%
     :param seed: a fixed seed is mandatory for same results between runs, seed variation might lead to different learning curves
     :return: A tuple containing the training and validation sets (TR Features, TR Labels, VL Features, VL Labels)
     """
+
+    X = dataset.X
+    y = dataset.y
 
     rng = np.random.default_rng(seed) # <-- a fixed seed is mandatory
     idx = np.arange(len(X))
@@ -69,28 +79,6 @@ def _to_tensors(X: ndarray, y: ndarray) -> (ndarray, ndarray):
     return torch.from_numpy(X), torch.from_numpy(y)
 
 
-def _prepare_for_torch(X:ndarray, y:ndarray, val_ratio:float, seed: int) ->(Tensor, Tensor, Tensor, Tensor):
-    """
-    This function prepare a dataset to be used with PyTorch by performing the following actions:
-    1. Split into training and validation sets according to seed and ratio
-    2. Transform each set into tensors
-    :param X: the features
-    :param y: the labels
-    :param val_ratio: how many samples we want to reserve for validation. i.e. 0.2 = 20%
-    :param seed: a fixed seed is mandatory for same results between runs, seed variation might lead to different learning curves
-    :return: A tuple of tensors (X TR, y TR, X VL, y VL)
-    """
-
-    # Split data into training set and validation set
-    X_tr, y_tr, X_vl, y_vl = _make_split(X, y, val_ratio=val_ratio, seed=seed)
-
-    # Converto each sets to tensor for use with PyTorch
-    X_tr_t, y_tr_t = _to_tensors(X_tr, y_tr) # TR sets
-    X_vl_t, y_vl_t = _to_tensors(X_vl, y_vl) # VL sets
-
-    return X_tr_t, y_tr_t, X_vl_t, y_vl_t
-
-
 def _make_loaders(X_tr: torch.Tensor, y_tr: torch.Tensor, X_vl: torch.Tensor, y_vl: torch.Tensor, batch_size: int):
     """
     Implements a batch stochastic gradient descent, handles data shuffling across epochs,
@@ -118,7 +106,7 @@ def _make_loaders(X_tr: torch.Tensor, y_tr: torch.Tensor, X_vl: torch.Tensor, y_
     return dl_tr, dl_vl
 
 
-def compute_loss(model:MLP, X:torch.Tensor, y: torch.Tensor, loss_function: nn.Module) -> torch.Tensor:
+def _compute_loss(model:MLP, X:torch.Tensor, y: torch.Tensor, loss_function: nn.Module) -> torch.Tensor:
     """
     This function computes the loss for a given set by invoking 'forward' on the model and applying the loss function.
     It is mandatory that the output layer of the model is kept linear.
@@ -133,44 +121,51 @@ def compute_loss(model:MLP, X:torch.Tensor, y: torch.Tensor, loss_function: nn.M
     # of the last perceptron in the network.
     output = model.forward(X)
 
-    # Our loss function, here y represents the target
-    # which is being compared with the output
+    # Our loss function, with y representing the target
+    # to be compared with the output
     loss = loss_function(output, y)
     return loss
 
 
-def epoch_mee(model: MLP, dataloader: DataLoader) -> float:
-    """
-    Computes the Mean Euclidean Error (MEE) over an entire dataset.
-    MEE is defined as the average Euclidean distance between
-    predicted and target vectors (multi-output regression).
-    """
-
-    was_training = model.training
-    model.eval()
-
-    total_mee = 0.0
-    total_n = 0
-
-    with torch.no_grad():
-        for X, y in dataloader:
-            # Model output: shape (batch_size, 4)
-            output = model.forward(X)
-
-            # Euclidean distance per sample
-            # shape: (batch_size,)
-            distances = torch.norm(output - y, dim=1)
-
-            total_mee += distances.sum().item()
-            total_n += y.size(0)
-
-    if was_training:
-        model.train()
-
-    return total_mee / total_n
+# def _epoch_mee(model: MLP, dataloader: DataLoader) -> float:
+#     """
+#     Computes the Mean Euclidean Error (MEE) over an entire dataset.
+#     MEE is defined as the average Euclidean distance between
+#     predicted and target vectors (multi-output regression).
+#     """
+#
+#     was_training = model.training
+#     model.eval()
+#
+#     total_mee = 0.0
+#     total_n = 0
+#
+#     with torch.no_grad():
+#         for X, y in dataloader:
+#             # Model output: shape (batch_size, 4)
+#             output = model.forward(X)
+#
+#             # Euclidean distance per sample
+#             # shape: (batch_size,)
+#             distances = torch.norm(output - y, dim=1)
+#
+#             total_mee += distances.sum().item()
+#             total_n += y.size(0)
+#
+#     if was_training:
+#         model.train()
+#
+#     return total_mee / total_n
 
 
 def epoch_accuracy(model, dataloader):
+    """
+    Calculate the epoch accuracy for a given model
+    :param model:
+    :param dataloader:
+    :return:
+    """
+
     model.eval()
     correct = 0
     total = 0
@@ -185,16 +180,19 @@ def epoch_accuracy(model, dataloader):
             correct += (preds[0] == y).sum().item()
             total += y.size(0)
 
+    if correct/total > 1:
+        print("Warning, accuracy override")
+
     return correct / total
 
 
-def epoch_loss(model: MLP, dataloader: DataLoader, loss_algorithm: nn.Module) -> float:
+def epoch_loss(model: MLP, dataloader: DataLoader, loss_function: nn.Module) -> float:
     """
     This function computes the average loss over an entire dataset by aggregating the batch-wise losses
     without updating the model parameters, providing a stable estimate of training or validation error per epoch.
     :param model: the NN model
     :param dataloader: dataloader
-    :param loss_algorithm: the chosen algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
+    :param loss_function: the chosen algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :return: the average loss
     """
 
@@ -217,7 +215,7 @@ def epoch_loss(model: MLP, dataloader: DataLoader, loss_algorithm: nn.Module) ->
             # In this case the loss is a 0-dimension Tensor obtained
             # from our loss function (see function documentation)
             # this is the reason why we use Tensor.item()
-            loss = compute_loss(model, X, y, loss_algorithm).item()
+            loss = _compute_loss(model, X, y, loss_function).item()
 
             # The loss returned by PyTorch is the AVERAGE on the batch,
             # but we want to reconstruct the SUM of the losses on individual examples,
@@ -255,52 +253,159 @@ def predict(model: 'MLP', X_test: pd.DataFrame):
     return preds_t
 
 
-def train(model: MLP, datasets: tuple, optimizer_template, loss_algorithm, batch_size: int | str = DEFAULT_TRAIN_BATCH_SIZE,
-          epochs:int=DEFAULT_TRAIN_EPOCHS, val_ratio:float=DEFAULT_TRAIN_VAL_RATIO, seed:int=DEFAULT_TRAIN_SEED,
-          patience:int = DEFAULT_TRAIN_PATIENCE, min_delta:float=DEFAULT_TRAIN_DELTA,
-          scheduler_template= None,silence_output:bool=False) -> {}:
+class EarlyStoppingStrategy:
+    """
+    The class defines the early stopping strategy.
+    """
+
+    def __init__(self, patience:int = DEFAULT_TRAIN_PATIENCE, min_delta:float=DEFAULT_TRAIN_DELTA):
+        """
+        Constructor
+        :param patience: number of epochs to wait before stopping early
+        :param min_delta: the delta between two consecutive epochs
+        """
+        self._patience = patience
+        self._min_delta = min_delta
+
+    @property
+    def patience(self):
+        return self._patience
+
+    @property
+    def min_delta(self):
+        return self._min_delta
+
+    def __str__(self):
+        return "EarlyStopping with patience={}, min_delta={}".format(self.patience, self.min_delta)
+
+
+class TrainSet:
+    """
+    This class is a wrapper for a dataset that is represented with X (the feature), and y (the labels).
+    """
+
+    def __init__(self, X: pd.DataFrame, y: ndarray):
+        self._X = X.astype(np.float32).to_numpy()
+        self._y = y
+        return
+
+    @property
+    def X(self):
+        return self._X
+
+    @property
+    def y(self):
+        return self._y
+
+
+class SplitStrategy:
+
+    def SplitStrategy(self):
+        raise NotImplementedError
+
+    def __init__(self):
+        self._X_tr = None
+        self._y_tr = None
+        self._X_vl = None
+        self._y_vl = None
+
+    @property
+    def train_set(self):
+        return (self._X_tr, self._y_tr)
+
+    @property
+    def validation_set(self):
+        return (self._X_vl, self._y_vl)
+
+
+class SplitByRatioAndSeedStrategy(SplitStrategy):
+    """
+    The classic split strategy to be applied to a single set, according to the ratio and seed
+    """
+
+    def __init__(self, X: pd.DataFrame, y: ndarray, val_ratio:float=DEFAULT_TRAIN_VAL_RATIO, seed:int=DEFAULT_TRAIN_SEED):
+        super().__init__()
+        train_set = TrainSet(X, y)
+        X_tr, y_tr, X_vl, y_vl = _make_split(train_set, val_ratio=val_ratio, seed=seed)
+
+        # Convert each sets to tensor for use with PyTorch
+        self._X_tr, self._y_tr = _to_tensors(X_tr, y_tr)  # TR sets
+        self._X_vl, self._y_vl = _to_tensors(X_vl, y_vl)  # VL sets
+
+        return
+
+
+
+class ManualSplitStrategy(SplitStrategy):
+    """
+    The split strategy has already been applied to a single set, according to the ratio and seed
+    """
+
+    def __init__(self, X_tr: pd.DataFrame, y_tr: ndarray, X_vl: pd.DataFrame, y_vl: ndarray):
+
+        super().__init__()
+        self._X_tr, self._y_tr = _to_tensors(X_tr, y_tr)  # TR sets
+        self._X_vl, self._y_vl = _to_tensors(X_vl, y_vl)  # VL sets
+
+
+def train_wrapper_fn(
+    model: MLP, datasets: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
+    epochs:int, early_stopping_strategy:EarlyStoppingStrategy = None,
+    scheduler_template= None,silence_output:bool=False
+    ):
+
+    return train(
+        model,
+        datasets,
+        optimizer_template,
+        loss_function,
+        batch_size,
+        epochs,
+        early_stopping_strategy,
+        scheduler_template,
+        silence_output
+    )
+
+
+def predict_wrapper_fn(model, X):
+    # forward + numpy, coerente col tuo adapter di regressione
+    X = np.asarray(X, dtype=np.float32)
+    with torch.no_grad():
+        X_t = torch.from_numpy(X)
+        _, scores = model.predict(X_t)
+        return scores.cpu().numpy()
+
+
+def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
+          epochs:int, early_stopping_strategy:EarlyStoppingStrategy = None,
+          scheduler_template= None,silence_output:bool=False) -> TrainResults:
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
     while monitoring performance on a validation set to track generalization and detect overfitting.
-    Depending on the input parameter datasets the train will perform in two ways:
-        - if len(dataset) == 2 the dataset is split in two datasets X_tr + y_tr for training and X_vl + y_vl for testing, the split depends on the val_ratio parameter
-        - if len(dataset) == 4 the dataset remains untouched
-    It returns a dictionary containing:
-        - record_tr_loss Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.\n
-        - record_vl_loss: Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
-        - record_tr_acc: Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks. (Note: in regression tasks this quantity is not used.)
-        - record_vl_acc: Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
-        - record_grad_norm: Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
+    :param scheduler_template: The learning decay strategy
     :param model: the model to be trained
-    :param datasets: a tuple containing X_tr, y_tr or X_tr, y_tr, X_vl, y_vl
+    :param datasets: the split strategy (i.e. SplitByRatioStrategy, ManualSplitStrategy, etc.)
     :param optimizer_template:
-    :param loss_algorithm: the loss algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
+    :param loss_function: the loss algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :param batch_size: "batch", "online" or the mini-batch size for training
     :param epochs: the number of epochs for training
-    :param val_ratio: the ratio of validation to training (i.e. 0.2 = 20% of dataset reserved for training)
-    :param patience: the number of epochs without improvement, passing 0 or lower will disable this capability
-    :param min_delta: the delta between epochs for early stopping. Ignored if patience < 1
+    :param early_stopping_strategy: the early stopping strategy
     :param scheduler: learning rate scheduler
     :param silence_output: True/False if we want to display the train params
-    :return: tuple(record_tr_loss,record_vl_loss,record_tr_acc,record_vl_acc)
+    :return: TrainResults
     """
 
     # Data container for later
     # visual representation
-    hist_tr_loss = []
-    hist_vl_loss = []
-    hist_tr_acc = []
-    hist_vl_acc = []
-    hist_tr_mae = []
-    hist_vl_mae = []
-    hist_tr_mee = []
-    hist_vl_mee = []
-    hist_grad_norm = []
-    epoch_grad_norms = []
+    epochs_tr_mse, epochs_vl_mse = [], []
+    epochs_tr_acc, epochs_vl_acc = [], []
+    epochs_tr_mae, epochs_vl_mae = [], []
+    epochs_tr_mee, epochs_vl_mee = [], []
+    epochs_grad_norm, epoch_grad_norms = [], []
 
     best_vl = float("inf")
-    best_state = None
-    bad_epochs = 0
+    best_state = None # used only if early stopping is enabled
+    bad_epochs = 0 # used only if early stopping is enabled
 
     # initialize optimizer
     optimizer = optimizer_template(model.parameters())
@@ -309,36 +414,17 @@ def train(model: MLP, datasets: tuple, optimizer_template, loss_algorithm, batch
     else:
         scheduler = None
 
-    # Hold-out
-    if len(datasets) == 2:
-        X=datasets[0].astype(np.float32).to_numpy()
-        y=datasets[1]
-        X_tr, y_tr, X_vl, y_vl = _make_split(X, y, val_ratio=val_ratio, seed=seed)
 
-        # Convert each sets to tensor for use with PyTorch
-        X_tr_t, y_tr_t = _to_tensors(X_tr, y_tr) # TR sets
-        X_vl_t, y_vl_t = _to_tensors(X_vl, y_vl) # VL sets
-
-    # KFold
-    else:  # "kf" in datasets:
-        X_tr=datasets[0].astype(np.float32).to_numpy()
-        y_tr=datasets[1]
-        X_vl=datasets[2].astype(np.float32).to_numpy()
-        y_vl=datasets[3]
-
-        X_tr_t, y_tr_t = _to_tensors(X_tr, y_tr)
-        X_vl_t, y_vl_t = _to_tensors(X_vl, y_vl)
-
+    X_tr, y_tr = datasets.train_set
+    X_vl, y_vl = datasets.validation_set
 
     # Build DataLoader (or the batch as it is known in ML)
     if batch_size=="batch":
-        batch_size = X_tr_t.shape[0]
+        batch_size = X_tr.shape[0] # if 'batch' then the batch size is the X dimension
     elif batch_size=="online":
         batch_size = 1
-    dl_tr, dl_vl = _make_loaders(X_tr_t, y_tr_t, X_vl_t, y_vl_t, batch_size=batch_size)
 
-    if not silence_output:
-        _print_train_summary(model, dl_tr,dl_vl,optimizer_template,loss_algorithm, scheduler_template, batch_size, epochs,patience,min_delta)
+    dl_tr, dl_vl = _make_loaders(X_tr, y_tr, X_vl, y_vl, batch_size=batch_size)
 
     # Performing epochs loop
     for epoch in range(epochs):
@@ -355,110 +441,97 @@ def train(model: MLP, datasets: tuple, optimizer_template, loss_algorithm, batch
             optimizer.zero_grad()
 
             # Calculating the loss and applying the backpropagation
-            loss = compute_loss(model, X, y, loss_algorithm)
-
+            loss = _compute_loss(model, X, y, loss_function)
             loss.backward()
+
             # Take gradient measurement before update
             epoch_grad_norms.append(gradient_norm(model))
             optimizer.step()
 
-        # Loss estimation
-        tr_l = epoch_loss(model, dl_tr, loss_algorithm)
-        vl_l = epoch_loss(model, dl_vl, loss_algorithm)
-        hist_tr_loss.append(tr_l)
-        hist_vl_loss.append(vl_l)
+        # Loss estimation at the end of epoch
+        tr_epoch_mse = epoch_loss(model, dl_tr, MSELoss(reduction="mean"))
+        vl_epoch_mse = epoch_loss(model, dl_vl, MSELoss(reduction="mean"))
+        epochs_tr_mse.append(tr_epoch_mse)
+        epochs_vl_mse.append(vl_epoch_mse)
 
         # Calculate Mean Absolute Error (MAE)
-        hist_tr_mae.append(epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean")))
-        hist_vl_mae.append(epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean")))
+        epochs_tr_mae.append(epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean")))
+        epochs_vl_mae.append(epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean")))
 
-        hist_tr_mee.append(epoch_mee(model, dl_tr))
-        hist_vl_mee.append(epoch_mee(model, dl_vl))
+        epochs_tr_mee.append(epoch_loss(model, dl_tr, MEELoss(reduction="mean")))
+        epochs_vl_mee.append(epoch_loss(model, dl_vl, MEELoss(reduction="mean")))
 
-        hist_tr_acc.append(epoch_accuracy(model, dl_tr))
-        hist_vl_acc.append(epoch_accuracy(model, dl_vl))
+        epochs_tr_acc.append(epoch_accuracy(model, dl_tr))
+        epochs_vl_acc.append(epoch_accuracy(model, dl_vl))
 
         # Gradient mean
-        hist_grad_norm.append(float(np.mean(epoch_grad_norms)) if len(epoch_grad_norms) else 0.0)
-
+        epochs_grad_norm.append(float(np.mean(epoch_grad_norms)) if len(epoch_grad_norms) else 0.0)
 
         # Applying learning rate decay
         if scheduler is not None:
-            scheduler.step(vl_l)
+            scheduler.step(vl_epoch_mse)
 
         # ---- EARLY STOPPING LOGIC ----
-        if patience > 0:
-            if vl_l < best_vl - min_delta:
-                best_vl = vl_l
+        if early_stopping_strategy is not None:
+            if vl_epoch_mse < best_vl - early_stopping_strategy.min_delta:
+                best_vl = vl_epoch_mse
                 bad_epochs = 0
                 best_state = copy.deepcopy(model.state_dict())
             else:
                 bad_epochs += 1
 
-            #if epoch % 20 == 0:
-            #    print(f"Epoch {epoch:3d} | TR loss: {tr_l:.4f} | VL loss: {vl_l:.4f} | bad: {bad_epochs}/{patience}")
-
-            if bad_epochs >= patience:
+            if bad_epochs >= early_stopping_strategy.patience:
                 print(f"Early stopping at epoch {epoch} (best VL loss: {best_vl:.4f})")
                 break
-        # -----------------------------
 
-        # In case early stopping is enabled
+        # Keeping track of the latest best model
         if best_state is not None:
             model.load_state_dict(best_state)
+        # -----------------------------
 
-    train_results = {
-        "hist_tr_loss": hist_tr_loss,
-        "hist_vl_loss": hist_vl_loss,
-        "hist_tr_acc": hist_tr_acc,
-        "hist_vl_acc": hist_vl_acc,
-        "hist_tr_mae": hist_tr_mae,
-        "hist_vl_mae": hist_vl_mae,
-        "hist_tr_mee": hist_tr_mee,
-        "hist_vl_mee": hist_vl_mee,
-        "hist_grad": hist_grad_norm
-    }
+    if not silence_output:
+        _print_train_summary(model, dl_tr,dl_vl,optimizer_template,loss_function, scheduler_template, batch_size, epochs,early_stopping_strategy)
 
-    return train_results
+    return TrainResults({
+        "epochs_tr_mse": epochs_tr_mse, "epochs_vl_mse": epochs_vl_mse,
+        "epochs_tr_acc": epochs_tr_acc, "epochs_vl_acc": epochs_vl_acc,
+        "epochs_tr_mae": epochs_tr_mae, "epochs_vl_mae": epochs_vl_mae,
+        "epochs_tr_mee": epochs_tr_mee, "epochs_vl_mee": epochs_vl_mee,
+        "epochs_grad": epochs_grad_norm
+    })
 
 
-def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_template, loss_function, fold_strategy, inner_train_params: dict):
+def kfold(untrained_base_model: MLP, X, y, fold_strategy, scaler_template, inner_train_params: dict) -> cc.FoldResults:
     """
     Runs K-Fold cross-validation by reusing existing training/evaluation code.
-    Returns per-fold histories and final validation accuracies.
+    Returns per-fold histories and final validation metrics.
     Each fold is trained using the train() function.
     :param untrained_base_model: the untrained MLP model
     :param X: training data
     :param y: training labels
-    :param optimizer_template: the weight update algorithm
-    :param scheduler_template: the learning rate decay scheduler
-    :param loss_function: the chosen loss function (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :param fold_strategy: the fold strategy (i.e. KFold, StratifiedKfold,...)
     :param inner_train_params: the parameters for the inner trainer
     """
 
-    fold_histories = []
-
-    inner_epochs = inner_train_params.get("epochs", DEFAULT_TRAIN_EPOCHS)
-    inner_patience = inner_train_params.get("patience", DEFAULT_TRAIN_PATIENCE)
-    inner_batch_size = inner_train_params.get("batch_size", DEFAULT_TRAIN_BATCH_SIZE)
-    inner_min_delta = inner_train_params.get("min_delta", DEFAULT_TRAIN_DELTA)
-    inner_seed = inner_train_params.get("seed", DEFAULT_TRAIN_SEED)
-
-    #_print_train_summary(untrained_base_model, X, y, optimizer_template, loss_function, inner_epochs, inner_patience, inner_min_delta)
+    fold_results = cc.FoldResults()
 
     # Fold iteration
     for fold_nr, (tr_idx, vl_idx) in enumerate(fold_strategy.split(X, y)):
 
-        # X, y subset
-        # X_subset = X.iloc[tr_idx]
-        # y_subset = y[tr_idx]
+        X_tr, y_tr = X.iloc[tr_idx], y[tr_idx]
+        X_vl, y_vl = X.iloc[vl_idx], y[vl_idx]
 
-        X_tr = X.iloc[tr_idx];
-        y_tr = y[tr_idx]
-        X_vl = X.iloc[vl_idx];
-        y_vl = y[vl_idx]
-
+        sc = clone(scaler_template)  # fresh scaler per fold
+        X_tr = pd.DataFrame(
+            sc.fit_transform(X_tr),
+            columns=X_tr.columns,
+            index=X_tr.index
+        )
+        X_vl = pd.DataFrame(
+            sc.transform(X_vl),
+            columns=X_vl.columns,
+            index=X_vl.index
+        )
 
         print(f"  ")
         print(f"Perform fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
@@ -467,68 +540,43 @@ def run_kfold(untrained_base_model: MLP, X, y, optimizer_template, scheduler_tem
         fold_model = copy.deepcopy(untrained_base_model)
 
         # Training
-        #tr_loss_hist, vl_loss_hist, tr_hist_acc, vl_hist_acc, grad_norm
         train_result = train(
             fold_model,
-            (X_tr, y_tr, X_vl, y_vl),
-            optimizer_template, loss_function,
-            epochs=inner_epochs,
-            patience=inner_patience,
-            min_delta=inner_min_delta,
-            batch_size=inner_batch_size,
-            silence_output=False,
-            seed=inner_seed,
-            scheduler_template=scheduler_template
+            ManualSplitStrategy(X_tr, y_tr, X_vl, y_vl),
+            **inner_train_params
         )
 
-        hist_tr_loss = train_result["hist_tr_loss"]
-        hist_vl_loss = train_result["hist_vl_loss"]
-        tr_hist_acc = train_result["hist_tr_acc"]
-        vl_hist_acc = train_result["hist_vl_acc"]
-        hist_tr_mae = train_result["hist_tr_mae"]
-        hist_vl_mae = train_result["hist_vl_mae"]
-        hist_tr_mee = train_result["hist_tr_mee"]
-        hist_vl_mee = train_result["hist_vl_mee"]
-        hist_grad = train_result["hist_grad"]
+        epochs_tr_mse = train_result.epochs_tr_mse
+        epochs_vl_mse = train_result.epochs_vl_mse
+        epochs_tr_acc = train_result.epochs_tr_acc
+        epochs_vl_acc = train_result.epochs_vl_acc
+        epochs_tr_mae = train_result.epochs_tr_mae
+        epochs_vl_mae = train_result.epochs_vl_mae
+        epochs_tr_mee = train_result.epochs_tr_mee
+        epochs_vl_mee = train_result.epochs_vl_mee
+        epochs_grad = train_result.epochs_grad
 
         # Data gathering
-        fold_histories.append({
-            "tr_loss": np.mean(hist_tr_loss),
-            "tr_loss_std": np.std(hist_tr_loss),
-            "vl_loss": np.mean(hist_vl_loss),
-            "vl_loss_std": np.std(hist_vl_loss),
-            "tr_acc": np.mean(tr_hist_acc),
-            "tr_acc_std": np.std(tr_hist_acc),
-            "vl_acc": np.mean(vl_hist_acc),
-            "vl_acc_std": np.std(vl_hist_acc),
-            "tr_mae": np.mean(hist_tr_mae),
-            "tr_mae_std": np.std(hist_tr_mae),
-            "vl_mae": np.mean(hist_vl_mae),
-            "vl_mae_std": np.std(hist_vl_mae),
-            "tr_mee": np.mean(hist_tr_mee),
-            "tr_mee_std": np.std(hist_tr_mee),
-            "vl_mee": np.mean(hist_vl_mee),
-            "vl_mee_std": np.std(hist_vl_mee),
+        fold_results.append(cc.FoldResult({
+            "fold_nr": fold_nr,
 
-            "best_tr_loss": float(min(hist_tr_loss)),
-            "best_tr_acc": float(max(tr_hist_acc)),
-            "last_tr_loss": float(hist_tr_loss[-1]),
-            "last_tr_acc": float(tr_hist_acc[-1]),
+            # NN Specific attributes
+            "epochs_tr_mse_mean": np.mean(epochs_tr_mse), "epochs_tr_mse_std": np.std(epochs_tr_mse),
+            "epochs_vl_mse_mean": np.mean(epochs_vl_mse), "epochs_vl_mse_std": np.std(epochs_vl_mse),
+            "epochs_tr_acc_mean": np.mean(epochs_tr_acc), "epochs_tr_acc_std": np.std(epochs_tr_acc),
+            "epochs_vl_acc_mean": np.mean(epochs_vl_acc), "epochs_vl_acc_std": np.std(epochs_vl_acc),
+            "epochs_tr_mae_mean": np.mean(epochs_tr_mae), "epochs_tr_mae_std": np.std(epochs_tr_mae),
+            "epochs_vl_mae_mean": np.mean(epochs_vl_mae), "epochs_vl_mae_std": np.std(epochs_vl_mae),
+            "epochs_tr_mee_mean": np.mean(epochs_tr_mee), "epochs_tr_mee_std": np.std(epochs_tr_mee),
+            "epochs_vl_mee_mean": np.mean(epochs_vl_mee), "epochs_vl_mee_std": np.std(epochs_vl_mee),
 
-            "best_vl_loss": float(min(hist_vl_loss)),
-            "best_vl_acc": float(max(vl_hist_acc)),
-            "last_vl_loss": float(hist_vl_loss[-1]),
-            "last_vl_acc": float(vl_hist_acc[-1]),
+            "fold_tr_mse": float(min(epochs_tr_mse)), "fold_vl_mse": float(min(epochs_vl_mse)),
+            "fold_tr_mee": float(min(epochs_tr_mee)), "fold_vl_mee": float(min(epochs_vl_mee)),
+            "fold_tr_mae": float(min(epochs_tr_mae)), "fold_vl_mae": float(min(epochs_vl_mae)),
+            "fold_tr_acc": float(max(epochs_tr_acc)), "fold_vl_acc": float(max(epochs_vl_acc))
+        }))
 
-            "best_tr_mee": float(min(hist_tr_mee)),
-            "best_vl_mee": float(min(hist_vl_mee)),
-            "last_vl_mee": float(hist_vl_mee[-1]),
-
-            # return original metric
-            #"train_result": train_result
-        })
-
-    return fold_histories
+    return fold_results
 
 
 def init_weights(m: nn.Module, method: str, nonlinearity: str = "relu") -> None:
@@ -642,48 +690,126 @@ def multiclass_ce_adapter(dim: int = 1) -> OutputAdapter:
     return OutputAdapter(link, decision)
 
 
-def regression_mse_adapter() -> OutputAdapter:
+def regression_adapter() -> OutputAdapter:
     link = lambda z: z                 # identity
     decision = lambda z: z             # per regressione "pred" = valore
     return OutputAdapter(link, decision)
 
 
-def plot_epoch_loss(hist_tr, hist_vl):
-    plt.figure()
-    plt.plot(hist_tr, label="TR loss")
-    plt.plot(hist_vl, label="VL loss")
-    plt.xlabel("Epoch")
-    plt.ylabel("Loss")
-    plt.legend()
-    plt.show()
+def plot_epoch_mee(epochs_tr_mee, epochs_vl_mee):
+
+    plot_epochs_curves(
+        [
+            {"key": "TR MEE", "value": epochs_tr_mee},
+            {"key": "VL MEE", "value": epochs_vl_mee}
+        ],
+        x_label="Epochs", y_label="MEE", title="Training vs Validation Loss"
+    )
 
 
-def plot_epoch_accuracy(hist_tr_acc, hist_vl_acc):
+def plot_epoch_loss(epochs_tr, epochs_vl):
+
+    plot_epochs_curves(
+        [
+            {"key": "TR MSE", "value": epochs_tr},
+            {"key": "VL MSE", "value": epochs_vl}
+        ],
+        x_label="Epochs", y_label="Loss", title="Training vs Validation Loss"
+    )
+
+
+def plot_epoch_accuracy(epochs_tr_acc, epochs_vl_acc):
+
+    plot_epochs_curves(
+        [
+            {"key": "TR Accuracy", "value": epochs_tr_acc},
+            {"key": "VL Accuracy", "value": epochs_vl_acc}
+        ],
+        x_label="Epochs", y_label="Loss", title="Training vs Validation Accuracy"
+    )
+
+
+def plot_gradient_norm_line(grad_norms, step=10):
+
+    epochs = np.arange(0, len(grad_norms), step)
+    values = [grad_norms[i] for i in epochs]
+
+    df = pd.DataFrame({
+        "Epoch": epochs,
+        "Gradient norm": values
+    })
+
     plt.figure()
-    plt.plot(hist_tr_acc, label="TR Accuracy")
-    plt.plot(hist_vl_acc, label="VL Accuracy")
-    plt.xlabel("Epoch")
-    plt.ylabel("Accuracy")
+    sns.lineplot(
+        data=df,
+        x="Epoch",
+        y="Gradient norm",
+        marker="o",
+        markersize=4,
+    )
+
+    # --- MIN / MAX lines ---
+
+    gmin = min(values)
+    gmax = max(values)
+    plt.axhline(
+        gmin, linestyle="--", linewidth=1,
+        label=f"Min = {gmin:.4f}"
+    )
+    plt.axhline(
+        gmax, linestyle="--", linewidth=1,
+        label=f"Max = {gmax:.4f}"
+    )
+
+    plt.title("Gradient norm (sampled every {} epochs)".format(step))
+    plt.ylabel("Gradient")
+    plt.grid(True, alpha=0.3)
+    plt.tight_layout()
     plt.legend()
     plt.show()
 
 
 def plot_gradient_norm_bars(grad_norms, step=10):
+
+    sns.set_theme(style="whitegrid")
+
     epochs = np.arange(0, len(grad_norms), step)
     values = [grad_norms[i] for i in epochs]
 
-    plt.figure(figsize=(7, 4))
-    plt.bar(epochs, values, width=step * 0.6)
+    df = pd.DataFrame({
+        "Epoch": epochs,
+        "Gradient norm": values
+    })
+
+    plt.figure()
+    sns.barplot(
+        data=df,
+        x="Epoch",
+        y="Gradient norm",
+        color="steelblue"
+    )
+
     plt.xlabel("Epoch")
-    plt.ylabel("||nabla L||")
-    plt.title("Gradient norm (one bar every {} epochs)".format(step))
-    plt.grid(axis="y")
+    plt.ylabel(r"$\|\nabla L\|$")
+    plt.title(f"Gradient norm (one bar every {step} epochs)")
     plt.tight_layout()
     plt.show()
 
 
-def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer_template,loss_algorithm,scheduler_template, batch_size, epochs,patience,min_delta):
-
+def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer_template,loss_function,scheduler_template, batch_size, epochs,early_stopping_strategy):
+    """
+    Display a nice and formatted table containing the train hyperparameters
+    :param model: the model
+    :param train_dataloader: the training dataloader
+    :param validation_dataloader: the validation dataloader
+    :param optimizer_template: the optimizer template
+    :param loss_function: the loss function (MSELoss, etc.)
+    :param scheduler_template:
+    :param batch_size: the mini-batch or batch size
+    :param epochs: the number of epochs
+    :param early_stopping_strategy: the early stopping strategy
+    :return: None
+    """
 
     if batch_size == 1:
         batch_size_desc = "online"
@@ -699,239 +825,203 @@ def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer
     print(f"Train           | samples: {len(train_dataloader.dataset)}")
     print(f"Validation      | samples: {len(validation_dataloader.dataset)}")
     print(f"Batch type      | {batch_size_desc}")
-    print(f"Loss algorithm  | {loss_algorithm}")
+    print(f"Loss function   | {loss_function}")
     print(f"Optimizer       | class: {optimizer_template.func} , params: {optimizer_template.keywords}")
     if scheduler_template is not None:
         print(f"LR Decay        | params: {scheduler_template.keywords}")
     else:
         print(f"LR Decay        | disabled")
-    if patience > 0:
-        print(f"Early Stopping  | patience: {patience} , minimum delta: {min_delta}")
+    if early_stopping_strategy is not None:
+        print(f"Early Stopping  | patience: {early_stopping_strategy.patience} , minimum delta: {early_stopping_strategy.min_delta}")
     else:
         print(f"Early Stopping  | disabled")
     print("-" * 100)
-    # print("Model")
-    # print(model)
-    # print("-" * 100)
 
 
-def summarize_kfold_table(fold_histories, use="best"):
-    """
-    Print a compact per-fold table and mean±std summary.
-
-    Parameters
-    ----------
-    fold_histories : list[dict]
-        Each dict contains keys like best_vl_acc, best_vl_loss, last_vl_acc, last_vl_loss, etc.
-    use : {"best","last"}
-        Which scalar to report as the fold performance.
-        - "best": uses best_vl_acc and best_vl_loss
-        - "last": uses last_vl_acc and last_vl_loss
-    """
-    if use not in {"best", "last"}:
-        raise ValueError("use must be 'best' or 'last'")
-
-    acc_key = f"{use}_vl_acc"
-    loss_key = f"{use}_vl_loss"
-
-    accs = np.array([h[acc_key] for h in fold_histories], dtype=float)
-    losses = np.array([h[loss_key] for h in fold_histories], dtype=float)
-
-    # header
-    print(f"K-Fold summary ({use.upper()} metrics)")
-    print("-" * 54)
-    print(f"{'Fold':>4} | {acc_key:>10} | {loss_key:>11} | {'gap_tr-vl(acc)':>14}")
-    print("-" * 54)
-
-    for i, h in enumerate(fold_histories, start=1):
-        tr_acc = h[f"{use}_tr_acc"]
-        vl_acc = h[acc_key]
-        gap = tr_acc - vl_acc
-        print(f"{i:>4} | {vl_acc:>10.4f} | {h[loss_key]:>11.6f} | {gap:>14.4f}")
-
-    print("-" * 54)
-    print(f"MEAN | {accs.mean():>10.4f} | {losses.mean():>11.6f}")
-    print(f"STD  | {accs.std():>10.4f} | {losses.std():>11.6f}")
-    print("-" * 54)
-    return {
-        "acc_mean": float(accs.mean()),
-        "acc_std": float(accs.std()),
-        "loss_mean": float(losses.mean()),
-        "loss_std": float(losses.std()),
-    }
-
-
-def plot_kfold_bar_acc(fold_histories, use="best"):
-    """
-    Bar plot of validation accuracy per fold + mean line.
-
-    Parameters
-    ----------
-    fold_histories : list[dict]
-    use : {"best","last"}
-    """
-    if use not in {"best", "last"}:
-        raise ValueError("use must be 'best' or 'last'")
-
-    acc_key = f"{use}_vl_acc"
-    acc = np.array([h[acc_key] for h in fold_histories], dtype=float)
-    folds = np.arange(1, len(acc) + 1)
-    mean_acc = acc.mean()
-
-    plt.figure(figsize=(7, 4))
-    plt.bar(folds, acc)
-    plt.axhline(mean_acc, linestyle="--", linewidth=2, label=f"Mean = {mean_acc:.3f}")
-    plt.xticks(folds)
-    plt.ylim(0, 1.0)
-    plt.xlabel("Fold")
-    plt.ylabel("Validation accuracy")
-    plt.title(f"K-Fold validation accuracy per fold ({use})")
-    plt.grid(axis="y", alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_kfold_bar_vl_loss(fold_histories, use="best", ylabel="Validation loss (MSE)"):
-    """
-    Bar plot of validation loss per fold + mean line.
-    Uses keys: best_vl_loss / last_vl_loss.
-    """
-    if use not in {"best", "last"}:
-        raise ValueError("use must be 'best' or 'last'")
-
-    key = f"{use}_vl_loss"
-    vals = np.array([h[key] for h in fold_histories], dtype=float)
-    folds = np.arange(1, len(vals) + 1)
-    mean_val = vals.mean()
-
-    plt.figure(figsize=(7, 4))
-    plt.bar(folds, vals)
-    plt.axhline(mean_val, linestyle="--", linewidth=2, label=f"Mean = {mean_val:.4f}")
-    plt.xticks(folds)
-    plt.xlabel("Fold")
-    plt.ylabel(ylabel)
-    plt.title(f"K-Fold validation loss per fold ({use})")
-    plt.grid(axis="y", alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_kfold_bar_vl_mee(fold_histories, use="best", ylabel="Validation MEE"):
-    """
-    Bar plot of validation MEE per fold + mean line.
-    Uses keys: best_vl_mee / last_vl_mee.
-    """
-    if use not in {"best", "last"}:
-        raise ValueError("use must be 'best' or 'last'")
-
-    key = f"{use}_vl_mee"
-    vals = np.array([h[key] for h in fold_histories], dtype=float)
-    folds = np.arange(1, len(vals) + 1)
-    mean_val = vals.mean()
-
-    plt.figure(figsize=(7, 4))
-    plt.bar(folds, vals)
-    plt.axhline(mean_val, linestyle="--", linewidth=2, label=f"Mean = {mean_val:.4f}")
-    plt.xticks(folds)
-    plt.xlabel("Fold")
-    plt.ylabel(ylabel)
-    plt.title(f"K-Fold validation MEE per fold ({use})")
-    plt.grid(axis="y", alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def plot_kfold_bar_vl_rmse(fold_histories, use="best"):
-    """
-    Bar plot of validation RMSE per fold + mean line.
-    Assumes vl_loss stored is MSE (from MSELoss).
-    """
-    if use not in {"best", "last"}:
-        raise ValueError("use must be 'best' or 'last'")
-
-    key = f"{use}_vl_loss"
-    mse = np.array([h[key] for h in fold_histories], dtype=float)
-    rmse = np.sqrt(mse)
-
-    folds = np.arange(1, len(rmse) + 1)
-    mean_rmse = rmse.mean()
-
-    plt.figure(figsize=(7, 4))
-    plt.bar(folds, rmse)
-    plt.axhline(mean_rmse, linestyle="--", linewidth=2, label=f"Mean = {mean_rmse:.4f}")
-    plt.xticks(folds)
-    plt.xlabel("Fold")
-    plt.ylabel("Validation RMSE")
-    plt.title(f"K-Fold validation RMSE per fold ({use})")
-    plt.grid(axis="y", alpha=0.3)
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-
-def kfold_regression_table(fold_histories, use="best", derive_rmse=True):
-    """
-    Build a K-Fold summary table for regression.
-
-    Parameters
-    ----------
-    fold_histories : list[dict]
-        Output histories from training (one per fold).
-    use : {"best", "last"}
-        Whether to use best or last validation loss.
-    derive_rmse : bool
-        If True, derive RMSE from MSE (sqrt).
-
-    Returns
-    -------
-    pandas.DataFrame
-        Table with per-fold metrics + mean/std.
-    """
-    if use not in {"best", "last"}:
-        raise ValueError("use must be 'best' or 'last'")
+def plot_epochs_curves(plots: list[dict], x_label: str, y_label: str, title:str=None):
 
     rows = []
 
-    for i, h in enumerate(fold_histories, start=1):
-        tr_loss = h[f"{use}_tr_loss"]
-        vl_loss = h[f"{use}_vl_loss"]
+    for p in plots:
+        for i, v in enumerate(p["value"]):
+            rows.append({
+                x_label: i,
+                y_label: v,
+                "Series": p["key"]
+            })
 
-        row = {
-            "Fold": i,
-            "TR_MSE": tr_loss,
-            "VL_MSE": vl_loss,
-            "Gap(TR-VL)": vl_loss - tr_loss
-        }
+    df = pd.DataFrame(rows)
 
-        if derive_rmse:
-            row["TR_RMSE"] = np.sqrt(tr_loss)
-            row["VL_RMSE"] = np.sqrt(vl_loss)
-
-        rows.append(row)
-
-    df = pd.DataFrame(rows).set_index("Fold")
-
-    # Add mean and std rows
-    mean_row = df.mean()
-    std_row = df.std()
-
-    df.loc["MEAN"] = mean_row
-    df.loc["STD"] = std_row
-
-    print(df)
-
-    return df
-
-
-def plot_epoch_mee(hist_tr_mee, hist_vl_mee):
     plt.figure()
-    plt.plot(hist_tr_mee, label="TR MEE")
-    plt.plot(hist_vl_mee, label="VL MEE")
-    plt.xlabel("Epoch")
-    plt.ylabel("MEE")
-    plt.legend()
+    fig, ax = plt.subplots()
+    sns.lineplot(data=df, x=x_label, y=y_label, hue="Series")
+    ax.xaxis.set_major_locator(MaxNLocator(integer=True))
+    plt.grid(True, alpha=0.3)
+    plt.title(title)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
     plt.tight_layout()
     plt.show()
+
+
+class TrainResults:
+    """
+    Helper class for model training results
+    """
+
+    def __init__(self, results: dict):
+        """
+#       Param results is a dictionary containing:
+                - epochs_tr_loss: Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.
+                - epochs_vl_loss: Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
+                - epochs_tr_acc: Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks (Note: in regression tasks this quantity is not used).
+                - epochs_vl_acc: Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
+                - epochs_tr_mae: Training Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the training set at each epoch. MAE measures the average absolute difference between predicted and target values and provides an error estimate less sensitive to outliers than MSE. It is meaningful for regression tasks (for classification it is typically not used).
+                - epochs_vl_mae: Validation Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the validation set at each epoch. It is used to monitor generalization in regression tasks and to detect overfitting/underfitting trends when compared with the training MAE curve.
+                - epochs_tr_mee: Training Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the training set at each epoch. For multi-output regression, MEE is defined as the average Euclidean distance between the predicted output vector and the target vector for each sample; it summarizes the global prediction error across all output dimensions.
+                - epochs_vl_mee: Validation Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the validation set at each epoch. This is the key metric for the CUP task (multi-output regression) and is used to select models/hyperparameters by tracking the best generalization performance across epochs.
+                - epochs_grad: Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
+        :param results: the initialization dictionary
+        """
+
+        self._epochs_tr_mse = results.get("epochs_tr_mse")
+        self._epochs_vl_mse = results.get("epochs_vl_mse")
+        self._epochs_tr_acc = results.get("epochs_tr_acc")
+        self._epochs_vl_acc = results.get("epochs_vl_acc")
+        self._epochs_tr_mae = results.get("epochs_tr_mae")
+        self._epochs_vl_mae = results.get("epochs_vl_mae")
+        self._epochs_tr_mee = results.get("epochs_tr_mee")
+        self._epochs_vl_mee = results.get("epochs_vl_mee")
+        self._epochs_grad = results.get("epochs_grad")
+
+        self._min_vl_mee = min(self._epochs_vl_mee)
+        self._max_vl_mee = max(self._epochs_vl_mee)
+        self._best_mee_epoch = self._epochs_vl_mee.index(self._min_vl_mee) + 1
+
+    @property
+    def min_vl_mee(self) -> float:
+        """
+        The min validation MEE
+        :return:
+        """
+        return self._min_vl_mee
+
+    @property
+    def max_vl_mee(self) -> float:
+        """
+        The max validation MEE
+        :return: float
+        """
+        return self._max_vl_mee
+
+    @property
+    def best_mee_epoch(self) -> int:
+        """
+        The epoch with best MEE metric
+        :return: the epoch
+        """
+        return self._best_mee_epoch
+
+    @property
+    def epochs_tr_mse(self):
+        """
+        Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.
+        :return:
+        """
+        return self._epochs_tr_mse
+
+    @property
+    def epochs_vl_mse(self):
+        """
+        Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
+        :return:
+        """
+        return self._epochs_vl_mse
+
+    @property
+    def epochs_tr_acc(self):
+        """
+        Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks (Note: in regression tasks this quantity is not used).
+        :return:
+        """
+        return self._epochs_tr_acc
+
+    @property
+    def epochs_vl_acc(self):
+        """
+        Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
+        :return:
+        """
+        return self._epochs_vl_acc
+
+    @property
+    def epochs_tr_mae(self):
+        """
+        Training Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the training set at each epoch. MAE measures the average absolute difference between predicted and target values and provides an error estimate less sensitive to outliers than MSE. It is meaningful for regression tasks (for classification it is typically not used).
+        :return:
+        """
+        return self._epochs_tr_mae
+
+    @property
+    def epochs_vl_mae(self):
+        """
+        Validation Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the validation set at each epoch. It is used to monitor generalization in regression tasks and to detect overfitting/underfitting trends when compared with the training MAE curve.
+        :return:
+        """
+        return self._epochs_vl_mae
+
+    @property
+    def epochs_tr_mee(self):
+        """
+        Training Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the training set at each epoch. For multi-output regression, MEE is defined as the average Euclidean distance between the predicted output vector and the target vector for each sample; it summarizes the global prediction error across all output dimensions.
+        :return:
+        """
+        return self._epochs_tr_mee
+
+    @property
+    def epochs_vl_mee(self):
+        """
+        Validation Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the validation set at each epoch. This is the key metric for the CUP task (multi-output regression) and is used to select models/hyperparameters by tracking the best generalization performance across epochs.
+        :return:
+        """
+        return self._epochs_vl_mee
+
+    @property
+    def epochs_grad(self):
+        """
+        Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
+        :return:
+        """
+        return self._epochs_grad
+
+
+class MEELoss(nn.Module):
+    """
+    Custom implementation of Mean Euclidean Error (MEE) loss.
+    :param reduction: Specifies the reduction to apply to the output
+        - "mean": mean Euclidean error over the batch
+        - "sum":  sum of Euclidean errors over the batch
+        - "none": per-sample Euclidean error (shape: [batch_size])
+    """
+    def __init__(self, reduction: str = "mean"):
+        super().__init__()
+        if reduction not in {"mean", "sum", "none"}:
+            raise ValueError(f"Invalid reduction: {reduction}")
+        self.reduction = reduction
+
+    def forward(self, y_hat, y):
+        # Euclidean distance per sample
+        distances = torch.linalg.vector_norm(y_hat - y, ord=2, dim=1)
+
+        if self.reduction == "mean":
+            return distances.mean()
+        elif self.reduction == "sum":
+            return distances.sum()
+        else:
+            return distances
+
+    def __repr__(self):
+        return self.__str__()
+
+    def __str__(self):
+        return f"{type(self).__name__}(reduction='{self.reduction}' custom function)"

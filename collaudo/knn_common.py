@@ -9,6 +9,7 @@ from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve
 from sklearn.neighbors import KNeighborsClassifier
 from matplotlib import pyplot as plt
+import cup_common as cc
 
 
 def extract_best_knn_metrics_from_grid(gs):
@@ -116,19 +117,14 @@ def plot_knn_validation_curve_from_gs_old(gs):
     plt.show()
 
 
-import numpy as np
-import matplotlib.pyplot as plt
-
-def plot_knn_validation_curve_from_gs(gs, agg:str="max"):
+def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1):
 
     r = gs.cv_results_
-    best_k = gs.best_params_["knn__n_neighbors"]
+    best_k = gs.best_params_["regressor__n_neighbors"] # best K
+    k_vals = np.array(r["param_regressor__n_neighbors"], dtype=int) # all tried K
 
-    # 1) Estrai k (qui tieni la tua chiave esplicita; se vuoi la rendo automatica)
-    k_vals = np.array(r["param_knn__n_neighbors"], dtype=int)
-
-    test_scores = np.array(r["mean_test_score"], dtype=float)
-    train_scores = np.array(r.get("mean_train_score", np.full_like(test_scores, np.nan)), dtype=float)
+    test_scores = np.array(score_correction * r["mean_test_score"], dtype=float)
+    train_scores = np.array(score_correction * r.get("mean_train_score", np.full_like(test_scores, np.nan)), dtype=float)
 
     # 2) Aggrega per k
     uniq_k = np.unique(k_vals)
@@ -219,7 +215,7 @@ def plot_knn_validation_curve_regression(k_values, train_mse, cv_mse):
     plt.show()
 
 
-def plot_knn_learning_curve(model, X, y, cv, ax=None, scoring: str = "accuracy"):
+def plot_knn_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, scoring: str = "accuracy"):
     """
     Plot a learning curve for a given KNN model (classifier or regressor).
     If scoring is a neg_* loss, the curve is plotted as the corresponding positive loss.
@@ -243,8 +239,8 @@ def plot_knn_learning_curve(model, X, y, cv, ax=None, scoring: str = "accuracy")
         random_state=random_state
     )
 
-    train_mean = train_scores.mean(axis=1)
-    val_mean = val_scores.mean(axis=1)
+    train_mean = score_correction *  train_scores.mean(axis=1)
+    val_mean = score_correction * val_scores.mean(axis=1)
 
     # Decide label + possible sign flip
     y_label = "Score"
@@ -287,12 +283,12 @@ def plot_knn_learning_curve(model, X, y, cv, ax=None, scoring: str = "accuracy")
 
     ax.set_xlabel("Training set size")
     ax.set_ylabel(y_label)
-    ax.set_title(f"K-NN learning curve (k={k}) – {title_metric}")
+    ax.set_title(f"K-NN learning curve (k={k})")
     ax.legend()
     ax.grid(True)
 
 
-def plot_knn_learning_curves_grid(model, X, y, cv, n_cols=2, scoring="accuracy"):
+def plot_knn_learning_curves_grid(model, X, y, cv, n_cols=2, score_correction:int = 1, scoring="accuracy"):
     """
     Plot learning curves for multiple KNN models in a grid layout.
     Optionally highlight the subplot whose model.n_neighbors == highlight_k.
@@ -326,7 +322,7 @@ def plot_knn_learning_curves_grid(model, X, y, cv, n_cols=2, scoring="accuracy")
         if model.n_neighbors == kn:
             for spine in ax.spines.values():
                 spine.set_linewidth(3.0)   # bordo più spesso
-            ax.set_title(f"K-NN learning curve (k={model.n_neighbors})  ★")
+            ax.set_title(f"K-NN learning curve (k={model.n_neighbors})  *")
 
     # remove unused axes
     for j in range(i + 1, len(axes)):
@@ -425,74 +421,97 @@ import pandas as pd
 from sklearn.base import clone
 from sklearn.metrics import mean_squared_error
 
-def mee(y_true, y_pred):
-    y_true = np.asarray(y_true)
-    y_pred = np.asarray(y_pred)
-    return float(np.mean(np.linalg.norm(y_true - y_pred, axis=1)))
+
+# def mee(y_true, y_pred):
+#     y_true = np.asarray(y_true)
+#     y_pred = np.asarray(y_pred)
+#     return float(np.mean(np.linalg.norm(y_true - y_pred, axis=1)))
 
 
-def run_kfold(untrained_base_model,X,y,fold_strategy):
+def run_kfold(untrained_base_model, X, y, fold_strategy, fill_value=np.nan) -> cc.FoldResults:
     """
-    K-Fold CV for sklearn models (multi-output regression) collecting:
-    - MEE
-    - MSE (averaged over outputs)
-    - RMSE
+    K-Fold CV for sklearn multi-output regression model (e.g., Pipeline+KNN).
+    Returns fold_histories in a format aligned with your NN logs.
 
-    'best' and 'last' are defined over folds (no epochs in sklearn KNN):
-    - best = fold with minimum MEE
-    - last = last fold executed
+    Notes:
+    - No epochs => per-epoch histories do not exist.
+      We store single-point metrics per fold; mean/best/last coincide.
+    - 'acc' fields are not defined for regression => filled with fill_value.
+    - 'loss' fields: we map them to MSE (quadratic loss) for consistency.
     """
 
-    # Convert to numpy once
     Xn = X.to_numpy() if hasattr(X, "to_numpy") else np.asarray(X)
     yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
 
-    fold_rows = []
+    fold_results = cc.FoldResults()
 
     for fold_nr, (tr_idx, vl_idx) in enumerate(fold_strategy.split(Xn), start=1):
+
+        X_tr, y_tr = Xn[tr_idx], yn[tr_idx] # Train set
+        X_vl, y_vl = Xn[vl_idx], yn[vl_idx] # Validation set
+
+        # Clone model and fit
         model = clone(untrained_base_model)
-
-        X_tr, y_tr = Xn[tr_idx], yn[tr_idx]
-        X_vl, y_vl = Xn[vl_idx], yn[vl_idx]
-
         model.fit(X_tr, y_tr)
-        pred = model.predict(X_vl)
 
-        fold_mee = mee(y_vl, pred)
-        fold_mse = float(mean_squared_error(y_vl, pred))   # avg over 4 outputs
-        fold_rmse = float(np.sqrt(fold_mse))
+        # Predict on train-fold and val-fold
+        pred_tr = model.predict(X_tr)
+        pred_vl = model.predict(X_vl)
 
-        fold_rows.append({
-            "fold": fold_nr,
-            "mee": fold_mee,
-            "mse": fold_mse,
-            "rmse": fold_rmse
-        })
+        # Mean squared error and root mean squared error
+        tr_mse = float(mean_squared_error(y_tr, pred_tr))
+        tr_rmse = float(np.sqrt(tr_mse))
+        vl_mse = float(mean_squared_error(y_vl, pred_vl))
+        vl_rmse = float(np.sqrt(vl_mse))
+        # Mean euclidean error
+        tr_mee, vl_mee = cc.mee(y_tr, pred_tr), cc.mee(y_vl, pred_vl)
 
-    per_fold = pd.DataFrame(fold_rows)
+        # Compared with NN we have no epochs, "history" is a single point.
+        # std across epochs is 0.0, and best == last == that point.
+        fold_results.append(cc.FoldResult({
+            "fold_nr": fold_nr,
 
-    # Choose "best" fold based on MEE (you can switch criterion if you prefer)
-    best_idx = int(per_fold["mee"].idxmin())
+            # Map "loss" to MSE for regression (quadratic loss)
+            "tr_loss": tr_mse, "tr_loss_std": 0.0,
+            "vl_loss": vl_mse, "vl_loss_std": 0.0,
+            "tr_rmse": tr_rmse, "vl_rmse": vl_rmse,
 
-    results = {
-        "per_fold": per_fold,
+            # accuracy not defined in regression
+            "tr_acc": fill_value, "tr_acc_std": fill_value,
+            "vl_acc": fill_value, "vl_acc_std": fill_value,
 
-        "mee_mean": float(per_fold["mee"].mean()),
-        "mee_std":  float(per_fold["mee"].std(ddof=0)),
-        "mse_mean": float(per_fold["mse"].mean()),
-        "mse_std":  float(per_fold["mse"].std(ddof=0)),
-        "rmse_mean": float(per_fold["rmse"].mean()),
-        "rmse_std":  float(per_fold["rmse"].std(ddof=0)),
+            "tr_mae": fill_value, "tr_mae_std": fill_value,
+            "vl_mae": fill_value, "vl_mae_std": fill_value,
 
-        "best_fold": int(per_fold.loc[best_idx, "fold"]),
-        "mee_best":  float(per_fold.loc[best_idx, "mee"]),
-        "mse_best":  float(per_fold.loc[best_idx, "mse"]),
-        "rmse_best": float(per_fold.loc[best_idx, "rmse"]),
+            "tr_mee": tr_mee, "tr_mee_std": 0.0,
+            "vl_mee": vl_mee, "vl_mee_std": 0.0,
 
-        "last_fold": int(per_fold.iloc[-1]["fold"]),
-        "mee_last":  float(per_fold.iloc[-1]["mee"]),
-        "mse_last":  float(per_fold.iloc[-1]["mse"]),
-        "rmse_last": float(per_fold.iloc[-1]["rmse"]),
-    }
+            "best_tr_loss": tr_mse, "best_vl_loss": vl_mse,
+            "best_tr_acc": fill_value, "best_vl_acc": fill_value,
+            "best_tr_mee": tr_mee, "best_vl_mee": vl_mee
+        }))
 
-    return results
+        # fold_results.append(cc.FoldResult({
+        #     "fold_nr": fold_nr,
+        #     "tr_loss": np.mean(hist_tr_loss), "tr_loss_std": np.std(hist_tr_loss),
+        #     "vl_loss": np.mean(hist_vl_loss), "vl_loss_std": np.std(hist_vl_loss),
+        #     "tr_acc": np.mean(tr_hist_acc), "tr_acc_std": np.std(tr_hist_acc),
+        #     "vl_acc": np.mean(vl_hist_acc), "vl_acc_std": np.std(vl_hist_acc),
+        #     "tr_mae": np.mean(hist_tr_mae), "tr_mae_std": np.std(hist_tr_mae),
+        #     "vl_mae": np.mean(hist_vl_mae), "vl_mae_std": np.std(hist_vl_mae),
+        #     "tr_mee": np.mean(hist_tr_mee), "tr_mee_std": np.std(hist_tr_mee),
+        #     "vl_mee": np.mean(hist_vl_mee), "vl_mee_std": np.std(hist_vl_mee),
+        #
+        #     "best_tr_loss": float(min(hist_tr_loss)),
+        #     "best_tr_acc": float(max(tr_hist_acc)),
+        #
+        #     "best_vl_loss": float(min(hist_vl_loss)),
+        #     "best_vl_acc": float(max(vl_hist_acc)),
+        #
+        #     "best_tr_mee": float(min(hist_tr_mee)),
+        #     "best_vl_mee": float(min(hist_vl_mee))
+        # }))
+
+    #return pd.DataFrame(fold_histories)
+    return fold_results
+

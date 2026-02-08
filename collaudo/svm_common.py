@@ -4,7 +4,7 @@ from matplotlib import pyplot as plt
 from sklearn import clone
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from sklearn.model_selection import learning_curve
+from sklearn.model_selection import learning_curve, cross_val_score
 
 
 def compare_svfreq_vs_permutation(best_model, X_tr, y_tr, scoring="accuracy"):
@@ -115,34 +115,26 @@ def plot_learning_curve_svr(model, X, y, cv, scoring: str = "neg_mean_squared_er
     )
 
     # Mean over folds
-    train_mean = train_scores.mean(axis=1)
-    val_mean = val_scores.mean(axis=1)
+    train_mean = -train_scores.mean(axis=1)
+    val_mean = -val_scores.mean(axis=1)
 
     # Handle neg_* scorers (typical for regression)
-    if scoring.startswith("neg_"):
-        train_mean = -train_mean
-        val_mean = -val_mean
-        ylabel = scoring.replace("neg_", "") + " (lower is better)"
-    else:
-        ylabel = scoring + " (higher is better)"
+    # if scoring.startswith("neg_"):
+    #     train_mean = -train_mean
+    #     val_mean = -val_mean
+    #     ylabel = scoring.replace("neg_", "") + " (lower is better)"
+    # else:
+    #     ylabel = scoring + " (higher is better)"
 
     plt.figure(figsize=(6, 4))
     plt.plot(train_sizes, train_mean, label="Train")
     plt.plot(train_sizes, val_mean, label="CV")
     plt.xlabel("Training set size")
-    plt.ylabel(ylabel)
+    plt.ylabel("Score")
     plt.title("Learning Curve (SVR)")
     plt.legend()
     plt.grid(True)
     plt.show()
-
-
-def grid_introspection(grid):
-
-    print("Total model explored:", len(grid.cv_results_["params"]))
-    print("Best params:", grid.best_params_)
-    print("Best CV accuracy:", grid.best_score_)
-    print("Best model:", grid.best_estimator_)
 
 
 def label_row(r):
@@ -382,40 +374,39 @@ def run_kfold(model, X, y, folder_strategy):
 
     # loop folds
     for fold_nr, (tr_idx, vl_idx) in enumerate(folder_strategy.split(X)):
+
         X_tr, X_vl = X[tr_idx], X[vl_idx]
         y_tr, y_vl = y[tr_idx], y[vl_idx]
 
         m = clone(model)
         m.fit(X_tr, y_tr)
 
-        yhat_tr = m.predict(X_tr)
-        yhat_vl = m.predict(X_vl)
+        pred_tr = m.predict(X_tr)
+        pred_vl = m.predict(X_vl)
 
         # --- choose "loss": here MSE (scalar) computed by flattening all outputs
-        tr_mse = mean_squared_error(y_tr, yhat_tr)
-        vl_mse = mean_squared_error(y_vl, yhat_vl)
-
+        tr_mse = mean_squared_error(y_tr, pred_tr)
         tr_rmse = np.sqrt(tr_mse)
+        vl_mse = mean_squared_error(y_vl, pred_vl)
         vl_rmse = np.sqrt(vl_mse)
 
+        # MSE and RMSE
         hist_tr_loss.append(float(tr_mse))
         hist_vl_loss.append(float(vl_mse))
-
         hist_tr_rmse.append(float(tr_rmse))
         hist_vl_rmse.append(float(vl_rmse))
 
         # MAE (flattening multi-output)
-        hist_tr_mae.append(float(mean_absolute_error(y_tr, yhat_tr)))
-        hist_vl_mae.append(float(mean_absolute_error(y_vl, yhat_vl)))
+        hist_tr_mae.append(float(mean_absolute_error(y_tr, pred_tr)))
+        hist_vl_mae.append(float(mean_absolute_error(y_vl, pred_vl)))
 
         # MEE (vector error per sample)
-        hist_tr_mee.append(np.mean(np.linalg.norm(y_tr - yhat_tr, axis=1)))
-        hist_vl_mee.append(np.mean(np.linalg.norm(y_vl - yhat_vl, axis=1)))
+        hist_tr_mee.append(np.mean(np.linalg.norm(y_tr - pred_tr, axis=1)))
+        hist_vl_mee.append(np.mean(np.linalg.norm(y_vl - pred_vl, axis=1)))
 
     # helper
     def _agg(vals, decimals=4):
         vals = np.asarray(vals, dtype=float)
-
         return (
             round(np.mean(vals), decimals),
             round(np.std(vals), decimals),
@@ -432,7 +423,7 @@ def run_kfold(model, X, y, folder_strategy):
     tr_mee, tr_mee_std, best_tr_mee, last_tr_mee = _agg(hist_tr_mee)
     vl_mee, vl_mee_std, best_vl_mee, last_vl_mee = _agg(hist_vl_mee)
 
-    return {
+    return pd.DataFrame({
         "tr_loss": tr_loss,
         "tr_loss_std": tr_loss_std,
         "vl_loss": vl_loss,
@@ -459,7 +450,7 @@ def run_kfold(model, X, y, folder_strategy):
         "best_vl_loss": best_vl_loss,
         "last_vl_loss": last_vl_loss,
 
-        # acc not defined
+        # acc not defined in CUP 2025
         "best_tr_acc": None,
         "last_tr_acc": None,
         "best_vl_acc": None,
@@ -473,4 +464,20 @@ def run_kfold(model, X, y, folder_strategy):
         "hist_vl_mae": hist_vl_mae,
         "hist_vl_loss": hist_vl_loss,
         "hist_vl_rmse": hist_vl_rmse
-    }
+    })
+
+
+def assess_cv_robustness(cv, model, X, y, scoring="accuracy", seeds:list=[10, 20, 30, 40, 50]):
+
+    params = cv.__dict__.copy()
+    for seed in seeds:
+        params["random_state"] = seed
+        cv_copy = cv.__class__(**params)
+        scores = cross_val_score(
+            model,
+            X, y,
+            cv=cv_copy,
+            scoring=scoring,
+        )
+
+        print('seed: {} - mean {:.3f} ± {:.3f}'.format(seed, scores.mean(), scores.std()))

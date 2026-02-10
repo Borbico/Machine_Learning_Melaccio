@@ -10,7 +10,28 @@ from sklearn import clone
 from torch import nn, Tensor
 from torch.nn import MSELoss
 from torch.utils.data import TensorDataset, DataLoader
-import cup_common as cc
+import cross_common as cr
+from cross_common import (FOLD_NR,
+                FOLD_TR_MSE,FOLD_VL_MSE,FOLD_TR_MEE,
+                FOLD_VL_MEE,FOLD_TR_MAE,FOLD_VL_MAE,
+                FOLD_TR_ACC,FOLD_VL_ACC)
+
+EPOCHS_VL_MEE_STD = "epochs_vl_mee_std"
+EPOCHS_VL_MEE_MEAN = "epochs_vl_mee_mean"
+EPOCHS_TR_MEE_STD = "epochs_tr_mee_std"
+EPOCHS_TR_MEE_MEAN = "epochs_tr_mee_mean"
+EPOCHS_VL_MAE_STD = "epochs_vl_mae_std"
+EPOCHS_VL_MAE_MEAN = "epochs_vl_mae_mean"
+EPOCHS_TR_MAE_STD = "epochs_tr_mae_std"
+EPOCHS_TR_MAE_MEAN = "epochs_tr_mae_mean"
+EPOCHS_VL_ACC_STD = "epochs_vl_acc_std"
+EPOCHS_VL_ACC_MEAN = "epochs_vl_acc_mean"
+EPOCHS_TR_ACC_STD = "epochs_tr_acc_std"
+EPOCHS_TR_ACC_MEAN = "epochs_tr_acc_mean"
+EPOCHS_VL_MSE_STD = "epochs_vl_mse_std"
+EPOCHS_VL_MSE_MEAN = "epochs_vl_mse_mean"
+EPOCHS_TR_MSE_STD = "epochs_tr_mse_std"
+EPOCHS_TR_MSE_MEAN = "epochs_tr_mse_mean"
 
 # Default train params
 DEFAULT_TRAIN_EPOCHS = 500
@@ -465,7 +486,7 @@ def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function
     })
 
 
-def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: dict, scaler_template=None) -> cc.FoldResults:
+def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: dict, scaler_template=None) -> cr.FoldResults:
     """
     Runs K-Fold cross-validation by reusing existing training/evaluation code.
     Returns per-fold histories and final validation metrics.
@@ -478,7 +499,7 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
     :param scaler_template: The scaler if needed
     """
 
-    fold_results = cc.FoldResults()
+    fold_results = cr.FoldResults()
 
     # Fold iteration
     for fold_nr, (tr_idx, vl_idx) in enumerate(fold_strategy.split(X, y)):
@@ -522,23 +543,23 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
         epochs_grad = train_result.epochs_grad
 
         # Data gathering
-        fold_results.append(cc.FoldResult({
-            "fold_nr": fold_nr,
+        fold_results.append(cr.FoldResult({
+            FOLD_NR: fold_nr,
 
             # NN Specific attributes
-            "epochs_tr_mse_mean": np.mean(epochs_tr_mse), "epochs_tr_mse_std": np.std(epochs_tr_mse),
-            "epochs_vl_mse_mean": np.mean(epochs_vl_mse), "epochs_vl_mse_std": np.std(epochs_vl_mse),
-            "epochs_tr_acc_mean": np.mean(epochs_tr_acc), "epochs_tr_acc_std": np.std(epochs_tr_acc),
-            "epochs_vl_acc_mean": np.mean(epochs_vl_acc), "epochs_vl_acc_std": np.std(epochs_vl_acc),
-            "epochs_tr_mae_mean": np.mean(epochs_tr_mae), "epochs_tr_mae_std": np.std(epochs_tr_mae),
-            "epochs_vl_mae_mean": np.mean(epochs_vl_mae), "epochs_vl_mae_std": np.std(epochs_vl_mae),
-            "epochs_tr_mee_mean": np.mean(epochs_tr_mee), "epochs_tr_mee_std": np.std(epochs_tr_mee),
-            "epochs_vl_mee_mean": np.mean(epochs_vl_mee), "epochs_vl_mee_std": np.std(epochs_vl_mee),
+            EPOCHS_TR_MSE_MEAN: np.mean(epochs_tr_mse), EPOCHS_TR_MSE_STD: np.std(epochs_tr_mse),
+            EPOCHS_VL_MSE_MEAN: np.mean(epochs_vl_mse), EPOCHS_VL_MSE_STD: np.std(epochs_vl_mse),
+            EPOCHS_TR_ACC_MEAN: np.mean(epochs_tr_acc), EPOCHS_TR_ACC_STD: np.std(epochs_tr_acc),
+            EPOCHS_VL_ACC_MEAN: np.mean(epochs_vl_acc), EPOCHS_VL_ACC_STD: np.std(epochs_vl_acc),
+            EPOCHS_TR_MAE_MEAN: np.mean(epochs_tr_mae), EPOCHS_TR_MAE_STD: np.std(epochs_tr_mae),
+            EPOCHS_VL_MAE_MEAN: np.mean(epochs_vl_mae), EPOCHS_VL_MAE_STD: np.std(epochs_vl_mae),
+            EPOCHS_TR_MEE_MEAN: np.mean(epochs_tr_mee), EPOCHS_TR_MEE_STD: np.std(epochs_tr_mee),
+            EPOCHS_VL_MEE_MEAN: np.mean(epochs_vl_mee), EPOCHS_VL_MEE_STD: np.std(epochs_vl_mee),
 
-            "fold_tr_mse": float(min(epochs_tr_mse)), "fold_vl_mse": float(min(epochs_vl_mse)),
-            "fold_tr_mee": float(min(epochs_tr_mee)), "fold_vl_mee": float(min(epochs_vl_mee)),
-            "fold_tr_mae": float(min(epochs_tr_mae)), "fold_vl_mae": float(min(epochs_vl_mae)),
-            "fold_tr_acc": float(max(epochs_tr_acc)), "fold_vl_acc": float(max(epochs_vl_acc))
+            FOLD_TR_MSE: float(min(epochs_tr_mse)), FOLD_VL_MSE: float(min(epochs_vl_mse)),
+            FOLD_TR_MEE: float(min(epochs_tr_mee)), FOLD_VL_MEE: float(min(epochs_vl_mee)),
+            FOLD_TR_MAE: float(min(epochs_tr_mae)), FOLD_VL_MAE: float(min(epochs_vl_mae)),
+            FOLD_TR_ACC: float(max(epochs_tr_acc)), FOLD_VL_ACC: float(max(epochs_vl_acc))
         }))
 
     return fold_results

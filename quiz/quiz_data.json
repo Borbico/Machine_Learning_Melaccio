@@ -1411,5 +1411,15 @@
     ],
     "correct": [3],
     "answer":"Correct answers is 3"
+},
+{
+  "question": "Given x input, d target, o the perceptron’s output, the update rule of the Perceptron Learning Algorithm: It is $w_new = w + η x d$ only if there is a classification error for x",
+  "type": "tf",
+  "options": [
+    "True",
+    "False"
+  ],
+  "correct": "True",
+  "answer": "In the Perceptron Learning Algorithm, the weight update $w_new = w + η x d$ is applied only when the current example is misclassified. If the example is correctly classified, no update is performed."
 }
 ]

@@ -3,3 +3,6 @@ source quiz/bin/activate
 pip install streamlit pandas
 
 streamlit run quiz_app.py
+
+# per uscire
+deactivate

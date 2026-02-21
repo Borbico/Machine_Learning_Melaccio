@@ -1,0 +1,1415 @@
+[
+  {
+    "id": 1,
+    "question": "The gradient can be exploited to provide the direction toward local maxima of a function",
+    "type": "tf",
+    "answer": "The gradient shows the direction where the function grows, while the negative of the gradient show the direction where the function decreases.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 2,
+    "question": "The negative of gradient can be exploited to provide the direction toward local minima of a function",
+    "type": "tf",
+    "answer": "The gradient shows the direction where the function grows, while the negative of the gradient show the direction where the function decreases.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 3,
+    "question": "$$\\|x\\|_2 = \\sum_i x_i^2$$",
+    "type": "tf",
+    "answer": "Euclidean norm of a vector is given by $$\\sqrt{\\sum_i x_i^2} = \\|x\\|_2$$",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 4,
+    "question": "$\\|x\\|_2^2 = \\sum_i x_i^2$",
+    "type": "tf",
+    "answer": "Euclidean norm of a vector is given by $$\\sqrt{\\sum_i x_i^2} = \\|x\\|_2$$",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 5,
+    "question": "There exits the search inductive bias",
+    "type": "tf",
+    "answer": "There exist two types of inductive bias, the language bias and the search bias.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 6,
+    "question": "An unbiased learner corresponds to a look-up table model",
+    "type": "tf",
+    "answer": "The version space VS , with respect to hypothesis space H and training set TR, is the subset of H,TR hypotheses from H consistent with all training examples. The only examples that are unambiguously classified by an unbiased learner represented with the VS are the training examples themselves (we are implementing a lookup table). An unbiased learner is unable to generalize (on new instances). Each unobserved instance will be classified 1 (or positive) by precisely half the hypothesis in VS and 0 (or negative) by the other half.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 7,
+    "question": "For the supervised learning the loss is computed to evaluate the distance between the model response and its inputs",
+    "type": "tf",
+    "answer": "The Loss measures the “distance” between and (the output and the target).",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 8,
+    "question": "For the supervised learning the loss is computed to evaluate the distance between the target and the model inputs",
+    "type": "tf",
+    "answer": "The Loss measures the “distance” between h(x) and d (the output and the target).",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 9,
+    "question": "Removing the inductive bias from a learning system brings advantages for the learning system",
+    "type": "tf",
+    "answer": "A learner that makes no prior assumptions regarding the identity of the target function/concept has no rational basis for classifying any unseen instances. The bias (restriction, preference) is not only assumed for efficiency, but it is also needed for the generalization capability. However, it does not tell us (quantify) which one is the best solution for generalization yet.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 10,
+    "question": "Polynomial coefficients (magnitude) typically decreases after training with higher values of M",
+    "type": "tf",
+    "answer": "With a 0th order polynomial we have complexity M=0, and increasing the polynomial coefficient we are increasing the complexity.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 11,
+    "question": "Polynomial coefficients (magnitude) typically increases after training with higher values of M",
+    "type": "tf",
+    "answer": "With a 0th order polynomial we have complexity M=0, and increasing the polynomial coefficient we are increasing the complexity",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 12,
+    "question": "The model selection is made looking to best result on the test set",
+    "type": "tf",
+    "answer": "The Validation Set is used to select the best model (hyper-parameters tuning, model selection)",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 13,
+    "question": "The model selection is made looking to best result on the validation set",
+    "type": "tf",
+    "answer": "The Validation Set is used to select the best model (hyper-parameters tuning, model selection)",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 14,
+    "question": "The model selection is made looking to best result on the training set",
+    "type": "tf",
+    "answer": "The Validation Set is used to select the best model (hyper-parameters tuning, model selection)",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 15,
+    "question": "The number of free parameters after a LBE is typically greater than in the original model",
+    "type": "tf",
+    "answer": "Typically, the number of parameters K can exceed the number of original features n (K>n, before it was n)",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 16,
+    "question": "A linear classifier with LBE cannot solve a non-linear separable problem",
+    "type": "tf",
+    "answer": "The model is linear in the parameters w_k (also in ϕ, not in x), even though the transformed features are non-linear. This approach can model more complicated relationships (than the linear).",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 17,
+    "question": "A polynomial expansion is a form of LBE",
+    "type": "tf",
+    "answer": "A polynomial expansion is a form of linear basis expansion, where polynomials are used as bases to represent the function.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 18,
+    "question": "The perceptron is a LTU",
+    "type": "tf",
+    "answer": "A perceptron is a specific form of Linear Threshold Unit (LTU) where the activation function is a step function. It returns 1 if the weighted sum of inputs exceeds a certain threshold, otherwise, it returns 0. In simpler terms, a perceptron can be viewed as a simplification of an LTU with a binary activation function.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 19,
+    "question": "The perceptron learning algorithm works with a unit that compute $$sign(w^Tx)$$",
+    "type": "tf",
+    "answer": "For each training pa]ern (x,d) , where d can be +1 or –1, we compute the output activation $$out = sign(w^Tx)$$",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 20,
+    "question": "The perceptron learning algorithm cannot solve the XOR problem",
+    "type": "tf",
+    "answer": "For the XOR (exclusive OR), it’s not possible using a linear separation because no linear separation surface exists.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 21,
+    "question": "A small networks with a hidden layer of perceptrons can solve the XOR problem",
+    "type": "tf",
+    "answer": "For the XOR we can’t use a linear separation, but we can use a NN. We can implement the network by introducing two additional variables and connecting them appropriately, such that the points are linearly separable in the new space.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 22,
+    "question": "The perceptron learning algorithm always converges in a finite number of steps",
+    "type": "tf",
+    "answer": "The perceptron is guaranteed to converge (classifying correctly all the input pa]erns) in a finite number of steps if the problem is linearly separable.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 23,
+    "question": "The perceptron learning algorithm solves only tasks with all positive pa[erns",
+    "type": "tf",
+    "answer": "The perceptron learning algorithm solves tasks with positive and negative pa]erns.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 24,
+    "question": "The sigmoidal logistic is not a differentiable function",
+    "type": "tf",
+    "answer": "The sigmoidal logistic is a differentiable function because there exists its derivative.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 25,
+    "question": "A linear model can be obtained by an artificial neural unit with an identity activation function",
+    "type": "tf",
+    "answer": "The identity activation function is a linear function. So, if you consider an artificial neural unit (neuron) with an identity activation function, it means that the output of the unit will be simply a linear combination of its inputs.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 26,
+    "question": "The perceptron has a differentiable activation function",
+    "type": "tf",
+    "answer": "The perceptron uses the threshold activation function that is non differentiable at every point because it lacks a defined derivative at points where there is a discrete jump. In such points, the derivative is practically zero.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 27,
+    "question": "A NN can be seen a LBE only when we consider LBE for classification",
+    "type": "tf",
+    "answer": "A NN can be seen as a LBE for both regression and classification",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 28,
+    "question": "A NN can be seen as a LBE, and we showed it when the phi function of the LBE is the NN’s output neurons function",
+    "type": "tf",
+    "answer": "The phi function of the LBE is the NN’s hidden neurons function. So in $$h(x) = f\\!\\left(\\sum_j w_j \\phi_j(x, w)\\right)$$, we have that $$\\phi_j(x, w) = f_j\\!\\left(\\sum_i w_{ji} x_i\\right)$$ is the hidden units output.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 29,
+    "question": "A NN cannot address a regression task, but only classification tasks",
+    "type": "tf",
+    "answer": "A NN can address both a regression task and a classification tasks",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 30,
+    "question": "The backpropagation is based on the minimization of the MSE",
+    "type": "tf",
+    "answer": "The backpropagation is based on the minimization of different minimization functions, not only the MSE.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 31,
+    "question": "The backpropagation allows us to obtain the update rule for the units finding the delta for each of them",
+    "type": "tf",
+    "answer": NaN,
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 32,
+    "question": "High values of w initialization accelerate the training",
+    "type": "tf",
+    "answer": "high initial values don’t accelerate the training but can lead to saturation issues. Saturation occurs when neurons in the network reach extreme values, causing the gradients during backpropagation to become very small",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 33,
+    "question": "All zero values to initialize the weights can be a good strategy",
+    "type": "tf",
+    "answer": "If all weights are initialized to zero, all neurons in the network will produce the same output during forward propagation.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 34,
+    "question": "It is always convenient to have a high eta value to speed-up the training",
+    "type": "tf",
+    "answer": "The eta value can be high or low and depends on different situations. Sometimes a high eta value can lead to overfijng.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 35,
+    "question": "The momentum has been introduces to provide a regularization of the model",
+    "type": "tf",
+    "answer": "The momentum in gradient optimization, particularly in the gradient descent algorithm with momentum, is not primarily introduced for the purpose of model regularization. Momentum is a technique used to accelerate convergence during the training of machine learning models. It introduces a \"momentum\" term that adds a fraction of the previous step to the current weight update. This helps maintain a momentum of acceleration in the direction of gradient descent, aiding in overcoming flat local minima or reducing oscillation during optimization.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 36,
+    "question": "Too few hidden units can lead to underfijng",
+    "type": "tf",
+    "answer": "In general, too few hidden units can cause underfitting, and too many hidden units can cause overfijng.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 37,
+    "question": "With a well regularized approach, early stopping can even be not necessary or it can be used without showing its effect",
+    "type": "tf",
+    "answer": "If we have a good regularization, then we don’t need (or strictly need) the Early Stopping heuristic and we can stop at training convergence. Anyway, we can also use both. In that case, the Early Stopping will not enter in action if VL error does not increase.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 38,
+    "question": "In the Nesterov Momentum approach the gradient is computed aTer the movement due to the momentum",
+    "type": "tf",
+    "answer": "So, we first apply the momentum with $$w' = w + \\alpha \\,\\Delta w_{old}$$, and then we evaluate the new old gradient at this interim point, i.e. with such w (in the previous methods we evaluate the gradient and then we applied the momentum)",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 39,
+    "question": "In the cascade correlation algorithm the hidden units are trained to minimize their LMS",
+    "type": "tf",
+    "answer": "In CCA, the model starts with an empty network and gradually adds hidden layers during training. Each new hidden layer is trained to approximate the residual error of the current network, rather than directly minimizing the error on the output variable, as in the case of Mean Squared Error (MSE/LMS).",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 40,
+    "question": "The use of a K-fold CV can solve in itself the problem of a rigorous approach to the model selection and assessment",
+    "type": "tf",
+    "answer": "Cross-Validation is a fundamental practice for evaluating model performance, but the rigorous selection and assessment of a model require a broader consideration of various aspects of the machine learning process.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 41,
+    "question": "It is not suggested to use the VL set to select among different models",
+    "type": "tf",
+    "answer": "The validation set (VL) is used specifically to select the best model, among different models and/or hyper-parameters configurations. It’s for the model selection.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 42,
+    "question": "It is a good practice to stop selecting the number of epochs that provides very low training error",
+    "type": "tf",
+    "answer": "Relying solely on the value of the training error may lead to a problem known as “overfitting”. It is common to use techniques such as the validation set and early stopping during training.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 43,
+    "question": "Both early stopping and regularization Tikhonov aims to control the effective complexity of the model",
+    "type": "tf",
+    "answer": "Early Stopping involves halting the training of the model once its performance on a validation dataset starts deteriorating, indicating a potential point where the model is beginning to overfit to the training data. Tikhonov Regularization involves adding a regularization term to the loss function during model training. Both of these techniques aim to prevent excessive model complexity, providing a trade-off between the model's ability to fit the training data and its ability to generalize to new data.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 44,
+    "question": "The momentum in the batch and on-line version has the same meaning and effect",
+    "type": "tf",
+    "answer": "For Batch we have to consider the previous batch, while for Online we have to consider the previous example.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 45,
+    "question": "The validation and training sets compose the “design set”",
+    "type": "tf",
+    "answer": "The training set and validation set together are sometimes jointly called development/design set, because they are used to build the final model (to train different models and select the best final model).",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 46,
+    "question": "The K-fold CV is an approach to split the dataset",
+    "type": "tf",
+    "answer": "With the K-fold Cross-Validation, we split the data such that we use all the data for validation purpose, instead of using a specific set for the training and another one for the validation.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 47,
+    "question": "Selecting the number of units of a NN by the grid search is enough, we can avoid other regularization approaches,True False",
+    "type": "tf",
+    "options": [
+        "True",
+        "False"
+    ],
+    "correct": "False",
+    "answer": "Choosing the number of units (or neurons) in a neural network via grid search addresses only part of the complexity of the problem of training a neural network."
+  },
+  {
+    "id": 48,
+    "question": "During the training the complexity of the NN increases",
+    "type": "tf",
+    "answer": "When we start the training, we are increasing the complexity, but it is important to find a balance between the complexity of the model and its ability to generalize to new data.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 49,
+    "question": "The model selection does not consider the TS error",
+    "type": "tf",
+    "answer": "For model selection we use only the validation set, and the test set results cannot be used for model selection. There is the gold rule to keep separation between goals and use separate sets.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 50,
+    "question": "The training error is the best indicator to choose among different models",
+    "type": "tf",
+    "answer": "The best indicator to choose among different models is the validation error.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 51,
+    "question": "The test error is the best indicator to choose among different models",
+    "type": "tf",
+    "answer": "The best indicator to choose among different models is the validation error.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 52,
+    "question": "The lambda and the patient are hyperparameters",
+    "type": "tf",
+    "answer": "They are hyperparameters because they are external parameters to the learning algorithm that must be set manually before starting training.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 53,
+    "question": "R-Prop is a variant of the backpropagation based algorithm in which the exact value of the gradient does not care",
+    "type": "tf",
+    "answer": "R-prop, that does not use the value of the gradient (it can vanish for deep layers) but the sign of gradient (to increase or decrease the weights)",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 54,
+    "question": "It is suggested to use the VL set to estimate the general risk R of the SLT for assessment purposes",
+    "type": "tf",
+    "answer": "For assessment purposes, we use the TS set to estimate the general risk R",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 55,
+    "question": "The validation set is used to estimate the $$R_{emp}$$ as used in the SLT",
+    "type": "tf",
+    "answer": "We use the TS set to estimate the Remp",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 56,
+    "question": "Too many units can lead to overfitting unless proper regulations is adopted",
+    "type": "tf",
+    "answer": "In general, too few hidden units can cause underfitting, and too many hidden units can cause overfitting. If a proper regulations is adopted, this can change the aspect.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 57,
+    "question": "H shatters X if and only if for every possible dichotomy of X, there exists a h in H that classifies perfectly all the data",
+    "type": "tf",
+    "answer": "H shatters X if and only if H can represent all the possible dichotomies on X (with 0 errors). There exists at least one hypothesis thanks to which we can discriminate perfectly all these points.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 58,
+    "question": "The VC dimension of a class of functions H is the maximum cardinality of a set (configuration) of points in X that can discriminated by a model in H for at least a labeling assignment",
+    "type": "tf",
+    "answer": "We have VC(H) = p if H shatters at least one set (configuration) of p points and if H cannot shatter any set (configuration) of p + 1 points.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 59,
+    "question": "The objective function of the primal form of the SVM hard margin minimizes the training errors",
+    "type": "tf",
+    "answer": "The minimization of the equation $$\\psi(w) = \\frac{1}{2} w^{T} w$$ (objective function for hard margin) correspond to the minimization of ||w||.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 60,
+    "question": "In the SVM hard-margin the minimization of the norm of w leads to the increment of the $$R_{emp}$$ of the SLT",
+    "type": "tf",
+    "answer": "Minimizing the norm of w is equivalent to minimizing the VC dimension and thus to minimizing the capacity term",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 61,
+    "question": "The theorem of Vapnik shows for a SVM hard margin the relationships between the VC-dim and the margin",
+    "type": "tf",
+    "answer": "Maximizing the margin we minimize the VC dimension",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 62,
+    "question": "For a ML model with a n-dimensional input space, the VC-dim is n + 1",
+    "type": "tf",
+    "answer": "In general, the VC dimension of a class of linear (separator/decision) hyperplanes (LTU) in a n-dimensional space is n+1. Note that could exist an upper-bound, because in some case the VC-dim can be less constraining for the model (because we want to reduce the VC dimension).",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 63,
+    "question": "A support vector is a positive value",
+    "type": "tf",
+    "answer": "A support vector x(s) is a vector that satisfies the equation $$d_i \\left( w^{T} x_i + b \\right) \\ge 1$$ exactly, such that we have $$d^{(s)} \\left( w^{T} x^{(s)} + b \\right) = 1$$ (1 is just a convention for the canonical representation of the hyperplane). Graphically, the support vectors are the closest data points to the hyperplane.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 64,
+    "question": "The SVM hard margin (under its assumption of use) does not need any hyperparameters",
+    "type": "tf",
+    "answer": "There aren’t hyperparameters because there are no external parameters that must be set manually before starting.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 65,
+    "question": "Some configuration of 3 points in the plane are not sha[ered by a linear model",
+    "type": "tf",
+    "answer": "We can have non linearly separable problem, e.g when we have the points positioned one after the other.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 66,
+    "question": "An optimal hyperplane is the one with minimum margin",
+    "type": "tf",
+    "answer": "The optimal hyperplane is the hyperplane which maximizes the margin.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 67,
+    "question": "The objective function of the SVM hard margin is related to the control of the VC-dim of the model",
+    "type": "tf",
+    "answer": "Maximizing the margin we minimize the VC dimension",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 68,
+    "question": "Bagging for classification is likely to decrease the margin of the classifier",
+    "type": "tf",
+    "answer": "For classification, bagging it’s likely to increase (and not decrease) the margin of a classifier. That’s because the average of K separation curves is likely to be “in the middle” (in medio stat virtus).",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 69,
+    "question": "Bagging can exploit high variance learners",
+    "type": "tf",
+    "answer": "We can use high variance models (with low bias) because they can perform well on average.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 70,
+    "question": "Boosting cannot be used with weak learners",
+    "type": "tf",
+    "answer": "Boosting is a technique of ensembling, used to enhance the performance of weak learners incrementally.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 71,
+    "question": "Boosting differentiates each training progressively concentrating on well classified pa[erns",
+    "type": "tf",
+    "answer": "Boosting differentiates each training progressively concentrating on misclassified (and not well classified) pa]erns",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 72,
+    "question": "A deep neural network allows for multiple levels of abstraction of the internal representations",
+    "type": "tf",
+    "answer": "The deep-learning methods exploit distributed representation with multiple levels of representation. We have an increase of level of abstraction through different layers (each layer learns increasingly abstract and complex representations of the input data).",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 73,
+    "question": "A deep (i.e. not shallow) neural network is the only way to implement a representation learning",
+    "type": "tf",
+    "answer": "Deep neural networks are effective, but they are not the only way to implement representation learning. There are other approaches and models that can be used for representation learning, such as shallower neural networks, recurrent neural networks, convolutional neural networks, and other unsupervised learning methods.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 74,
+    "question": "With a two layer logic network is possible to solve the parity problem with polynomial number of gates with respect to the input dimension",
+    "type": "tf",
+    "answer": "With a two layer logic network, we can solve the parity problem with an exponential (not polynomial) number of gates with respect to the input dimension. With N inputs, we have $$\\frac{2^N}{2} + 1 = 2^{N-1} + 1$$ gates.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 75,
+    "question": "An autoencoder can be used to initialize a deep NN exploiting the decoder (pre)trained part",
+    "type": "tf",
+    "answer": "When the autoencoder is trained, then we have $$W_1$$ and $$W′$$ (encoder and decoder) and we can delete the decoder and use only the encoder part.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "False"
+  },
+  {
+    "id": 76,
+    "question": "Stacking many layers with sigmoidal functions and using backprogation, gradient vanish can occur",
+    "type": "tf",
+    "answer": "“Gradient vanishing” occurs when the gradients of the activation functions become very small as one approaches the initial layers of the network during backpropagation. This results in weight updates of the initial layers becoming meaningless, and the network does not learn effectively from those layers. The sigmoid function has a limited range between 0 and 1, and its derivative reaches a maximum value of approximately 0.25. When calculating gradients during backpropagation, these gradients can decrease exponentially as they move backwards through the network. As a result, gradients become very small near the initial layers, contributing to the gradient vanishing problem.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 77,
+    "question": "Gradient clipping check the norm of the gradient to bound the weights update",
+    "type": "tf",
+    "answer": "The repetition of multiplication through many layers can introduce cliffs in the cost function. With clipping, considering g as the gradient and v as the norm threshold, if ||g|| > v then we can impose a normalization of the gradient with g = vg/||g|| . So, we are moving in the gradient direction, but bounding the weight update.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+  {
+    "id": 78,
+    "question": "Increasing the number of layers in a logic network is possible to solve the parity problem with polynomial number of gates with respect to the input dimension",
+    "type": "tf",
+    "answer": "For a solution with logN layers, we have a polynomial number of gates. We construct a complete tree with N − 1 (XOR) internal nodes (a complete binary tree with N leaves has N-1 internal nodes). Considering that the XOR has 3 AND/OR gates, so we have 3 gates for each node and 3(N − 1) total gates. So, with more layers we are reducing the number of gates.",
+    "options": [
+      "True",
+      "False"
+    ],
+    "correct": "True"
+  },
+{
+    "id": 79,
+    "question": "Choose the appropriate claims (with, as usual, negative score for the not correct options):",
+    "type": "multi",
+    "answer": "The general idea of no-flattening is that when a function can be compactly represented by a deep architecture, it might need a very large architecture to be represented by an insufficiently deep one (we can always represent the same task, but the difference is in the efficiency). Deep architectures can compactly represent certain functions that might require a very large architecture in a shallow setting.",
+    "options": [
+      "“No flattening” results show that for some functions, a shallow model would require an exponential number of units with respect to the dimension of the input",
+      "“No flattening” results show that a deep model can be more efficient than a shallow one, with an exponential gain in terms of units",
+      "“No flattening” results show that a deep model can be more efficient than a shallow one, with an exponential gain in terms of bits used to encode each weight of the network",
+      "“No flattening” results show that a deep model is more expressive than a shallow one, with an exponential gain in terms of functions that can be represented",
+      "“No flattening” results does not show that a deep model is more expressive than a shallow one, but that we can have exponential gain in terms of number of weights",
+      "“No flattening” results show that for some functions, a shallow model would require an exponential number of units with respect to the number of layers",
+      "“No flattening” results show that some compositional functions cannot be implemented by a shallow network holding the same number of units of a deep network",
+      "“No flattening” results show that a deep models cannot be more efficient, in terms of units, than a shallow one"
+    ],
+    "correct": [
+      1,
+      2,
+      5,
+      7
+    ]
+  },
+    {
+      "id": 80,
+      "question": "Choose from the following one or more alternatives of formulations for the bias/variance decomposition that are correct (with the notation and assumption used in the lecture of the course). All appropriate answers should be listed below (to gain the max score), but those indicated as appropriate that are not, however, affect the exercise score by negative values",
+      "type": "multi",
+      "options": [
+        "$E_P[(y - h(x))^2] = (f(x) - \\bar{h}(x))^2 + E_P[(h(x) - \\bar{h}(x))^2] + \\sigma^2$ with the mean computed with respect to all the possible data points x according to a distribution P.",
+        "$E_P[(y - h(x))^2] = E_P[(h(x) - \\bar{h}(x))^2] + (f(x) - \\bar{h}(x))^2 + \\sigma^2$ with the mean computed with respect to all the possible training sets sampled according to a distribution P.",
+        "$E_P[(y - h(x))^2] = (f(x) - E_P[h(x)])^2 + E_P[(h(x) - \\bar{h}(x))^2] + \\sigma^2$ with the mean computed with respect to all the possible training sets sampled according to a distribution P.",
+        "$E_P[(y - h(x))^2] = E_P[(h(x) - \\bar{h}(x))^2] + (f(x) - h(x))^2 + \\sigma^2$ with the mean computed with respect to all the possible training sets sampled according to a distribution P.",
+        "$E_P[(y - h(x))^2] = (f(x) - \\bar{h}(x))^2 - E_P[(h(x) - \\bar{h}(x))^2] + \\sigma^2$ with the mean computed with respect to all the possible training sets sampled according to a distribution P.",
+        "$E_P[(y - h(x))^2] = (f(x) - h(x))^2 + E_P[(h(x) - \\bar{h}(x))^2] + \\sigma^2$ with the mean computed with respect to all the possible data points x according to a distribution P."
+      ],
+      "correct": [2, 3],
+      "answer": "We have that:\n\n$$\nE_P[(y-h(x))^2] = E_P[h(x)^2] + E_P[y^2] - 2E_P[y]E_P[h(x)]\n$$\n\nwhere:\n\n$$\nE_P[h(x)^2] = E_P[(h(x)-\\bar{h}(x))^2] + \\bar{h}(x)^2\n$$\n\n$$\nE_P[y^2] = E_P[(y-f(x))^2] + f(x)^2\n$$\n\n$$\n-2E_P[y]E_P[h(x)] = -2 f(x)\\bar{h}(x)\n$$\n\nTherefore:\n\n$$\nE_P[(y-h(x))^2] = E_P[(h(x)-\\bar{h}(x))^2] + \\bar{h}(x)^2 - 2f(x)\\bar{h}(x) + f(x)^2 + E_P[(y-f(x))^2]\n$$\n\n$$\n= E_P[(h(x)-\\bar{h}(x))^2] + (\\bar{h}(x)-f(x))^2 + E_P[(y-f(x))^2]\n$$\n\nMoreover, the mean is computed with respect to all the possible training sets sampled according to a distribution P (and not with respect to all the possible data points x)."
+    },
+{
+  "id": 81,
+  "question": "Choose one or more alternatives of formulations of the RBF kernel that are correct. All appropriate answers should be listed below (to gain the max score), but those indicated as appropriate that are not, however, affect the exercise by a negative score.",
+  "type": "multi",
+  "options": [
+    "$K(t,v) = e^{\\frac{1}{2\\sigma^2}\\|v-t\\|^2}$",
+    "$K(t,v) = e^{-\\frac{1}{2\\sigma^2}(t-v)}$",
+    "$K(t,v) = e^{\\frac{1}{2\\sigma^2}\\|t-v\\|}$",
+    "$K(t,v) = - e^{\\frac{1}{2\\sigma^2}\\|t-v\\|^2}$",
+    "$K(t,v) = e^{-\\frac{1}{2\\sigma^2}\\|v-t\\|^2}$",
+    "$K(t,v) = e^{-\\frac{1}{2\\sigma^2}\\|t-v\\|}$",
+    "$K(t,v) = e^{-\\frac{1}{2\\sigma^2}\\|t-v\\|^2}$",
+    "$K(v,t) = e^{-\\frac{1}{2\\sigma^2}\\|v-t\\|^2}$",
+    "$K(t,v) = e^{\\frac{1}{2\\sigma^2}\\|t-v\\|^2}$"
+  ],
+  "correct": [5, 7, 8],
+  "answer": "The Radial Basis Function kernel is defined as $K(x,x_i) = e^{-\\frac{1}{2\\sigma^2}\\|x - x_i\\|^2}$. The kernel is symmetric, so $K(t,v) = K(v,t)$. Therefore, any formulation with a negative exponent and the squared Euclidean norm is correct."
+},
+    {
+  "id": 82,
+  "question": "List the proper claims for the Soft margin SVM",
+  "type": "multi",
+  "options": [
+    "Small values of C can lead to overfitting",
+    "Slack variables change the constraints of the primal problem",
+    "The slack variables have no effect on the width of the margin",
+    "High values of C can lead to underfitting",
+    "With slack variables is possible to gain a greater margin",
+    "The values of alfa allow us to know the not-null slack variables",
+    "C in a soft margin SVM can be tailored by the user with a cross validation approach",
+    "Slack variables does not changes the constraints of the primal problem"
+  ],
+  "correct": [2, 5, 6, 7],
+  "answer": "1. For Soft Margin, small values of C can lead to underfitting.\n2. For Soft Margin, we introduce the non-negative scalar variables $\\xi_i$, such that we add a tolerance in the constraint, and we obtain $d_i(w^T x_i + b) \\ge 1 - \\xi_i\\,(\\forall i = 1,\\ldots,N)$.\n3. The slack variables have effect on the width of the margin because we are now admitting points inside the margin that allows us to have a larger margin and a noise tolerance.\n4. For Soft Margin, high values of C can lead to overfitting.\n5. With the slack variables we are now admitting points inside the margin that allows us to have a larger margin and a noise tolerance.\n6. If $0 < \\alpha_i < C$ then $\\xi_i = 0$ (so we are on the edge of the margin), and if $\\alpha_i = C$ then $\\xi_i \\ge 0$ (so we are inside the margin).\n7. C is a regularization hyper-parameter to control the trade-off between the empirical risk minimization and the capacity term minimization.\n8. With the slack variables $\\xi_i$ we add a tolerance in the constraint, and we obtain $d_i(w^T x_i + b) \\ge 1 - \\xi_i\\,(\\forall i = 1,\\ldots,N)$."
+},
+{
+  "id": 83,
+  "question": "Compute the correct delta for a hidden unit u or z that is connected in output to units denoted by the index v, using the conventions assumed in the course.",
+  "type": "multi",
+  "options": [
+    "$\\delta_u = (\\sum_u \\delta_v w_{vu}) f'_u(net_u)$",
+    "$\\delta_z = (\\sum_z \\delta_v w_{vz}) f'_z(net_z)$",
+    "$\\delta_u = (\\sum_u \\delta_u w_{vu}) f'_u(net_u)$",
+    "$\\delta_u = (\\sum_v \\delta_v w_{vu}) f'_u(net_u)$",
+    "$\\delta_z = (\\sum_v \\delta_v w_{zv}) f'_z(net_z)$",
+    "$\\delta_z = (\\sum_v \\delta_v w_{vz}) f'_z(net_z)$",
+    "$\\delta_z = (\\sum_z \\delta_z w_{vz}) f'_z(net_z)$",
+    "$\\delta_u = (\\sum_v \\delta_v w_{uv}) f'_u(net_u)$"
+  ],
+  "correct": [4, 6],
+  "answer": "The equation for the hidden unit's error signal is $\\delta_j = \\left( \\sum_{k=1}^{K} \\delta_k w_{kj} \\right) f'_j(net_j)$, where j denotes a hidden unit and k denotes an output unit."
+},
+{
+  "id": 84,
+  "question": "Compute the correct delta for a hidden unit r or s that is connected in output to units denoted by the index v, using the conventions assumed in the course.",
+  "type": "multi",
+  "options": [
+    "$\\delta_s = (\\sum_s \\delta_s w_{vs}) f'_s(net_s)$",
+    "$\\delta_s = (\\sum_v \\delta_s w_{uv}) f'_s(net_s)$",
+    "$\\delta_s = (\\sum_v \\delta_v w_{vs}) f'_s(net_s)$",
+    "$\\delta_r = (\\sum_r \\delta_v w_{vr}) f'_r(net_r)$",
+    "$\\delta_r = (\\sum_v \\delta_v w_{vr}) f'_r(net_r)$",
+    "$\\delta_s = (\\sum_s \\delta_v w_{vs}) f'_s(net_s)$",
+    "$\\delta_r = (\\sum_r \\delta_r w_{vr}) f'_r(net_r)$",
+    "$\\delta_r = (\\sum_v \\delta_v w_{rv}) f'_r(net_r)$"
+  ],
+  "correct": [3, 5],
+  "answer": "The equation for the hidden unit's error signal is $\\delta_j = \\left( \\sum_{k=1}^{K} \\delta_k w_{kj} \\right) f'_j(net_j)$, where j denotes a hidden unit and k denotes an output unit."
+},
+{
+  "id": 85,
+  "question": "Given an unit with activation function f and δ_p = (d_p - f(net(x_p))), and denoting the weights with t or i, list the proper results among the following equations for a pattern p:",
+  "type": "multi",
+  "options": [
+    "$\\frac{\\partial E_p(w)}{\\partial w_t} = +2\\delta_p (x_{p,t}) f'(x_p) net(x_p)$",
+    "$\\frac{\\partial E_p(w)}{\\partial w_i} = -2\\delta_p (x_{p,i}) f'(x_p)$",
+    "$\\frac{\\partial E_p(w)}{\\partial w_t} = -2 x_{p,t} \\delta_p f'(net(x_p))$",
+    "$\\frac{\\partial E_p(w)}{\\partial w_i} = +2 \\delta_p f'(net(x_p)) x_{p,i}$",
+    "$\\frac{\\partial E_p(w)}{\\partial w_t} = -2 x_{p,t} f'(net(x_p)) net(x_p)$",
+    "$\\frac{\\partial E_p(w)}{\\partial w_i} = -2 \\delta_p f'(net(x_p)) x_{p,i}$"
+  ],
+  "correct": [3, 6],
+  "answer": "Considering $E(w) = \\sum_p (d_p - o(x_p))^2 = \\sum_p (d_p - f(x_p^T w))^2$ and $o(x_p) = f(x_p^T w) = f(net(x_p))$, we obtain for one pattern p:\n\n$\\frac{\\partial E_p(w)}{\\partial w_j} = -2 x_{p,j} (d_p - f(net(x_p))) f'(net(x_p)) = -2 x_{p,j} \\delta_p f'(net(x_p))$.\n\nTherefore the correct expressions are the ones consistent with $-2 x_{p,j} \\delta_p f'(net(x_p))$."
+},
+{
+  "id": 86,
+  "question": "According to the picture and notation in the slide “Exercise to use a uniform notation for the inputs” of Lecture on NN-part1, what is the right expression for the net of a hidden unit? (note that the input argument of the net has been omitted)",
+  "type": "multi",
+  "options": [
+    "$net_j = \\sum_j w_{ji} o_i$",
+    "$net_i = \\sum_i w_{ij} o_i$",
+    "$net_k = \\sum_j w_{kj} o_j$",
+    "$net_j = \\sum_j w_{ij} o_j$",
+    "$net_j = \\sum_i w_{ij} o_i$",
+    "$net_j = \\sum_i w_{ji} o_i$"
+  ],
+  "correct": [6],
+  "answer": "We used i for input units, j for hidden units, and k for output units. Therefore, the net of the hidden unit is $net_j(x) = \\sum_i w_{ji} x_i$, i.e., the weighted sum of the outputs of the input units."
+},
+{
+  "id": 87,
+  "question": "List the proper claims for the K-NN:",
+  "type": "multi",
+  "options": [
+    "Neighborhoods are no longer \"local\" when the input dimension n increases",
+    "The curse of dimensionality is due to the high retrieval cost for testing data in K-NN",
+    "The curse of dimensionality is due to the changing in the data density when we change the input dimension",
+    "A high value of K leads to very flexible models",
+    "Lower values of K, for the K-NN, lead to more flexible models",
+    "For the K-NN: if the dimension of input increases, we can compensate the curse of dimensionality reducing the value of K so to avoid negative effects on the generalization capability",
+    "For the K-NN, fixing K: with high dimensional inputs, the range of features values to be considered becomes high, so you lose the similarity among examples in the N(x)"
+  ],
+  "correct": [1, 3, 5, 7],
+  "answer": "In high input dimensions, near neighborhoods tend to be spatially large, and estimates are no longer local. The curse of dimensionality is related to the change in data density as dimensionality increases. Higher values of K lead to more rigid models, while lower values of K lead to more flexible models. In high-dimensional spaces, distances between examples become less meaningful, causing a loss of similarity in the neighborhood N(x)."
+},
+{
+  "id": 88,
+  "question": "The use of a Tikhonov loss introduces a new learning rule where we have a further addend for the gradient of MSE given by:",
+  "type": "multi",
+  "options": [
+    "$+ 2 \\lambda w$",
+    "$- 2 \\lambda w$",
+    "$- 2 \\lambda$",
+    "$+ 2 \\lambda$",
+    "$+ 2 \\lambda w$",
+    "$- 2 \\lambda w$"
+  ],
+  "correct": [6],
+  "answer": "With Tikhonov (L2) regularization, the loss becomes $E(w) + \\lambda \\|w\\|^2$. The gradient of the regularization term is $2\\lambda w$, therefore in gradient descent the update rule includes the term $-2\\lambda w$. Hence the additional addend in the update rule is $-2\\lambda w$."
+},
+{
+  "id": 89,
+  "question": "A LTU for a pattern p can be expressed as (assuming x0 = 1):",
+  "type": "multi",
+  "options": [
+    "$h(x_p) = sign(x_p^T w)$",
+    "$h(x_p) = sign(x_p^T w_p)$",
+    "$h(x_p) = sign(\\sum_{t=0}^n x_{p,t} w_u)$",
+    "$h(x_p) = sign(\\sum_{t=0}^n w_t x_{p,t})$",
+    "$h(x_p) = sign(\\sum_{u=0}^n x_{p,u} w_u)$",
+    "$h(x_p) = sign(w_p^T x_p)$",
+    "$h(x_p) = sign(\\sum_{u=0}^n x_{p,u} w_t)$",
+    "$h(x_p) = sign(w^T x_p)$"
+  ],
+  "correct": [1, 4, 5, 8],
+  "answer": "For a Linear Threshold Unit (LTU), the output is given by the sign of the weighted sum. Assuming x0 = 1 (bias included in w), we have $h(x_p) = sign(w^T x_p) = sign(x_p^T w) = sign(\\sum_{i=0}^n x_{p,i} w_i)$. All algebraically equivalent expressions are correct."
+},
+{
+  "id": 90,
+  "question": "Considering the SLT, fixing l and δ (delta), a polynomial with increased/higher degree:",
+  "type": "multi",
+  "options": [
+    "It implies higher R value",
+    "It implies lower R value",
+    "It implies that the VC-bound does not hold",
+    "It has higher VC-confidence",
+    "It has higher VC-dim",
+    "It provides higher fitting capability, reducing $R_emp$",
+    "It provides higher fitting capability, increasing $R_emp$"
+  ],
+  "correct": [4, 5, 6],
+  "answer": "Increasing the degree of a polynomial increases the model capacity and therefore its VC-dimension. With fixed l and δ, the VC-confidence term increases with VC-dim. Moreover, a higher-capacity model provides higher fitting capability, typically reducing the empirical risk R_emp (training error)."
+},
+{
+  "id": 91,
+  "question": "Considering the SLT, fixing l and δ (delta), a polynomial with decreased/lower degree:",
+  "type": "multi",
+  "options": [
+    "It implies higher R value",
+    "It provides lower fitting capability, increasing R_emp",
+    "It has lower VC-dim",
+    "It implies lower R value",
+    "It implies that the VC-bound does not hold"
+  ],
+  "correct": [2, 3],
+  "answer": "Decreasing the polynomial degree reduces model capacity and therefore reduces the VC-dimension. A lower-capacity model has lower fitting capability and can lead to higher empirical risk R_emp (underfitting). However, it does not necessarily imply a direct increase or decrease of the true risk R, nor that the VC-bound does not hold."
+},
+{
+  "id": 92,
+  "question": "List all the appropriate answers (but those indicated as appropriate that are not affect the exercise sum by a negative score).",
+  "type": "multi",
+  "options": [
+    "In a regression task each data is labeled with a real number",
+    "In a classification task we search for subsets of \"similar\" data",
+    "The hypothesis space contains all the input data",
+    "In supervised learning for classification the labeled examples can be provided in the form <x,+1> e <x,-1>",
+    "In the supervised learning the aim is to approximate an unknown target function",
+    "In a unsupervised learning the labeled examples are provided in the form <x,d>",
+    "In a multi-class problem f can have K continuous values in output",
+    "If we have a Boolean target function we learn a classifier with two classes"
+  ],
+  "correct": [1, 4, 5, 8],
+  "answer": "1. Regression is a process of estimating a real-valued function from a finite set of noisy samples: known pairs $(x, f(x) + \\text{random noise})$.\n2. In classification, patterns (feature vectors) are members of a class and the goal is to assign each observed pattern to a specific class label based on a learned function.\n3. The hypothesis space is a space of different functions.\n4. If $f(x)$ is boolean (binary classification), the output class can be T/F, 0/1, -1/+1, negative/positive.\n5. Given training examples $\\langle x,d \\rangle$ for an unknown function $f$, we want to find a good approximation to $f$, a hypothesis $h$ to predict on unseen data.\n6. Unsupervised learning has no teacher: the training set is unlabeled data $\\langle x \\rangle$.\n7. In a multi-class problem $(C_1, C_2, \\dots, C_K)$ the function assigns the input to one of the multiple classes.\n8. If $f(x)$ is boolean then we have a binary classification."
+},
+  {
+    "id": 93,
+    "question": "The negative of this vector provides the direction toward local minima of a function f(x1, x2) in a 2-dimensional space: (∂f/∂x1, ∂f/∂x2)",
+    "type": "tf",
+    "options": ["True", "False"],
+    "correct": "True",
+    "answer": "The gradient ∇f gives the direction of maximum increase of the function. Therefore, the negative of the gradient gives the direction of steepest descent, i.e., toward a local minimum."
+  },
+ {
+    "id": 94,
+    "question": "List all the appropriate answers (but those indicated as appropriate that are not affect the exercise sum by a negative score).",
+    "type": "multi",
+    "options": [
+      "Changing the nature (type) of the target we can see classification or regression as a function approximation task.",
+      "In a unsupervised learning the labeled examples are provided in the form <x,d>.",
+      "In a classification task we search for subsets of 'similar' data.",
+      "If we have a Boolean target function we learn a classifier with two classes."
+    ],
+    "correct": [1, 4],
+    "answer": "Changing the nature (type) of the target we can see the classification or regression as a function approximation task, If we have a Boolean target function we learn a classifier with two classes"
+  },
+{
+  "id": 95,
+  "question": "There is no inductive bias called \"full space bias\".",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "There is no formally defined inductive bias known as 'full space bias' in machine learning theory."
+},
+{
+  "id": 96,
+  "question": "There exists the version space inductive bias.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "The version space inductive bias refers to the assumption that the target hypothesis belongs to the version space, i.e., the set of hypotheses consistent with the training data."
+},
+{
+  "id": 97,
+  "question": "For the supervised learning the loss is computed to evaluate the distance between the model response and the outputs mean.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "In supervised learning, the loss function evaluates the discrepancy between the model output and the true target values, not the mean of the outputs."
+},
+{
+  "id": 98,
+  "question": "The VC dimension of a class of functions H is the maximum cardinality of a set (configuration) of points in X that can be discriminated by a model in H for at least a labeling assignment.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "The VC dimension is the maximum cardinality of a set of points that can be shattered by H, meaning that all possible labelings of those points can be realized by hypotheses in H. It is not sufficient that at least one labeling assignment is realizable."
+},
+{
+  "id": 99,
+  "question": "The VC-dim can be used to define a nested hierarchy over hypothesis spaces of growing complexity.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "The VC-dimension measures the capacity of a hypothesis space. By increasing VC-dim, we obtain hypothesis spaces of increasing complexity, which can be organized in a nested hierarchy."
+},
+{
+  "id": 100,
+  "question": "The objective function of the primal form of the SVM hard margin minimizes the training errors.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "In hard-margin SVM the objective function minimizes 1/2 ||w||^2, i.e., it maximizes the margin under the constraint that training errors are zero. It does not minimize training errors; it assumes perfect separability."
+},
+{
+  "id": 101,
+  "question": "Choose one or more alternatives of formulations of the RBF kernel that are correct. All appropriate answers should be listed below (to gain the max score), but those indicated as appropriate that are not, however, affect the exercise by a negative score.",
+  "type": "multi",
+  "options": [
+    "$K(t,v) = e^{-\\frac{1}{2\\sigma^2} \\|t-v\\|^2}$",
+    "$K(t,v) = e^{-\\frac{1}{2\\sigma^2} (t-v)}$",
+    "$K(t,v) = e^{\\frac{1}{2\\sigma^2} \\|t-v\\|^2}$",
+    "$K(t,v) = e^{-\\frac{1}{2\\sigma^2} \\|t-v\\|}$",
+    "$K(t,v) = e^{\\frac{1}{2\\sigma^2} \\|t-v\\|}$",
+    "$K(t,v) = -e^{-\\frac{1}{2\\sigma^2} \\|t-v\\|^2}$",
+    "$K(v,t) = e^{-\\frac{1}{2\\sigma^2} \\|v-t\\|^2}$",
+    "$K(t,v) = e^{-\\frac{1}{2\\sigma^2} \\|v-t\\|^2}$",
+    "$K(t,v) = e^{\\frac{1}{2\\sigma^2} \\|v-t\\|^2}$"
+  ],
+  "correct": [1, 7, 8],
+  "answer": "The RBF (Gaussian) kernel is defined as $K(x,x') = e^{-\\frac{1}{2\\sigma^2}\\|x-x'\\|^2}$. It is symmetric, so K(t,v) = K(v,t). Therefore, all formulations with negative exponent and squared Euclidean norm are correct."
+},
+{
+  "id": 102,
+  "question": "The cascade correlation algorithm allows to automatically find the number of hidden units.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "The Cascade-Correlation algorithm incrementally adds hidden units during training, automatically determining the number of hidden neurons needed to improve performance."
+},
+{
+  "id": 103,
+  "question": "Both early stopping and regularization Tikhonov aims to control the effective complexity of the model.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "Both early stopping and Tikhonov (L2) regularization control the effective complexity of the model. Early stopping limits model capacity by halting training before overfitting occurs, while Tikhonov regularization penalizes large weights, reducing effective model complexity."
+},
+{
+  "id": 104,
+  "question": "The momentum in the batch and on-line version has the same meaning and effect.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "Momentum has the same conceptual role (smoothing updates and accelerating along consistent directions), but its practical effect differs between batch and on-line/SGD settings because the gradient noise and update frequency are different."
+},
+{
+  "id": 105,
+  "question": "The K-fold CV is an approach to split the dataset.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "K-fold cross-validation splits the dataset into K subsets (folds), using K−1 folds for training and one fold for validation, rotating the validation fold across runs."
+},
+{
+  "id": 106,
+  "question": "The model selection does not consider the TR error.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "Model selection is based on validation performance (e.g., cross-validation error), not on training error (TR error), which is optimistically biased."
+},
+{
+  "id": 107,
+  "question": "A NN with 1 hidden layer (using logistic activation functions) has a universal approximation capability.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "According to the Universal Approximation Theorem, a feedforward neural network with a single hidden layer and a non-linear activation function (such as the logistic sigmoid) can approximate any continuous function on a compact domain, given sufficiently many hidden units."
+},
+{
+  "id": 108,
+  "question": "In a NN by using multiple output units we can obtain a multi-regression or multi-classes classifier.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "Using multiple output units in a neural network allows modeling multi-output regression problems or multi-class classification tasks (e.g., using one-hot encoding and softmax for classification)."
+},
+{
+  "id": 109,
+  "question": "∂E/∂w = (∂E/∂o) · (∂w/∂o)",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "By the chain rule, ∂E/∂w = (∂E/∂o) · (∂o/∂w), not (∂w/∂o). The derivative must follow the correct dependency direction."
+},
+{
+  "id": 110,
+  "question": "The backpropagation allows us to obtain the update rule for each weight in the network on the basis of an exact gradient computing.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "Backpropagation computes the exact gradient of the loss function with respect to each network weight using the chain rule, enabling gradient-based update rules."
+},
+{
+  "id": 111,
+  "question": "In the backpropagation the delta values are propagated from the input to the output layers units.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "In backpropagation, the delta values are propagated from the output layer back to the hidden and input layers (i.e., from output to input), not the other way around."
+},
+{
+  "id": 112,
+  "question": "According to the Backpropagation, given a TR set with l patterns, the $$ \\Delta w $$ can be expressed as (list the proper results among the following equations):",
+  "type": "multi",
+  "options": [
+    "$\\Delta w_{rh} = \\sum_{p=1}^{l} \\delta_{p,r} \\; o_{p,h}$",
+    "$\\Delta w_{ts} = - \\sum_{p=1}^{l} \\delta_{p,t} \\; o_{p,s}$",
+    "$\\Delta w_{rh} = \\sum_{p=1}^{l} \\delta_{p,h} \\; o_{p,r}$",
+    "$\\Delta w_{rh} = - \\sum_{p=1}^{l} \\delta_{p,r} \\; o_{p,h}$",
+    "$\\Delta w_{ts} = - \\sum_{p=1}^{l} \\delta_{p,s} \\; o_{p,t}$",
+    "$\\Delta w_{ts} = \\sum_{p=1}^{l} \\delta_{p,t} \\; o_{p,s}$"
+  ],
+  "correct": [4, 6],
+  "answer": "In backpropagation, the weight update over the full training set is proportional to the sum over patterns of the product between the delta of the receiving unit and the output of the sending unit. Depending on the sign convention adopted for Δw, the correct formulations correspond to options 4 and 6."
+},
+{
+  "id": 113,
+  "question": "The w of a NN are hyper-parameters to be selected by the user.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "The weights (w) of a neural network are learned parameters optimized during training. Hyper-parameters (e.g., learning rate, number of hidden units, regularization strength) are selected by the user."
+} ,
+{
+  "id": 114,
+  "question": "Mini-batch is a technique introduced to optimize the complexity of the model.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "Mini-batch is a training strategy used to approximate the gradient during optimization. It affects computational efficiency and convergence properties, not the intrinsic complexity (capacity) of the model."
+},
+{
+  "id": 115,
+  "question": "It is always convenient to have a high eta value to speed-up the training.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "A high learning rate (η) can speed up training, but it may cause instability, divergence, or oscillations. The learning rate must be carefully tuned to balance convergence speed and stability."
+},
+{
+  "id": 116,
+  "question": "$w_{qr}$ denote the weight of the unit r coming from the input with index q.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "According to the notation used in the course, the weight $w_{rq}$ (not $w_{qr}$) denotes the weight of unit r receiving input from unit q. The first index refers to the receiving unit."
+},
+{
+  "id": 117,
+  "question": "A LTU for a pattern p can be expressed as (assuming x0 = 1):",
+  "type": "multi",
+  "options": [
+    "$h(x_p) = sign(\\sum_{t=0}^{n} x_{p,t} w_u)$",
+    "$h(x_p) = sign(x_p^T w)$",
+    "$h(x_p) = sign(\\sum_{u=0}^{n} x_{p,u} w_u)$",
+    "$h(x_p) = sign(w_p^T x_p)$"
+  ],
+  "correct": [2, 3],
+  "answer": "An LTU computes the sign of the weighted sum of inputs. With $x_0 = 1$ and including the bias in w, the correct formulations are $h(x_p) = sign(x_p^T w)$ and equivalently $h(x_p) = sign(∑_{u=0}^{n} x_{p,u} w_u)$."
+},
+{
+  "id": 118,
+  "question": "A linear classifier with LSE cannot solve a non-linear separable problem.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "A linear classifier in the original input space cannot solve a non-linearly separable problem. However, by using a suitable feature mapping (e.g., polynomial expansion), the problem can become linearly separable in the transformed space."
+},
+{
+  "id": 119,
+  "question": "List the proper claims for the Tikhonov regularization.",
+  "type": "multi",
+  "options": [
+    "The regularization term does not depend on the size of w",
+    "High lambda value allows maximum fitting of the training set",
+    "The best lambda value allows us to optimize the model complexity",
+    "Lambda = 0 corresponds to a minimum regularization effect"
+  ],
+  "correct": [3, 4],
+  "answer": "Tikhonov regularization adds a term proportional to $||w||^2$ to control model complexity. The optimal lambda balances fitting and regularization. When $ \\lambda = 0$ there is no regularization effect."
+},
+{
+  "id": 120,
+  "question": "List the proper claims for the K-NN.",
+  "type": "multi",
+  "options": [
+    "For the K-NN, fixing K with high dimensional inputs, the range of features values to be considered becomes high, so you lose the similarity among examples in the N(x)",
+    "The curse of dimensionality is due to the changing in the data density when we change the input dimension",
+    "A high value of K leads to a very flexible models",
+    "If the dimension of input increases, we can compensate the curse of dimensionality reducing the value of K so to avoid negative effects on the generalization capability"
+  ],
+  "correct": [1, 2],
+  "answer": "In high-dimensional spaces, distances lose meaning and neighborhoods are no longer truly local. Adjusting K can partially affect generalization behavior, but dimensionality still impacts similarity structure."
+},
+{
+  "id": 121,
+  "question": "$||x||_2 = \\sum_i x_i^2$",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "The L2 norm is defined as $||x||_2 = sqrt(\\sum_i x_i^2)$. The expression $\\sum_i x_i^2$ corresponds to the squared L2 norm, i.e., $||x||_2^2$."
+},
+{
+  "id": 122,
+  "question": "The gradient of f can be written as a vector whose components are the partial derivatives of f.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "The gradient of a scalar function $f(x_1, ..., x_n)$ is defined as the vector of its partial derivatives: $\\Nabla f = (df/dx_1, ..., df/dx_n)$."
+},
+{
+  "id": 123,
+  "question": "In a regression task each data is labeled with a real number.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "True",
+  "answer": "In regression tasks, the target variable is continuous, meaning each example is labeled with a real-valued number."
+},
+{
+  "id": 124,
+  "question": "Removing the inductive bias from a learning system is positive (i.e., it brings advantages for the learning system).",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "Inductive bias is necessary for generalization. Without inductive bias, a learning system cannot prefer one hypothesis over another consistent with the training data, making learning and generalization impossible."
+},
+{
+  "id": 125,
+  "question": "For the supervised learning the loss is computed to evaluate the distance between the model response and its inputs.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "In supervised learning, the loss measures the discrepancy between the model output and the target (true label), not between the model output and the inputs."
+},
+{
+  "id": 126,
+  "question": "The underfitting occurs because we have too few data.",
+  "type": "tf",
+  "options": ["True", "False"],
+  "correct": "False",
+  "answer": "Underfitting occurs when the model is too simple to capture the underlying structure of the data (low model capacity). Too few data typically increases the risk of overfitting, not underfitting."
+},
+{
+  "id": 127,
+    "question": "Given a unit with activation function f and $\\delta_p = (d_p - f(net(x_p)))$, list the proper results among the following equations for a pattern p:",
+    "type": "multi",
+    "options": [
+        "$\\frac{\\partial E_p(w)}{\\partial w_t} = -2\\, x_{p,t}\\, f'\\!\\big(net(x_p)\\big) \\, net(x_p)$",
+        "$\\frac{\\partial E_p(w)}{\\partial w_i} = -2\\, \\delta_p\\, (x_{p,i})\\, f'(x_p)$",
+        "$\\frac{\\partial E_p(w)}{\\partial w_i} = -2\\, \\delta_p \\, f'\\!\\big(net(x_p)\\big)\\, x_{p,i}$",
+        "$\\frac{\\partial E_p(w)}{\\partial w_t} = -2\\, x_{p,t}\\, \\delta_p \\, f\\!\\big(net(x_p)\\big)$",
+        "$\\frac{\\partial E_p(w)}{\\partial w_t} = +2\\, \\delta_p \\, (x_{p,t}) \\, f'(x_p)\\, net(x_p)$",
+        "$\\frac{\\partial E_p(w)}{\\partial w_i} = +2\\, \\delta_p \\, f'\\!\\big(net(x_p)\\big)\\, x_{p,i}$"
+    ],
+    "correct": [3],
+    "answer":"Correct answers is 3"
+}
+]

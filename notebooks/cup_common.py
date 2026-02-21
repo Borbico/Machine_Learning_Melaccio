@@ -103,7 +103,7 @@ def prepare_dataset(df: DataFrame, scaler=None, fit_scaler: bool = False):
     return X, y
 
 
-def prepare_dataset_for_dry_run(df_train: DataFrame, ratio: float = 0.2, random_state:int = 42, scaler=None) -> (DataFrame, ndarray, DataFrame, ndarray, DataFrame, ndarray, DataFrame, ndarray):
+def prepare_dataset_for_hold_out(df: DataFrame, ratio: float = 0.2, random_state:int = 42, scaler=None) -> (DataFrame, ndarray, DataFrame, ndarray, DataFrame, ndarray, DataFrame, ndarray):
     """
     Split dataset into training and testing sets eventually applying a scaler if present
     :param df_orig: the original dataset
@@ -115,7 +115,7 @@ def prepare_dataset_for_dry_run(df_train: DataFrame, ratio: float = 0.2, random_
 
     # divide dataframe in two df train and test based on ratio
     df_80, df_20 = train_test_split(
-        df_train,
+        df,
         test_size=ratio,
         random_state=random_state,
         shuffle=True
@@ -203,145 +203,135 @@ def extract_mean_std(fold_histories, key:str):
     return mean_std_from_kfold(best_vals)
 
 
-class FoldResults:
-
-    def __init__(self):
-        self._folds = []
-
-    def append(self, fold_result: FoldResult):
-        if not isinstance(fold_result, FoldResult):
-            raise TypeError("Expected a FoldResult instance")
-        self._folds.append(fold_result)
-
-    def __iter__(self):
-        return iter(self._folds)
-
-    def __len__(self):
-        return len(self._folds)
-
-    def __getitem__(self, idx):
-        return self._folds[idx]
-
-    def get_fold(self, fold_nr: int) -> FoldResult:
-        for f in self._folds:
-            if f.fold_nr == fold_nr:
-                return f
-        raise KeyError(f"Fold {fold_nr} not found")
-
-    def values(self, attr: str):
-        """
-        """
-        vals = []
-        for f in self._folds:
-            v = getattr(f, attr)
-            if v is not None:
-                vals.append(v)
-        return vals
-
-
-class FoldResult:
-
-    def __init__(self, fold_result):
-        self._fold_nr = fold_result.get(FOLD_NR)
-
-        self._epochs_tr_mse_mean = fold_result.get("epochs_tr_mse_mean")
-        self._epochs_vl_mse_mean = fold_result.get("epochs_vl_mse_mean")
-        self._epochs_tr_acc_mean = fold_result.get("epochs_tr_acc_mean")
-        self._epochs_vl_acc_mean = fold_result.get("epochs_vl_acc_mean")
-
-        self._epochs_tr_mae_mean = fold_result.get("epochs_tr_mae_mean")
-        self._epochs_vl_mae_mean = fold_result.get("epochs_vl_mae_mean")
-
-        self._epochs_tr_mee_mean = fold_result.get("epochs_tr_mee_mean")
-        self._epochs_vl_mee_mean = fold_result.get("epochs_vl_mee_mean")
-
-        self._fold_tr_mse = fold_result.get(FOLD_TR_MSE)
-        self._fold_vl_mse = fold_result.get(FOLD_VL_MSE)
-        self._fold_tr_acc = fold_result.get(FOLD_TR_ACC)
-        self._fold_vl_acc = fold_result.get(FOLD_VL_ACC)
-        self._fold_tr_mae = fold_result.get(FOLD_TR_MAE)
-        self._fold_vl_mae = fold_result.get(FOLD_VL_MAE)
-        self._fold_tr_mee = fold_result.get(FOLD_TR_MEE)
-        self._fold_vl_mee = fold_result.get(FOLD_VL_MEE)
-
-    @property
-    def fold_nr(self):
-        return self._fold_nr
-
-    # -------- loss --------
-    @property
-    def epochs_tr_mse_mean(self):
-        return self._epochs_tr_mse_mean
-
-    @property
-    def epochs_vl_mse_mean(self):
-        return self._epochs_vl_mse_mean
-
-    @property
-    def fold_tr_mse(self):
-        return self._fold_tr_mse
-
-    @property
-    def fold_vl_mse(self):
-        return self._fold_vl_mse
-
-    # -------- accuracy --------
-    @property
-    def epochs_tr_acc_mean(self):
-        return self._epochs_tr_acc_mean
-
-    @property
-    def epochs_vl_acc_mean(self):
-        return self._epochs_vl_acc_mean
-
-    @property
-    def fold_tr_acc(self):
-        return self._fold_tr_acc
-
-    @property
-    def fold_vl_acc(self):
-        return self._fold_vl_acc
-
-    # -------- MAE --------
-    @property
-    def epochs_tr_mae_mean(self):
-        return self._epochs_tr_mae_mean
-
-    @property
-    def epochs_vl_mae_mean(self):
-        return self._epochs_vl_mae_mean
-
-    @property
-    def fold_tr_mae(self):
-        return self._fold_tr_mae
-
-    @property
-    def fold_vl_mae(self):
-        return self._fold_vl_mae
-
-    # -------- MEE --------
-    @property
-    def epochs_tr_mee_mean(self):
-        return self._epochs_tr_mee_mean
-
-    @property
-    def epochs_vl_mee_mean(self):
-        return self._epochs_vl_mee_mean
-
-    @property
-    def fold_tr_mee(self):
-        return self._fold_tr_mee
-
-    @property
-    def fold_vl_mee(self):
-        return self._fold_vl_mee
+# class FoldResults:
+#
+#     def __init__(self):
+#         self._folds = []
+#
+#     def append(self, fold_result: FoldResult):
+#         if not isinstance(fold_result, FoldResult):
+#             raise TypeError("Expected a FoldResult instance")
+#         self._folds.append(fold_result)
+#
+#     def __iter__(self):
+#         return iter(self._folds)
+#
+#     def __len__(self):
+#         return len(self._folds)
+#
+#     def __getitem__(self, idx):
+#         return self._folds[idx]
+#
+#     def get_fold(self, fold_nr: int) -> FoldResult:
+#         for f in self._folds:
+#             if f.fold_nr == fold_nr:
+#                 return f
+#         raise KeyError(f"Fold {fold_nr} not found")
+#
+#     def values(self, attr: str):
+#         """
+#         """
+#         vals = []
+#         for f in self._folds:
+#             v = getattr(f, attr)
+#             if v is not None:
+#                 vals.append(v)
+#         return vals
 
 
-def mee(y_true, y_pred):
-    """
-    MEE calc helper function returning np.mean
-    :param y_true: the true label
-    :param y_pred: the predicted label
-    :return: float
-    """
-    return float(np.mean(np.linalg.norm(np.asarray(y_true) - np.asarray(y_pred), axis=1)))
+# class FoldResult:
+#
+#     def __init__(self, fold_result):
+#         self._fold_nr = fold_result.get(FOLD_NR)
+#
+#         self._epochs_tr_mse_mean = fold_result.get("epochs_tr_mse_mean")
+#         self._epochs_vl_mse_mean = fold_result.get("epochs_vl_mse_mean")
+#         self._epochs_tr_acc_mean = fold_result.get("epochs_tr_acc_mean")
+#         self._epochs_vl_acc_mean = fold_result.get("epochs_vl_acc_mean")
+#
+#         self._epochs_tr_mae_mean = fold_result.get("epochs_tr_mae_mean")
+#         self._epochs_vl_mae_mean = fold_result.get("epochs_vl_mae_mean")
+#
+#         self._epochs_tr_mee_mean = fold_result.get("epochs_tr_mee_mean")
+#         self._epochs_vl_mee_mean = fold_result.get("epochs_vl_mee_mean")
+#
+#         self._fold_tr_mse = fold_result.get(FOLD_TR_MSE)
+#         self._fold_vl_mse = fold_result.get(FOLD_VL_MSE)
+#         self._fold_tr_acc = fold_result.get(FOLD_TR_ACC)
+#         self._fold_vl_acc = fold_result.get(FOLD_VL_ACC)
+#         self._fold_tr_mae = fold_result.get(FOLD_TR_MAE)
+#         self._fold_vl_mae = fold_result.get(FOLD_VL_MAE)
+#         self._fold_tr_mee = fold_result.get(FOLD_TR_MEE)
+#         self._fold_vl_mee = fold_result.get(FOLD_VL_MEE)
+#
+#     @property
+#     def fold_nr(self):
+#         return self._fold_nr
+#
+#     # -------- loss --------
+#     @property
+#     def epochs_tr_mse_mean(self):
+#         return self._epochs_tr_mse_mean
+#
+#     @property
+#     def epochs_vl_mse_mean(self):
+#         return self._epochs_vl_mse_mean
+#
+#     @property
+#     def fold_tr_mse(self):
+#         return self._fold_tr_mse
+#
+#     @property
+#     def fold_vl_mse(self):
+#         return self._fold_vl_mse
+#
+#     # -------- accuracy --------
+#     @property
+#     def epochs_tr_acc_mean(self):
+#         return self._epochs_tr_acc_mean
+#
+#     @property
+#     def epochs_vl_acc_mean(self):
+#         return self._epochs_vl_acc_mean
+#
+#     @property
+#     def fold_tr_acc(self):
+#         return self._fold_tr_acc
+#
+#     @property
+#     def fold_vl_acc(self):
+#         return self._fold_vl_acc
+#
+#     # -------- MAE --------
+#     @property
+#     def epochs_tr_mae_mean(self):
+#         return self._epochs_tr_mae_mean
+#
+#     @property
+#     def epochs_vl_mae_mean(self):
+#         return self._epochs_vl_mae_mean
+#
+#     @property
+#     def fold_tr_mae(self):
+#         return self._fold_tr_mae
+#
+#     @property
+#     def fold_vl_mae(self):
+#         return self._fold_vl_mae
+#
+#     # -------- MEE --------
+#     @property
+#     def epochs_tr_mee_mean(self):
+#         return self._epochs_tr_mee_mean
+#
+#     @property
+#     def epochs_vl_mee_mean(self):
+#         return self._epochs_vl_mee_mean
+#
+#     @property
+#     def fold_tr_mee(self):
+#         return self._fold_tr_mee
+#
+#     @property
+#     def fold_vl_mee(self):
+#         return self._fold_vl_mee

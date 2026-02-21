@@ -11,7 +11,7 @@ from scipy.spatial.distance import euclidean
 from sklearn import clone
 from sklearn.dummy import DummyRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer
-from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, KFold
+from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, KFold, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
@@ -20,12 +20,31 @@ from sympy.physics.control import Series
 FOLD_NR = "fold_nr"
 FOLD_TR_MSE = "fold_tr_mse"
 FOLD_VL_MSE = "fold_vl_mse"
+FOLD_TR_RMSE = "fold_tr_rmse"
+FOLD_VL_RMSE = "fold_vl_rmse"
 FOLD_TR_ACC = "fold_tr_acc"
 FOLD_VL_ACC = "fold_vl_acc"
 FOLD_TR_MAE = "fold_tr_mae"
 FOLD_VL_MAE = "fold_vl_mae"
 FOLD_TR_MEE = "fold_tr_mee"
 FOLD_VL_MEE = "fold_vl_mee"
+
+EPOCHS_VL_MEE_STD = "epochs_vl_mee_std"
+EPOCHS_VL_MEE_MEAN = "epochs_vl_mee_mean"
+EPOCHS_TR_MEE_STD = "epochs_tr_mee_std"
+EPOCHS_TR_MEE_MEAN = "epochs_tr_mee_mean"
+EPOCHS_VL_MAE_STD = "epochs_vl_mae_std"
+EPOCHS_VL_MAE_MEAN = "epochs_vl_mae_mean"
+EPOCHS_TR_MAE_STD = "epochs_tr_mae_std"
+EPOCHS_TR_MAE_MEAN = "epochs_tr_mae_mean"
+EPOCHS_VL_ACC_STD = "epochs_vl_acc_std"
+EPOCHS_VL_ACC_MEAN = "epochs_vl_acc_mean"
+EPOCHS_TR_ACC_STD = "epochs_tr_acc_std"
+EPOCHS_TR_ACC_MEAN = "epochs_tr_acc_mean"
+EPOCHS_VL_MSE_STD = "epochs_vl_mse_std"
+EPOCHS_VL_MSE_MEAN = "epochs_vl_mse_mean"
+EPOCHS_TR_MSE_STD = "epochs_tr_mse_std"
+EPOCHS_TR_MSE_MEAN = "epochs_tr_mse_mean"
 
 output_columns = ["t1", "t2", "t3", "t4"]
 base_columns = [
@@ -197,37 +216,41 @@ def common_fold_strategy(stratified:bool=False, n_split:int=5, shuffle:bool=True
         return KFold(n_splits=n_split, shuffle=shuffle, random_state=random_state)
 
 
-def model_baseline(X, y, cv=common_fold_strategy(), baseline=DummyRegressor(strategy='mean'), scorer_name:str="mee"):
-
-    scorer = common_scoring(scorer_name)
-
-    baseline_scores = cross_val_score(baseline, X, y, cv=cv, scoring=scorer)
-
-    print("-"*40)
-    print(f"Baseline: {baseline}")
-    print(f"Mean baseline: {-baseline_scores.mean()}")
-    print(f"Scorer: {scorer}")
-    print("Raw scores:", baseline_scores[:5])
-
-    return -baseline_scores.mean()
+# def plot_kfold_mee(kf_result):
+#     plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_mee"), "Validation MEE", "KFold Validation MEE per fold")
 
 
-def plot_kfold_mee(kf_result):
-    plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_mee"), "Validation MEE", "KFold Validation MEE per fold")
+def plot_kfold_metric(results: [tuple], key:str, subkey:str="vl"):
+
+    data = []
+    key_composed = map_key_to_metric(key, subkey)
+    for result in results:
+        values = extract_fold_history(result[0], key_composed)
+        data.append((values, result[1]))
+    plot_kfold_bars(data, f"Validation {key.upper()}", f"KFold Validation {key.upper()} per fold")
 
 
-def plot_kfold_mse(kf_result):
-    plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_mse"), "Validation MSE", "KFold Validation MSE per fold")
+def plot_kfold_mse(non_nested_result, nested_result):
+
+    plot_kfold_bars([
+        (extract_fold_history(non_nested_result, FOLD_VL_MSE), "non-nested"),
+        (extract_fold_history(nested_result, FOLD_VL_MSE), "nested")
+    ], "Validation MSE", "KFold Validation MSE per fold")
 
 
-def plot_kfold_rmse(kf_result):
-    mse = extract_fold_history(kf_result, "fold_vl_mse")
-    rmse = np.sqrt(np.array(mse, dtype=float))
-    plot_kfold_bar(rmse, "Validation RMSE", "KFold Validation RMSE per fold")
+def plot_kfold_rmse(results: [tuple]):
+    data = []
+    for result in results:
+        data.append((extract_fold_history(result[0], FOLD_VL_MSE), result[1]))
+    plot_kfold_bars(data, "Validation RMSE", "KFold Validation RMSE per fold")
 
 
-def plot_kfold_mae(kf_result):
-    plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_mae"), "Validation MAE", "KFold Validation MAE per fold")
+def plot_kfold_mae(non_nested_result, nested_result):
+
+    plot_kfold_bars([
+        (extract_fold_history(non_nested_result, FOLD_VL_MAE), "Non-nested"),
+        (extract_fold_history(nested_result, FOLD_VL_MAE), "Nested")
+    ], "Validation MAE", "KFold Validation MAE per fold")
 
 
 def plot_kfold_acc(kf_result):
@@ -263,6 +286,52 @@ def plot_kfold_bar(history, ylabel:str, title:str):
     # Mean
     plt.axhline(mean_val,linestyle="--",linewidth=2,color="black",label=f"Mean = {mean_val:.4f}")
 
+    plt.xlabel("Fold")
+    plt.ylabel(ylabel)
+    plt.title(title)
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+def plot_kfold_bars(histories,ylabel: str, title: str):
+    """
+    Plot multiple fold histories side-by-side.
+
+    histories: list of tuples
+        [(history_values, label), ...]
+    """
+
+    sns.set_theme(style="whitegrid")
+
+    n_methods = len(histories)
+    vals_list = [np.array(h[0], dtype=float) for h in histories]
+    labels = [h[1] for h in histories]
+
+    n_folds = len(vals_list[0])
+    folds = np.arange(1, n_folds + 1)
+
+    x = np.arange(n_folds)
+    total_width = 0.8
+    width = total_width / n_methods
+
+    plt.figure()
+
+    for i, (vals, label) in enumerate(zip(vals_list, labels)):
+        offset = (i - (n_methods - 1) / 2) * width
+        mean_val = vals.mean()
+        std_val = vals.std()
+
+        # Bars
+        plt.bar(x + offset, vals, width, label=label)
+
+        # Error bars (std)
+        plt.errorbar(x + offset, vals, yerr=std_val, fmt="none", ecolor="black", capsize=4, linewidth=1)
+
+        # Mean line
+        plt.axhline(mean_val,linestyle="--",linewidth=1.5,alpha=0.6,label=f"{label} Mean = {mean_val:.4f}")
+
+    plt.xticks(x, folds)
     plt.xlabel("Fold")
     plt.ylabel(ylabel)
     plt.title(title)
@@ -329,19 +398,21 @@ class FoldResult:
     def __init__(self, fold_result):
         self._fold_nr = fold_result.get(FOLD_NR)
 
-        self._epochs_tr_mse_mean = fold_result.get("epochs_tr_mse_mean")
-        self._epochs_vl_mse_mean = fold_result.get("epochs_vl_mse_mean")
-        self._epochs_tr_acc_mean = fold_result.get("epochs_tr_acc_mean")
-        self._epochs_vl_acc_mean = fold_result.get("epochs_vl_acc_mean")
+        self._epochs_tr_mse_mean = fold_result.get(EPOCHS_TR_MSE_MEAN)
+        self._epochs_vl_mse_mean = fold_result.get(EPOCHS_VL_MSE_MEAN)
+        self._epochs_tr_acc_mean = fold_result.get(EPOCHS_TR_ACC_MEAN)
+        self._epochs_vl_acc_mean = fold_result.get(EPOCHS_VL_ACC_MEAN)
 
-        self._epochs_tr_mae_mean = fold_result.get("epochs_tr_mae_mean")
-        self._epochs_vl_mae_mean = fold_result.get("epochs_vl_mae_mean")
+        self._epochs_tr_mae_mean = fold_result.get(EPOCHS_TR_MAE_MEAN)
+        self._epochs_vl_mae_mean = fold_result.get(EPOCHS_VL_MAE_MEAN)
 
-        self._epochs_tr_mee_mean = fold_result.get("epochs_tr_mee_mean")
-        self._epochs_vl_mee_mean = fold_result.get("epochs_vl_mee_mean")
+        self._epochs_tr_mee_mean = fold_result.get(EPOCHS_TR_MEE_MEAN)
+        self._epochs_vl_mee_mean = fold_result.get(EPOCHS_VL_MEE_MEAN)
 
         self._fold_tr_mse = fold_result.get(FOLD_TR_MSE)
         self._fold_vl_mse = fold_result.get(FOLD_VL_MSE)
+        self._fold_tr_rmse = fold_result.get(FOLD_TR_RMSE)
+        self._fold_vl_rmse = fold_result.get(FOLD_VL_RMSE)
         self._fold_tr_acc = fold_result.get(FOLD_TR_ACC)
         self._fold_vl_acc = fold_result.get(FOLD_VL_ACC)
         self._fold_tr_mae = fold_result.get(FOLD_TR_MAE)
@@ -362,6 +433,7 @@ class FoldResult:
     def epochs_vl_mse_mean(self):
         return self._epochs_vl_mse_mean
 
+
     @property
     def fold_tr_mse(self):
         return self._fold_tr_mse
@@ -369,6 +441,14 @@ class FoldResult:
     @property
     def fold_vl_mse(self):
         return self._fold_vl_mse
+
+    @property
+    def fold_tr_rmse(self):
+        return self._fold_tr_rmse
+
+    @property
+    def fold_vl_rmse(self):
+        return self._fold_vl_rmse
 
     # -------- accuracy --------
     @property
@@ -432,71 +512,16 @@ def mee(y_true, y_pred):
     return float(np.mean(np.linalg.norm(np.asarray(y_true) - np.asarray(y_pred), axis=1)))
 
 
-def run_kfold(fold_model, X, y, folder_strategy) -> FoldResults:
-    """
-    Build a NN-like fold history dictionary for models without epochs (e.g., SVR, KNN).
-
-    Produces the same keys style you use in NN:
-    - tr_mee, tr_mee_std, vl_mee, vl_mee_std
-    - tr_mae, tr_mae_std, vl_mae, vl_mae_std
-    - tr_loss, vl_loss (here loss = MSE by default)
-    - best_*, last_* are meaningful but trivial (best == last because 1 value per fold list).
-
-    Notes:
-    - Accuracy fields are set to None (not defined for regression).
-    - If you want a different "loss", change loss_fn section.
-    """
-
-    Xn = X.to_numpy() if hasattr(X, "to_numpy") else np.asarray(X)
-    yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
-
-    # loop folds
-    fold_results = FoldResults()
-    for fold_nr, (tr_idx, vl_idx) in enumerate(folder_strategy.split(X)):
-
-        X_tr, X_vl = Xn[tr_idx], Xn[vl_idx]
-        y_tr, y_vl = yn[tr_idx], yn[vl_idx]
-
-        print(f"  ")
-        print(f"Perform fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
-
-        fold_model = clone(fold_model)
-        fold_model.fit(X_tr, y_tr)
-
-        pred_tr = fold_model.predict(X_tr)
-        pred_vl = fold_model.predict(X_vl)
-
-        tr_mse = mean_squared_error(y_tr, pred_tr)
-        tr_rmse = np.sqrt(tr_mse)
-        vl_mse = mean_squared_error(y_vl, pred_vl)
-        vl_rmse = np.sqrt(vl_mse)
-        tr_mae = mean_absolute_error(y_tr, pred_tr)
-        vl_mae = mean_absolute_error(y_vl, pred_vl)
-        tr_mee = mee(y_tr, pred_tr)
-        vl_mee = mee(y_vl, pred_vl)
-
-        print(f"Fold summary")
-        print("-" * 80)
-        print(f"Validation MSE  | {vl_mse:.4f}")
-        print(f"Validation RMSE | {vl_rmse:.4f}")
-        print(f"Validation MEE  | {vl_mee:.4f}")
-        print(f"Train           | samples: {len(y_tr)}")
-        print(f"Validation      | samples: {len(y_vl)}")
-
-        fold_results.append(FoldResult({
-            "fold_nr": fold_nr,
-            "tr_loss": tr_mse, "vl_loss": vl_mse,
-            "tr_rmse": tr_rmse, "vl_rmse": vl_rmse,
-            "tr_mae": tr_mae, "vl_mae": vl_mae,
-            "tr_mee": tr_mee, "vl_mee": vl_mee,
-            "best_tr_loss": tr_mse, "best_vl_loss": vl_mse,
-            "best_tr_mee": tr_mee, "best_vl_mee": vl_mee
-        }))
-
-    return fold_results
-
-
 def model_baseline(X, y, cv=common_fold_strategy(), baseline=DummyRegressor(strategy='mean'), scorer_name:str="mee"):
+    """
+    Define a score based on a base model
+    :param X: The train data
+    :param y: The label
+    :param cv: fold strategy
+    :param baseline: the model
+    :param scorer_name: the scorer name as in common_scoring(scorer_name)
+    :return:
+    """
 
     scorer = common_scoring(scorer_name)
 
@@ -511,9 +536,23 @@ def model_baseline(X, y, cv=common_fold_strategy(), baseline=DummyRegressor(stra
     return -baseline_scores.mean()
 
 
+def map_key_to_metric(key: str, subkey:str="vl"):
+
+    if key == "mae":
+        return f"fold_{subkey}_mae"
+    elif key == "mse":
+        return f"fold_{subkey}_mse"
+    elif key == "rmse":
+        return f"fold_{subkey}_rmse"
+    elif key == "mee":
+        return f"fold_{subkey}_mee"
+
+    raise NameError
+
+
 def common_scoring(name:str= "mae"):
     """
-    Return a scorer given o name:
+    Return a scorer given a name:
         - mae: neg_mean_absolute_error
         - mse: neg_mean_squared_error
         - rmse: neg_root_mean_squared_error
@@ -542,12 +581,22 @@ def common_scoring(name:str= "mae"):
 
 
 def mee_scorer():
-    mee.__name__ = "neg_mean_eclidean_error"
+    mee.__name__ = "neg_mean_euclidean_error"
     ms = make_scorer(mee, greater_is_better=False)
     return ms
 
 
 def assess_cv_robustness(cv, model, X, y, scoring:str, seeds:list=[10, 20, 30, 40, 50]):
+    """
+    Perform a cross_val_score in order to compare model score with cv seeds
+    :param cv:
+    :param model:
+    :param X:
+    :param y:
+    :param scoring:
+    :param seeds:
+    :return:
+    """
 
     params = cv.__dict__.copy()
     for seed in seeds:
@@ -598,6 +647,23 @@ def plot_top_models(results, scoring_name:str, label_row:Series, TOP_N=10):
     plt.title(f"Worst {TOP_N} models from GridSearchCV")
     plt.tight_layout()
     plt.show()
+
+
+class SklearnNestedRegressorRunner:
+    def __init__(self, grid):
+        self.base_grid = grid
+
+    def new_model(self):
+        return clone(self.base_grid)
+
+    def fit(self, gs, X_tr, y_tr):
+        gs.fit(X_tr, y_tr)
+        grid_introspection(gs)
+        return gs
+        #return gs.best_estimator_
+
+    def predict(self, model, X):
+        return model.predict(X)
 
 
 class SklearnRegressorRunner:
@@ -651,45 +717,25 @@ def extract_best_pipeline_metrics_from_grid(gs, step_name:str="model"):
 
 def grid_introspection(grid):
 
-    print("Total model explored:", len(grid.cv_results_["params"]))
+    print("Grid summary")
+    print("-"*40)
+    print("Total model explored:", len(grid.cv_results_["params"]), " splits:", grid.n_splits_ )
     print("Best params:", grid.best_params_)
     print("Best score:", grid.best_score_)
     print("Best model:", grid.best_estimator_)
 
 
-def kfold(runner, X, y, folder_strategy, scaler=None) -> FoldResults:
-    """
-    Build a NN-like fold history dictionary for models without epochs (e.g., SVR, KNN).
-
-    Produces the same keys style you use in NN:
-    - tr_mee, tr_mee_std, vl_mee, vl_mee_std
-    - tr_mae, tr_mae_std, vl_mae, vl_mae_std
-    - tr_loss, vl_loss (here loss = MSE by default)
-    - best_*, last_* are meaningful but trivial (best == last because 1 value per fold list).
-
-    Notes:
-    - Accuracy fields are set to None (not defined for regression).
-    - If you want a different "loss", change loss_fn section.
-    """
+def kfold(runner, X, y, folder_strategy) -> FoldResults:
 
     Xn = X.to_numpy() if hasattr(X, "to_numpy") else np.asarray(X)
     yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
 
     # loop folds
     fold_results = FoldResults()
-    for fold_nr, (tr_idx, vl_idx) in enumerate(folder_strategy.split(X)):
+    for fold_nr, (tr_idx, vl_idx) in enumerate(folder_strategy.split(X), start=1):
 
-        #X_tr_raw, X_vl_raw = Xn[tr_idx], Xn[vl_idx]
-        X_tr_raw, X_vl_raw = X.iloc[tr_idx], X.iloc[vl_idx]
+        X_tr, X_vl = X.iloc[tr_idx], X.iloc[vl_idx]
         y_tr, y_vl = yn[tr_idx], yn[vl_idx]
-
-        if scaler is not None:
-            sc = clone(scaler)
-            X_tr = sc.fit_transform(X_tr_raw)
-            X_vl = sc.transform(X_vl_raw)
-        else:
-            X_tr = X_tr_raw
-            X_vl = X_vl_raw
 
         print(f"  ")
         print(f"Perform fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
@@ -700,12 +746,13 @@ def kfold(runner, X, y, folder_strategy, scaler=None) -> FoldResults:
         pred_tr = runner.predict(model, X_tr)
         pred_vl = runner.predict(model, X_vl)
 
-        metrics = Metrics(y_tr, pred_tr, y_vl, pred_vl)
+        metrics = MetricsPair(y_tr, pred_tr, y_vl, pred_vl)
         tr_mse, vl_mse = metrics.tr_mse, metrics.vl_mse
         tr_rmse, vl_rmse = metrics.tr_rmse, metrics.vl_rmse
         tr_mae, vl_mae = metrics.tr_mae, metrics.vl_mae
         tr_mee, vl_mee = metrics.tr_mee, metrics.vl_mee
 
+        print(f" ")
         print(f"Fold summary")
         print("-" * 80)
         print(f"Validation MSE  | {vl_mse:.4f}")
@@ -719,24 +766,133 @@ def kfold(runner, X, y, folder_strategy, scaler=None) -> FoldResults:
             FOLD_NR: fold_nr,
             FOLD_TR_MSE: tr_mse, FOLD_VL_MSE: vl_mse,
             FOLD_TR_MEE: tr_mee, FOLD_VL_MEE: vl_mee,
-            FOLD_TR_MAE: tr_mae, FOLD_VL_MAE: vl_mae
+            FOLD_TR_MAE: tr_mae, FOLD_VL_MAE: vl_mae,
+            FOLD_TR_RMSE: np.sqrt(tr_mae), FOLD_VL_RMSE: np.sqrt(vl_mae)
         }))
 
     return fold_results
 
 
+# def nested_cv(runner, X, y, outer_cv, grid, scaler=None, verbose=True) -> FoldResults:
+#     """
+#     Nested CV returning the same FoldResults structure as kfold():
+#       - Outer CV: model assessment (this is what you plot)
+#       - Inner CV: GridSearchCV hyperparameter selection
+#     """
+#
+#     yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
+#
+#     fold_results = FoldResults()
+#
+#     # OUTER loop
+#     for fold_nr, (tr_idx, vl_idx) in enumerate(outer_cv.split(X), start=1):
+#
+#         # keep pandas to preserve feature names
+#         X_tr_raw, X_vl_raw = X.iloc[tr_idx], X.iloc[vl_idx]
+#         y_tr, y_vl = yn[tr_idx], yn[vl_idx]
+#
+#         if scaler is not None:
+#             sc = clone(scaler)
+#             X_tr = sc.fit_transform(X_tr_raw)
+#             X_vl = sc.transform(X_vl_raw)
+#         else:
+#             X_tr, X_vl = X_tr_raw, X_vl_raw
+#
+#         if verbose:
+#             print(f"  ")
+#             print(f"Perform (outer) fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
+#
+#         # INNER grid search on outer-train only
+#         base_estimator = runner.new_model()          # unfitted pipeline/model template
+#         gs = clone(grid)
+#         gs.fit(X_tr, y_tr)
+#         best_model = gs.best_estimator_
+#
+#         # unfitted_model = runner.new_model()
+#         # model = runner.fit(unfitted_model, X_tr, y_tr)
+#
+#         # class SklearnNestedRegressorRunner:
+#         #     def __init__(self, grid):
+#         #         self.base_grid = grid
+#         #
+#         #     def new_model(self):
+#         #         return clone(self.grid)
+#         #
+#         #     def fit(self, gs, X_tr, y_tr):
+#         #         gs.fit(X_tr, y_tr)
+#         #         return gs.best_estimator_
+#         #
+#         #     def predict(self, model, X):
+#         #         return model.predict(X)
+#
+#         # evaluate best_model on OUTER train/val
+#         pred_tr = runner.predict(best_model, X_tr)
+#         pred_vl = runner.predict(best_model, X_vl)
+#
+#         metrics = Metrics(y_tr, pred_tr, y_vl, pred_vl)
+#
+#         if verbose:
+#             print(f"Inner fold summary")
+#             print("-" * 80)
+#             print(f"Validation MSE  | {metrics.vl_mse:.4f}")
+#             print(f"Validation RMSE | {metrics.vl_rmse:.4f}")
+#             print(f"Validation MEE  | {metrics.vl_mee:.4f}")
+#             print(f"Validation MAE  | {metrics.vl_mae:.4f}")
+#             print(f"Train           | samples: {len(y_tr)}")
+#             print(f"Validation      | samples: {len(y_vl)}")
+#             print("-" * 80)
+#             grid_introspection(gs)
+#
+#         fold_results.append(FoldResult({
+#             FOLD_NR: fold_nr,
+#             FOLD_TR_MSE: metrics.tr_mse, FOLD_VL_MSE: metrics.vl_mse,
+#             FOLD_TR_MEE: metrics.tr_mee, FOLD_VL_MEE: metrics.vl_mee,
+#             FOLD_TR_MAE: metrics.tr_mae, FOLD_VL_MAE: metrics.vl_mae,
+#
+#             "best_params": gs.best_params_,
+#         }))
+#
+#     return fold_results
+
 class Metrics():
+
+    def __init__(self, y_true, y_pred):
+        self._mse = mean_squared_error(y_true, y_pred)
+        self._rmse = np.sqrt(self._mse)
+        self._mae = mean_absolute_error(y_true, y_pred)
+        self._mee = mee(y_true, y_pred)
+
+    @property
+    def mse(self):
+        return self._mse
+
+    @property
+    def rmse(self):
+        return self._rmse
+
+    @property
+    def mae(self):
+        return self._mae
+
+    @property
+    def mee(self):
+        return self._mee
+
+
+class MetricsPair():
 
     def __init__(self, y_tr_true, y_tr_pred, y_vl_true, y_vl_pred):
 
-        self._tr_mse = mean_squared_error(y_tr_true, y_tr_pred)
-        self._tr_rmse = np.sqrt(self._tr_mse)
-        self._vl_mse = mean_squared_error(y_vl_true, y_vl_pred)
-        self._vl_rmse = np.sqrt(self._vl_mse)
-        self._tr_mae = mean_absolute_error(y_tr_true, y_tr_pred)
-        self._vl_mae = mean_absolute_error(y_vl_true, y_vl_pred)
-        self._tr_mee = mee(y_tr_true, y_tr_pred)
-        self._vl_mee = mee(y_vl_true, y_vl_pred)
+        tr_metrics = Metrics(y_tr_true, y_tr_pred)
+        vl_metrics = Metrics(y_vl_true, y_vl_pred)
+        self._tr_mse = tr_metrics.mse
+        self._tr_rmse = tr_metrics.rmse
+        self._vl_mse = vl_metrics.mse
+        self._vl_rmse = vl_metrics.rmse
+        self._tr_mae = tr_metrics.mae
+        self._vl_mae = vl_metrics.mae
+        self._tr_mee = tr_metrics.mee
+        self._vl_mee = vl_metrics.mee
 
     @property
     def tr_mse(self):
@@ -838,3 +994,70 @@ def assess_sklearn_cv_robustness(cv, model, X, y, scoring="accuracy", seeds:list
         )
 
         print('seed: {} - mean {:.3f} ± {:.3f}'.format(seed, scores.mean(), scores.std()))
+
+
+def plot_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, scoring: str = "accuracy"):
+    """
+    Plot a learning curve for a given model (classifier or regressor).
+    If scoring is a neg_* loss, the curve is plotted as the corresponding positive loss.
+    """
+
+    random_state = getattr(cv, "random_state", None)
+
+    train_sizes_abs, train_scores, val_scores = learning_curve(
+        model,
+        X, y,
+        cv=cv,
+        scoring=scoring,
+        train_sizes = np.linspace(0.2, 1.0, 15),
+        shuffle=True,
+        random_state=random_state
+    )
+
+    train_mean = score_correction *  train_scores.mean(axis=1)
+    val_mean = score_correction * val_scores.mean(axis=1)
+
+    # Decide label + possible sign flip
+    y_label = "Score"
+    train_label = "Training score"
+    val_label = "CV score"
+    title_metric = scoring
+
+    if isinstance(scoring, str) and scoring.startswith("neg_"):
+        # Convert from negative score to positive loss for readability
+        train_mean = -train_mean
+        val_mean = -val_mean
+
+        if scoring == "neg_mean_absolute_error":
+            y_label = "MAE"
+            title_metric = "MAE"
+        elif scoring == "neg_mean_squared_error":
+            y_label = "MSE"
+            title_metric = "MSE"
+        elif scoring == "neg_root_mean_squared_error":
+            y_label = "RMSE"
+            title_metric = "RMSE"
+        else:
+            y_label = scoring.replace("neg_", "").replace("_", " ").upper()
+            title_metric = y_label
+
+        train_label = f"Training {y_label}"
+        val_label = f"CV {y_label}"
+    elif scoring == "accuracy":
+        y_label = "Accuracy"
+        train_label = "Training accuracy"
+        val_label = "CV accuracy"
+        title_metric = "Accuracy"
+
+    # plot
+    if ax is None:
+        _, ax = plt.subplots()
+
+    ax.plot(train_sizes_abs, train_mean, label=train_label)
+    ax.plot(train_sizes_abs, val_mean, label=val_label)
+
+    ax.set_xlabel("Training set size")
+    ax.set_ylabel(y_label)
+    ax.set_title(f"Learning curve")
+    ax.legend()
+    ax.grid(True)

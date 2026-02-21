@@ -1,0 +1,5 @@
+python3 -m venv quiz
+source quiz/bin/activate
+pip install streamlit pandas
+
+streamlit run quiz_app.py

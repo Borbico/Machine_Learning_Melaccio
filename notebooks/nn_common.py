@@ -11,27 +11,23 @@ from torch import nn, Tensor
 from torch.nn import MSELoss
 from torch.utils.data import TensorDataset, DataLoader
 import cross_common as cr
-from cross_common import (FOLD_NR,
-                FOLD_TR_MSE,FOLD_VL_MSE,FOLD_TR_MEE,
-                FOLD_VL_MEE,FOLD_TR_MAE,FOLD_VL_MAE,
-                FOLD_TR_ACC,FOLD_VL_ACC)
+from cross_common import (
+    FOLD_NR,
+    FOLD_TR_MSE,FOLD_VL_MSE,
+    FOLD_TR_RMSE,FOLD_VL_RMSE,
+    FOLD_TR_MEE,FOLD_VL_MEE,
+    FOLD_TR_MAE,FOLD_VL_MAE,
+    FOLD_TR_ACC,FOLD_VL_ACC)
+from cross_common import (
+    EPOCHS_TR_MSE_MEAN,EPOCHS_TR_MSE_STD,
+    EPOCHS_VL_MSE_MEAN,EPOCHS_VL_MSE_STD,
+    EPOCHS_TR_ACC_MEAN,EPOCHS_TR_ACC_STD,
+    EPOCHS_VL_ACC_MEAN,EPOCHS_VL_ACC_STD,
+    EPOCHS_TR_MAE_MEAN, EPOCHS_TR_MAE_STD,
+    EPOCHS_VL_MAE_MEAN,EPOCHS_VL_MAE_STD,
+    EPOCHS_TR_MEE_MEAN,EPOCHS_TR_MEE_STD,
+    EPOCHS_VL_MEE_MEAN,EPOCHS_VL_MEE_STD)
 
-EPOCHS_VL_MEE_STD = "epochs_vl_mee_std"
-EPOCHS_VL_MEE_MEAN = "epochs_vl_mee_mean"
-EPOCHS_TR_MEE_STD = "epochs_tr_mee_std"
-EPOCHS_TR_MEE_MEAN = "epochs_tr_mee_mean"
-EPOCHS_VL_MAE_STD = "epochs_vl_mae_std"
-EPOCHS_VL_MAE_MEAN = "epochs_vl_mae_mean"
-EPOCHS_TR_MAE_STD = "epochs_tr_mae_std"
-EPOCHS_TR_MAE_MEAN = "epochs_tr_mae_mean"
-EPOCHS_VL_ACC_STD = "epochs_vl_acc_std"
-EPOCHS_VL_ACC_MEAN = "epochs_vl_acc_mean"
-EPOCHS_TR_ACC_STD = "epochs_tr_acc_std"
-EPOCHS_TR_ACC_MEAN = "epochs_tr_acc_mean"
-EPOCHS_VL_MSE_STD = "epochs_vl_mse_std"
-EPOCHS_VL_MSE_MEAN = "epochs_vl_mse_mean"
-EPOCHS_TR_MSE_STD = "epochs_tr_mse_std"
-EPOCHS_TR_MSE_MEAN = "epochs_tr_mse_mean"
 
 # Default train params
 DEFAULT_TRAIN_EPOCHS = 500
@@ -40,6 +36,195 @@ DEFAULT_TRAIN_BATCH_SIZE = 32
 DEFAULT_TRAIN_DELTA = 1e-4
 DEFAULT_TRAIN_VAL_RATIO = 0.2
 DEFAULT_TRAIN_SEED = 1
+
+
+class MLP(nn.Module):
+    """
+    Implements a skeleton of a Multilayer Perceptron network with given parameters
+    """
+
+    def __init__(self, net: nn.Module, adapter):
+        """
+        MLP constructor
+        :param net: the MLP architecture in form of Sequence
+        """
+        super().__init__()
+        self._net = net
+        self._adapter = adapter
+
+    def forward(self, x):
+        """
+        Implements the forward pass of the MLP architecture
+        :param x: the input
+        :return: a tensor containing the logits produced by the network, before any output activation function (e.g. sigmoid)
+        """
+        # The forward() method of Sequential accepts any input and forwards it to the first module it contains.
+        # It then "chains" outputs to inputs sequentially for each subsequent module,
+        # finally returning the output of the last module.
+        # It is basically the forward pass of the whole architecture.
+        return self._net(x)
+
+    @torch.no_grad()
+    def predict_proba(self, x: Tensor) -> Tensor:
+        self.eval()
+        logits = self.forward(x)
+        return self._adapter.probs(logits)
+
+    @torch.no_grad()
+    def predict(self, x: Tensor) -> Tensor:
+        self.eval()
+        logits = self.forward(x)
+        return self._adapter.predict(logits)
+
+
+class TrainSet:
+    """
+    This class is a wrapper for a dataset that is represented with X (the feature), and y (the labels).
+    """
+
+    def __init__(self, X: pd.DataFrame, y: ndarray):
+        self._X = X.astype(np.float32).to_numpy()
+        self._y = y
+        return
+
+    @property
+    def X(self):
+        return self._X
+
+    @property
+    def y(self):
+        return self._y
+
+
+class TrainResults:
+    """
+    Helper class for model training results
+    """
+
+    def __init__(self, results: dict):
+        """
+#       Param results is a dictionary containing:
+                - epochs_tr_loss: Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.
+                - epochs_vl_loss: Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
+                - epochs_tr_acc: Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks (Note: in regression tasks this quantity is not used).
+                - epochs_vl_acc: Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
+                - epochs_tr_mae: Training Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the training set at each epoch. MAE measures the average absolute difference between predicted and target values and provides an error estimate less sensitive to outliers than MSE. It is meaningful for regression tasks (for classification it is typically not used).
+                - epochs_vl_mae: Validation Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the validation set at each epoch. It is used to monitor generalization in regression tasks and to detect overfitting/underfitting trends when compared with the training MAE curve.
+                - epochs_tr_mee: Training Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the training set at each epoch. For multi-output regression, MEE is defined as the average Euclidean distance between the predicted output vector and the target vector for each sample; it summarizes the global prediction error across all output dimensions.
+                - epochs_vl_mee: Validation Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the validation set at each epoch. This is the key metric for the CUP task (multi-output regression) and is used to select models/hyperparameters by tracking the best generalization performance across epochs.
+                - epochs_grad: Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
+        :param results: the initialization dictionary
+        """
+
+        self._epochs_tr_mse = results.get("epochs_tr_mse")
+        self._epochs_vl_mse = results.get("epochs_vl_mse")
+        self._epochs_tr_acc = results.get("epochs_tr_acc")
+        self._epochs_vl_acc = results.get("epochs_vl_acc")
+        self._epochs_tr_mae = results.get("epochs_tr_mae")
+        self._epochs_vl_mae = results.get("epochs_vl_mae")
+        self._epochs_tr_mee = results.get("epochs_tr_mee")
+        self._epochs_vl_mee = results.get("epochs_vl_mee")
+        self._epochs_grad = results.get("epochs_grad")
+
+        self._min_vl_mee = min(self._epochs_vl_mee)
+        self._max_vl_mee = max(self._epochs_vl_mee)
+        self._best_mee_epoch = self._epochs_vl_mee.index(self._min_vl_mee) + 1
+
+    @property
+    def min_vl_mee(self) -> float:
+        """
+        The min validation MEE
+        :return:
+        """
+        return self._min_vl_mee
+
+    @property
+    def max_vl_mee(self) -> float:
+        """
+        The max validation MEE
+        :return: float
+        """
+        return self._max_vl_mee
+
+    @property
+    def best_mee_epoch(self) -> int:
+        """
+        The epoch with best MEE metric
+        :return: the epoch
+        """
+        return self._best_mee_epoch
+
+    @property
+    def epochs_tr_mse(self):
+        """
+        Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.
+        :return:
+        """
+        return self._epochs_tr_mse
+
+    @property
+    def epochs_vl_mse(self):
+        """
+        Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
+        :return:
+        """
+        return self._epochs_vl_mse
+
+    @property
+    def epochs_tr_acc(self):
+        """
+        Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks (Note: in regression tasks this quantity is not used).
+        :return:
+        """
+        return self._epochs_tr_acc
+
+    @property
+    def epochs_vl_acc(self):
+        """
+        Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
+        :return:
+        """
+        return self._epochs_vl_acc
+
+    @property
+    def epochs_tr_mae(self):
+        """
+        Training Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the training set at each epoch. MAE measures the average absolute difference between predicted and target values and provides an error estimate less sensitive to outliers than MSE. It is meaningful for regression tasks (for classification it is typically not used).
+        :return:
+        """
+        return self._epochs_tr_mae
+
+    @property
+    def epochs_vl_mae(self):
+        """
+        Validation Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the validation set at each epoch. It is used to monitor generalization in regression tasks and to detect overfitting/underfitting trends when compared with the training MAE curve.
+        :return:
+        """
+        return self._epochs_vl_mae
+
+    @property
+    def epochs_tr_mee(self):
+        """
+        Training Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the training set at each epoch. For multi-output regression, MEE is defined as the average Euclidean distance between the predicted output vector and the target vector for each sample; it summarizes the global prediction error across all output dimensions.
+        :return:
+        """
+        return self._epochs_tr_mee
+
+    @property
+    def epochs_vl_mee(self):
+        """
+        Validation Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the validation set at each epoch. This is the key metric for the CUP task (multi-output regression) and is used to select models/hyperparameters by tracking the best generalization performance across epochs.
+        :return:
+        """
+        return self._epochs_vl_mee
+
+    @property
+    def epochs_grad(self):
+        """
+        Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
+        :return:
+        """
+        return self._epochs_grad
 
 
 def _make_split(dataset: TrainSet, val_ratio, seed) -> (ndarray, ndarray, ndarray, ndarray):
@@ -262,25 +447,6 @@ class EarlyStoppingStrategy:
 
     def __str__(self):
         return "EarlyStopping with patience={}, min_delta={}".format(self.patience, self.min_delta)
-
-
-class TrainSet:
-    """
-    This class is a wrapper for a dataset that is represented with X (the feature), and y (the labels).
-    """
-
-    def __init__(self, X: pd.DataFrame, y: ndarray):
-        self._X = X.astype(np.float32).to_numpy()
-        self._y = y
-        return
-
-    @property
-    def X(self):
-        return self._X
-
-    @property
-    def y(self):
-        return self._y
 
 
 class SplitStrategy:
@@ -532,15 +698,12 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
             **inner_train_params
         )
 
-        epochs_tr_mse = train_result.epochs_tr_mse
-        epochs_vl_mse = train_result.epochs_vl_mse
-        epochs_tr_acc = train_result.epochs_tr_acc
-        epochs_vl_acc = train_result.epochs_vl_acc
-        epochs_tr_mae = train_result.epochs_tr_mae
-        epochs_vl_mae = train_result.epochs_vl_mae
-        epochs_tr_mee = train_result.epochs_tr_mee
-        epochs_vl_mee = train_result.epochs_vl_mee
+        epochs_tr_mse, epochs_vl_mse = train_result.epochs_tr_mse, train_result.epochs_vl_mse
+        epochs_tr_acc, epochs_vl_acc= train_result.epochs_tr_acc, train_result.epochs_vl_acc
+        epochs_tr_mae, epochs_vl_mae= train_result.epochs_tr_mae, train_result.epochs_vl_mae
+        epochs_tr_mee, epochs_vl_mee= train_result.epochs_tr_mee, train_result.epochs_vl_mee
         epochs_grad = train_result.epochs_grad
+
 
         # Data gathering
         fold_results.append(cr.FoldResult({
@@ -557,6 +720,7 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
             EPOCHS_VL_MEE_MEAN: np.mean(epochs_vl_mee), EPOCHS_VL_MEE_STD: np.std(epochs_vl_mee),
 
             FOLD_TR_MSE: float(min(epochs_tr_mse)), FOLD_VL_MSE: float(min(epochs_vl_mse)),
+            FOLD_TR_RMSE: float(min(epochs_tr_mse)), FOLD_VL_RMSE: float(min(epochs_vl_mse)),
             FOLD_TR_MEE: float(min(epochs_tr_mee)), FOLD_VL_MEE: float(min(epochs_vl_mee)),
             FOLD_TR_MAE: float(min(epochs_tr_mae)), FOLD_VL_MAE: float(min(epochs_vl_mae)),
             FOLD_TR_ACC: float(max(epochs_tr_acc)), FOLD_VL_ACC: float(max(epochs_vl_acc))
@@ -580,6 +744,10 @@ def init_weights(m: nn.Module, method: str, nonlinearity: str = "relu") -> None:
 
     if method == "kaiming":
         nn.init.kaiming_uniform_(m.weight, nonlinearity=nonlinearity)
+    elif method == "xavier":
+        nn.init.xavier_uniform_(m.weight)
+
+    # Not to be used, only for learning purposes
     elif method == "constant":
         nn.init.constant_(m.weight, 0.0)
 
@@ -604,45 +772,6 @@ def gradient_norm(model: torch.nn.Module) -> float:
             param_norm = p.grad.detach().norm(2)
             total_norm += param_norm.item() ** 2
     return total_norm ** 0.5
-
-
-class MLP(nn.Module):
-    """
-    Implements a skeleton of a Multilayer Perceptron network with given parameters
-    """
-
-    def __init__(self, net: nn.Module, adapter):
-        """
-        MLP constructor
-        :param net: the MLP architecture in form of Sequence
-        """
-        super().__init__()
-        self._net = net
-        self._adapter = adapter
-
-    def forward(self, x):
-        """
-        Implements the forward pass of the MLP architecture
-        :param x: the input
-        :return: a tensor containing the logits produced by the network, before any output activation function (e.g. sigmoid)
-        """
-        # The forward() method of Sequential accepts any input and forwards it to the first module it contains.
-        # It then "chains" outputs to inputs sequentially for each subsequent module,
-        # finally returning the output of the last module.
-        # It is basically the forward pass of the whole architecture.
-        return self._net(x)
-
-    @torch.no_grad()
-    def predict_proba(self, x: Tensor) -> Tensor:
-        self.eval()
-        logits = self.forward(x)
-        return self._adapter.probs(logits)
-
-    @torch.no_grad()
-    def predict(self, x: Tensor) -> Tensor:
-        self.eval()
-        logits = self.forward(x)
-        return self._adapter.predict(logits)
 
 
 class OutputAdapter:
@@ -850,137 +979,6 @@ def plot_epochs_curves(plots: list[dict], x_label: str, y_label: str, title:str=
     plt.show()
 
 
-class TrainResults:
-    """
-    Helper class for model training results
-    """
-
-    def __init__(self, results: dict):
-        """
-#       Param results is a dictionary containing:
-                - epochs_tr_loss: Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.
-                - epochs_vl_loss: Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
-                - epochs_tr_acc: Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks (Note: in regression tasks this quantity is not used).
-                - epochs_vl_acc: Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
-                - epochs_tr_mae: Training Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the training set at each epoch. MAE measures the average absolute difference between predicted and target values and provides an error estimate less sensitive to outliers than MSE. It is meaningful for regression tasks (for classification it is typically not used).
-                - epochs_vl_mae: Validation Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the validation set at each epoch. It is used to monitor generalization in regression tasks and to detect overfitting/underfitting trends when compared with the training MAE curve.
-                - epochs_tr_mee: Training Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the training set at each epoch. For multi-output regression, MEE is defined as the average Euclidean distance between the predicted output vector and the target vector for each sample; it summarizes the global prediction error across all output dimensions.
-                - epochs_vl_mee: Validation Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the validation set at each epoch. This is the key metric for the CUP task (multi-output regression) and is used to select models/hyperparameters by tracking the best generalization performance across epochs.
-                - epochs_grad: Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
-        :param results: the initialization dictionary
-        """
-
-        self._epochs_tr_mse = results.get("epochs_tr_mse")
-        self._epochs_vl_mse = results.get("epochs_vl_mse")
-        self._epochs_tr_acc = results.get("epochs_tr_acc")
-        self._epochs_vl_acc = results.get("epochs_vl_acc")
-        self._epochs_tr_mae = results.get("epochs_tr_mae")
-        self._epochs_vl_mae = results.get("epochs_vl_mae")
-        self._epochs_tr_mee = results.get("epochs_tr_mee")
-        self._epochs_vl_mee = results.get("epochs_vl_mee")
-        self._epochs_grad = results.get("epochs_grad")
-
-        self._min_vl_mee = min(self._epochs_vl_mee)
-        self._max_vl_mee = max(self._epochs_vl_mee)
-        self._best_mee_epoch = self._epochs_vl_mee.index(self._min_vl_mee) + 1
-
-    @property
-    def min_vl_mee(self) -> float:
-        """
-        The min validation MEE
-        :return:
-        """
-        return self._min_vl_mee
-
-    @property
-    def max_vl_mee(self) -> float:
-        """
-        The max validation MEE
-        :return: float
-        """
-        return self._max_vl_mee
-
-    @property
-    def best_mee_epoch(self) -> int:
-        """
-        The epoch with best MEE metric
-        :return: the epoch
-        """
-        return self._best_mee_epoch
-
-    @property
-    def epochs_tr_mse(self):
-        """
-        Training loss history. Sequence containing the value of the loss function computed on the training set at each training epoch. It is used to monitor how well the model fits the training data and to analyze the learning dynamics over time.
-        :return:
-        """
-        return self._epochs_tr_mse
-
-    @property
-    def epochs_vl_mse(self):
-        """
-        Validation loss history. Sequence containing the value of the loss function computed on the validation set at each training epoch. This quantity is used to assess the generalization capability of the model and to detect phenomena such as overfitting or underfitting.
-        :return:
-        """
-        return self._epochs_vl_mse
-
-    @property
-    def epochs_tr_acc(self):
-        """
-        Training accuracy history. Sequence containing the classification accuracy measured on the training set at each epoch. This metric represents the proportion of correctly classified samples and is meaningful only for classification tasks (Note: in regression tasks this quantity is not used).
-        :return:
-        """
-        return self._epochs_tr_acc
-
-    @property
-    def epochs_vl_acc(self):
-        """
-        Validation accuracy history. Sequence containing the classification accuracy measured on the validation set at each epoch. It is used to evaluate classification performance on unseen data and to monitor possible overfitting during training (Note: in regression tasks this quantity is not meaningful and is therefore ignored).
-        :return:
-        """
-        return self._epochs_vl_acc
-
-    @property
-    def epochs_tr_mae(self):
-        """
-        Training Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the training set at each epoch. MAE measures the average absolute difference between predicted and target values and provides an error estimate less sensitive to outliers than MSE. It is meaningful for regression tasks (for classification it is typically not used).
-        :return:
-        """
-        return self._epochs_tr_mae
-
-    @property
-    def epochs_vl_mae(self):
-        """
-        Validation Mean Absolute Error (MAE) history. Sequence containing the MAE computed on the validation set at each epoch. It is used to monitor generalization in regression tasks and to detect overfitting/underfitting trends when compared with the training MAE curve.
-        :return:
-        """
-        return self._epochs_vl_mae
-
-    @property
-    def epochs_tr_mee(self):
-        """
-        Training Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the training set at each epoch. For multi-output regression, MEE is defined as the average Euclidean distance between the predicted output vector and the target vector for each sample; it summarizes the global prediction error across all output dimensions.
-        :return:
-        """
-        return self._epochs_tr_mee
-
-    @property
-    def epochs_vl_mee(self):
-        """
-        Validation Mean Euclidean Error (MEE) history. Sequence containing the MEE computed on the validation set at each epoch. This is the key metric for the CUP task (multi-output regression) and is used to select models/hyperparameters by tracking the best generalization performance across epochs.
-        :return:
-        """
-        return self._epochs_vl_mee
-
-    @property
-    def epochs_grad(self):
-        """
-        Gradient norm history. Sequence containing the norm of the gradient of the loss function with respect to the model parameters, computed during training. This diagnostic quantity is useful to analyze optimization stability and to detect issues such as vanishing or exploding gradients.
-        :return:
-        """
-        return self._epochs_grad
-
-
 class MEELoss(nn.Module):
     """
     Custom implementation of Mean Euclidean Error (MEE) loss.
@@ -1011,3 +1009,32 @@ class MEELoss(nn.Module):
 
     def __str__(self):
         return f"{type(self).__name__}(reduction='{self.reduction}') - custom function"
+
+
+def build_mlp(input_dim: int, output_dim: int, hidden_units: list[int] , activation: str) -> nn.Sequential:
+    """
+    Build an MLP as nn.Sequential with configurable hidden layers.
+    Example: hidden_units=[128,64] gives input->128->64->output.
+    """
+    act_map = {
+        "relu": nn.ReLU,
+        "tanh": nn.Tanh,
+        "gelu": nn.GELU
+    }
+    if activation not in act_map:
+        raise ValueError(f"Unknown activation: {activation}. Choose from {list(act_map.keys())}")
+
+    Act = act_map[activation]
+
+    layers = []
+    prev = input_dim
+
+    for h in hidden_units:
+        layers.append(nn.Linear(prev, h, bias=True))
+        layers.append(Act())
+        prev = h
+
+    # output layer (linear)
+    layers.append(nn.Linear(prev, output_dim, bias=True))
+
+    return nn.Sequential(*layers)

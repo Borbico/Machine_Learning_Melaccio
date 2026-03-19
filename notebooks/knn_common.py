@@ -7,6 +7,7 @@ import numpy as np
 from networkx.classes import non_neighbors
 from sklearn.model_selection import learning_curve
 from matplotlib import pyplot as plt
+import cross_common as cr
 
 
 
@@ -37,10 +38,10 @@ def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1,
     best_k = gs.best_params_[f"{step_name}__{N_NEIGHBORS}"] # best K
     k_vals = np.array(r[f"param_{step_name}__{N_NEIGHBORS}"], dtype=int) # all tried K
 
-    test_scores = np.array(score_correction * r["mean_test_score"], dtype=float)
-    train_scores = np.array(score_correction * r.get("mean_train_score", np.full_like(test_scores, np.nan)), dtype=float)
+    test_scores = np.array(cr.apply_score_correction(gs.scoring, r["mean_test_score"]))
+    train_scores = np.array(cr.apply_score_correction(gs.scoring, r["mean_train_score"]))
 
-    # 2) Aggrega per k
+    # Group by K
     uniq_k = np.unique(k_vals)
     agg_test = []
     agg_train = []
@@ -71,9 +72,6 @@ def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1,
         if scoring == "accuracy":
             y_label = "Accuracy"
         elif scoring.startswith("neg_"):
-            # Loss switched to positive for better readability
-            agg_test = -agg_test
-            agg_train = -agg_train
 
             if "mean_squared_error" in scoring:
                 y_label = "MSE"
@@ -129,7 +127,7 @@ def plot_knn_validation_curve_regression(k_values, train_mse, cv_mse):
     plt.show()
 
 
-def plot_knn_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, scoring: str = "accuracy"):
+def plot_knn_learning_curve(model, X, y, cv, scoring, ax=None):
     """
     Plot a learning curve for a given KNN model (classifier or regressor).
     If scoring is a neg_* loss, the curve is plotted as the corresponding positive loss.
@@ -153,8 +151,7 @@ def plot_knn_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, sc
         random_state=random_state
     )
 
-    train_mean = score_correction *  train_scores.mean(axis=1)
-    val_mean = score_correction * val_scores.mean(axis=1)
+    train_mean, val_mean = cr.apply_score_correction(scoring,(train_scores.mean(axis=1),val_scores.mean(axis=1)))
 
     # Decide label + possible sign flip
     y_label = "Score"
@@ -163,9 +160,6 @@ def plot_knn_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, sc
     title_metric = scoring
 
     if isinstance(scoring, str) and scoring.startswith("neg_"):
-        # Convert from negative score to positive loss for readability
-        train_mean = -train_mean
-        val_mean = -val_mean
 
         if scoring == "neg_mean_absolute_error":
             y_label = "MAE"
@@ -202,7 +196,7 @@ def plot_knn_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, sc
     ax.grid(True)
 
 
-def plot_knn_learning_curves_grid(model, X, y, cv, n_cols=2, score_correction:int = 1, scoring="accuracy"):
+def plot_knn_learning_curves_grid(model, X, y, cv, scoring, n_cols=2):
     """
     Plot learning curves for multiple KNN models in a grid layout.
     Optionally highlight the subplot whose model.n_neighbors == highlight_k.

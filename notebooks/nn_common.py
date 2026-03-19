@@ -1,4 +1,7 @@
 import copy
+import datetime
+import os
+
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -7,10 +10,13 @@ from matplotlib import pyplot as plt
 from matplotlib.ticker import MaxNLocator
 from numpy import ndarray
 from sklearn import clone
+from sklearn.base import TransformerMixin
+from sklearn.preprocessing import StandardScaler
 from torch import nn, Tensor
 from torch.nn import MSELoss
 from torch.utils.data import TensorDataset, DataLoader
 import cross_common as cr
+from cross_common import (MEE,MAE,MSE,RMSE)
 from cross_common import (
     FOLD_NR,
     FOLD_TR_MSE,FOLD_VL_MSE,
@@ -19,6 +25,11 @@ from cross_common import (
     FOLD_TR_MAE,FOLD_VL_MAE,
     FOLD_TR_ACC,FOLD_VL_ACC)
 from cross_common import (
+    EPOCHS_TR_MSE, EPOCHS_VL_MSE,
+    EPOCHS_VL_ACC, EPOCHS_TR_ACC,
+    EPOCHS_TR_MAE, EPOCHS_VL_MAE,
+    EPOCHS_TR_MEE, EPOCHS_VL_MEE,
+    EPOCHS_TR_RMSE, EPOCHS_VL_RMSE,
     EPOCHS_TR_MSE_MEAN,EPOCHS_TR_MSE_STD,
     EPOCHS_VL_MSE_MEAN,EPOCHS_VL_MSE_STD,
     EPOCHS_TR_ACC_MEAN,EPOCHS_TR_ACC_STD,
@@ -77,7 +88,7 @@ class MLP(nn.Module):
         return self._adapter.predict(logits)
 
 
-class TrainSet:
+class FeatureTargetSet:
     """
     This class is a wrapper for a dataset that is represented with X (the feature), and y (the labels).
     """
@@ -116,14 +127,10 @@ class TrainResults:
         :param results: the initialization dictionary
         """
 
-        self._epochs_tr_mse = results.get("epochs_tr_mse")
-        self._epochs_vl_mse = results.get("epochs_vl_mse")
-        self._epochs_tr_acc = results.get("epochs_tr_acc")
-        self._epochs_vl_acc = results.get("epochs_vl_acc")
-        self._epochs_tr_mae = results.get("epochs_tr_mae")
-        self._epochs_vl_mae = results.get("epochs_vl_mae")
-        self._epochs_tr_mee = results.get("epochs_tr_mee")
-        self._epochs_vl_mee = results.get("epochs_vl_mee")
+        self._epochs_tr_mse, self._epochs_vl_mse = results.get(EPOCHS_TR_MSE), results.get(EPOCHS_VL_MSE)
+        self._epochs_tr_acc, self._epochs_vl_acc = results.get(EPOCHS_TR_ACC), results.get(EPOCHS_VL_ACC)
+        self._epochs_tr_mae, self._epochs_vl_mae = results.get(EPOCHS_TR_MAE), results.get(EPOCHS_VL_MAE)
+        self._epochs_tr_mee, self._epochs_vl_mee = results.get(EPOCHS_TR_MEE), results.get(EPOCHS_VL_MEE)
         self._epochs_grad = results.get("epochs_grad")
 
         self._min_vl_mee = min(self._epochs_vl_mee)
@@ -227,7 +234,7 @@ class TrainResults:
         return self._epochs_grad
 
 
-def _make_split(dataset: TrainSet, val_ratio, seed) -> (ndarray, ndarray, ndarray, ndarray):
+def _make_split(dataset: FeatureTargetSet, val_ratio: float, seed:int) -> tuple[ndarray, ndarray, ndarray, ndarray]:
     """
     Split a given set into training and validation sets according to val_ration and seed.
     Features and labels are often referred as X (uppercase) and y in NN literature,
@@ -420,7 +427,7 @@ def predict(model: 'MLP', X_test: pd.DataFrame):
 
     # Delegate the decision rule to the adapter via MLP.predict(...)
     preds_t = model.predict(X_t)  # shape (N,1) for binary adapters
-    return preds_t
+    return preds_t[0]
 
 
 class EarlyStoppingStrategy:
@@ -428,7 +435,7 @@ class EarlyStoppingStrategy:
     The class defines the early stopping strategy.
     """
 
-    def __init__(self, patience:int = DEFAULT_TRAIN_PATIENCE, min_delta:float=DEFAULT_TRAIN_DELTA):
+    def __init__(self, patience:int = DEFAULT_TRAIN_PATIENCE, min_delta:float=DEFAULT_TRAIN_DELTA, metric:str=MEE):
         """
         Constructor
         :param patience: number of epochs to wait before stopping early
@@ -436,6 +443,7 @@ class EarlyStoppingStrategy:
         """
         self._patience = patience
         self._min_delta = min_delta
+        self._metric = metric
 
     @property
     def patience(self):
@@ -445,8 +453,12 @@ class EarlyStoppingStrategy:
     def min_delta(self):
         return self._min_delta
 
+    @property
+    def metric(self):
+        return self._metric
+
     def __str__(self):
-        return "EarlyStopping with patience={}, min_delta={}".format(self.patience, self.min_delta)
+        return f"EarlyStopping monitoring {self._metric} with patience={self._patience}, min_delta={self._min_delta}"
 
 
 class SplitStrategy:
@@ -459,6 +471,11 @@ class SplitStrategy:
         self._y_tr = None
         self._X_vl = None
         self._y_vl = None
+        self._scaler = None
+
+    @property
+    def scaler(self):
+        return self._scaler
 
     @property
     def train_set(self):
@@ -469,15 +486,20 @@ class SplitStrategy:
         return (self._X_vl, self._y_vl)
 
 
-class SplitByRatioAndSeedStrategy(SplitStrategy):
+class HoldOutStrategy(SplitStrategy):
     """
     The classic split strategy to be applied to a single set, according to the ratio and seed
     """
 
-    def __init__(self, X: pd.DataFrame, y: ndarray, val_ratio:float=DEFAULT_TRAIN_VAL_RATIO, seed:int=DEFAULT_TRAIN_SEED):
+    def __init__(self, train_set:FeatureTargetSet, val_ratio:float=DEFAULT_TRAIN_VAL_RATIO, seed:int=DEFAULT_TRAIN_SEED, scaler:TransformerMixin=None):
         super().__init__()
-        train_set = TrainSet(X, y)
         X_tr, y_tr, X_vl, y_vl = _make_split(train_set, val_ratio=val_ratio, seed=seed)
+
+        # applying scaling if needed
+        if scaler is not None:
+            scaler.fit(X_tr)
+            X_tr = scaler.transform(X_tr)
+            X_vl = scaler.transform(X_vl)
 
         # Convert each sets to tensor for use with PyTorch
         self._X_tr, self._y_tr = _to_tensors(X_tr, y_tr)  # TR sets
@@ -486,15 +508,24 @@ class SplitByRatioAndSeedStrategy(SplitStrategy):
         return
 
 
-
 class ManualSplitStrategy(SplitStrategy):
     """
     The split strategy has already been applied to a single set, according to the ratio and seed
     """
 
-    def __init__(self, X_tr: pd.DataFrame, y_tr: ndarray, X_vl: pd.DataFrame, y_vl: ndarray):
+    def __init__(self, train_set:FeatureTargetSet, validation_set:FeatureTargetSet, scaler:TransformerMixin=None):
 
         super().__init__()
+
+        X_tr, y_tr = train_set.X, train_set.y
+        X_vl, y_vl = validation_set.X, validation_set.y
+
+        # applying scaling if needed
+        if scaler is not None:
+            scaler.fit(X_tr)
+            X_tr = scaler.transform(X_tr)
+            X_vl = scaler.transform(X_vl)
+
         self._X_tr, self._y_tr = _to_tensors(X_tr, y_tr)  # TR sets
         self._X_vl, self._y_vl = _to_tensors(X_vl, y_vl)  # VL sets
 
@@ -527,15 +558,15 @@ def predict_wrapper_fn(model, X):
         return scores.cpu().numpy()
 
 
-def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
+def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
           epochs:int, early_stopping_strategy:EarlyStoppingStrategy = None,
-          scheduler_template= None,silence_output:bool=False) -> TrainResults:
+          scheduler_template= None, silence_output:bool=False) -> TrainResults:
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
     while monitoring performance on a validation set to track generalization and detect overfitting.
     :param scheduler_template: The learning decay strategy
     :param model: the model to be trained
-    :param datasets: the split strategy (i.e. SplitByRatioStrategy, ManualSplitStrategy, etc.)
+    :param split_strategy: the split strategy (i.e. SplitByRatioStrategy, ManualSplitStrategy, etc.)
     :param optimizer_template:
     :param loss_function: the loss algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :param batch_size: "batch", "online" or the mini-batch size for training
@@ -557,6 +588,7 @@ def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function
     best_vl = float("inf")
     best_state = None # used only if early stopping is enabled
     bad_epochs = 0 # used only if early stopping is enabled
+    metric_to_watch = early_stopping_strategy.metric
 
     # initialize optimizer
     optimizer = optimizer_template(model.parameters())
@@ -565,9 +597,8 @@ def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function
     else:
         scheduler = None
 
-
-    X_tr, y_tr = datasets.train_set
-    X_vl, y_vl = datasets.validation_set
+    X_tr, y_tr = split_strategy.train_set
+    X_vl, y_vl = split_strategy.validation_set
 
     # Build DataLoader (or the batch as it is known in ML)
     if batch_size=="batch":
@@ -600,17 +631,21 @@ def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function
             optimizer.step()
 
         # Loss estimation at the end of epoch
-        tr_epoch_mse = epoch_loss(model, dl_tr, MSELoss(reduction="mean"))
-        vl_epoch_mse = epoch_loss(model, dl_vl, MSELoss(reduction="mean"))
-        epochs_tr_mse.append(tr_epoch_mse)
-        epochs_vl_mse.append(vl_epoch_mse)
+        epoch_tr_mse = epoch_loss(model, dl_tr, MSELoss(reduction="mean"))
+        epochs_tr_mse.append(epoch_tr_mse)
+        epoch_vl_mse = epoch_loss(model, dl_vl, MSELoss(reduction="mean"))
+        epochs_vl_mse.append(epoch_vl_mse)
 
         # Calculate Mean Absolute Error (MAE)
-        epochs_tr_mae.append(epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean")))
-        epochs_vl_mae.append(epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean")))
+        epoch_tr_mae = epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean"))
+        epochs_tr_mae.append(epoch_tr_mae)
+        epoch_vl_mae = epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean"))
+        epochs_vl_mae.append(epoch_vl_mae)
 
-        epochs_tr_mee.append(epoch_loss(model, dl_tr, MEELoss(reduction="mean")))
-        epochs_vl_mee.append(epoch_loss(model, dl_vl, MEELoss(reduction="mean")))
+        epoch_tr_mee = epoch_loss(model, dl_tr, MEELoss(reduction="mean"))
+        epochs_tr_mee.append(epoch_tr_mee)
+        epoch_vl_mee = epoch_loss(model, dl_vl, MEELoss(reduction="mean"))
+        epochs_vl_mee.append(epoch_vl_mee)
 
         epochs_tr_acc.append(epoch_accuracy(model, dl_tr))
         epochs_vl_acc.append(epoch_accuracy(model, dl_vl))
@@ -620,19 +655,30 @@ def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function
 
         # Applying learning rate decay
         if scheduler is not None:
-            scheduler.step(vl_epoch_mse)
+            scheduler.step(epoch_vl_mse)
 
         # ---- EARLY STOPPING LOGIC ----
         if early_stopping_strategy is not None:
-            if vl_epoch_mse < best_vl - early_stopping_strategy.min_delta:
-                best_vl = vl_epoch_mse
+
+            if metric_to_watch == MSE:
+                epoch_vl = epoch_vl_mse
+            elif metric_to_watch == MEE:
+                epoch_vl = epoch_vl_mee
+            elif metric_to_watch == MAE:
+                epoch_vl = epoch_vl_mae
+            else:
+                raise ValueError(f"{metric_to_watch} is not supported")
+
+            if epoch_vl < best_vl - early_stopping_strategy.min_delta:
+                best_vl = epoch_vl
                 bad_epochs = 0
                 best_state = copy.deepcopy(model.state_dict())
             else:
                 bad_epochs += 1
 
             if bad_epochs >= early_stopping_strategy.patience:
-                print(f"Early stopping at epoch {epoch} (best VL loss: {best_vl:.4f})")
+                if not silence_output:
+                    print(f"Early stopping at epoch {epoch} (best VL {metric_to_watch} loss: {best_vl:.4f})")
                 break
 
         # Keeping track of the latest best model
@@ -644,10 +690,10 @@ def train(model: MLP, datasets: SplitStrategy, optimizer_template, loss_function
         _print_train_summary(model, dl_tr,dl_vl,optimizer_template,loss_function, scheduler_template, batch_size, epochs,early_stopping_strategy)
 
     return TrainResults({
-        "epochs_tr_mse": epochs_tr_mse, "epochs_vl_mse": epochs_vl_mse,
-        "epochs_tr_acc": epochs_tr_acc, "epochs_vl_acc": epochs_vl_acc,
-        "epochs_tr_mae": epochs_tr_mae, "epochs_vl_mae": epochs_vl_mae,
-        "epochs_tr_mee": epochs_tr_mee, "epochs_vl_mee": epochs_vl_mee,
+        EPOCHS_TR_MSE: epochs_tr_mse, EPOCHS_VL_MSE: epochs_vl_mse,
+        EPOCHS_TR_ACC: epochs_tr_acc, EPOCHS_VL_ACC: epochs_vl_acc,
+        EPOCHS_TR_MAE: epochs_tr_mae, EPOCHS_VL_MAE: epochs_vl_mae,
+        EPOCHS_TR_MEE: epochs_tr_mee, EPOCHS_VL_MEE: epochs_vl_mee,
         "epochs_grad": epochs_grad_norm
     })
 
@@ -662,7 +708,7 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
     :param y: training labels
     :param fold_strategy: the fold strategy (i.e. KFold, StratifiedKfold,...)
     :param inner_train_params: the parameters for the inner trainer
-    :param scaler_template: The scaler if needed
+    :param scaler_template: The scaler if needed. Note: the scaler will eventually be cloned in each fold
     """
 
     fold_results = cr.FoldResults()
@@ -673,20 +719,11 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
         X_tr, y_tr = X.iloc[tr_idx], y[tr_idx]
         X_vl, y_vl = X.iloc[vl_idx], y[vl_idx]
 
-        sc = clone(scaler_template)  # fresh scaler per fold
-        X_tr = pd.DataFrame(
-            sc.fit_transform(X_tr),
-            columns=X_tr.columns,
-            index=X_tr.index
-        )
-        X_vl = pd.DataFrame(
-            sc.transform(X_vl),
-            columns=X_vl.columns,
-            index=X_vl.index
-        )
+        silence_output = inner_train_params.get("silence_output", False)
 
-        print(f"  ")
-        print(f"Perform fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
+        if not silence_output:
+            print(f"  ")
+            print(f"Perform fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
 
         # Model cloning
         fold_model = copy.deepcopy(untrained_base_model)
@@ -694,7 +731,7 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
         # Training
         train_result = train(
             fold_model,
-            ManualSplitStrategy(X_tr, y_tr, X_vl, y_vl),
+            ManualSplitStrategy(FeatureTargetSet(X_tr, y_tr), FeatureTargetSet(X_vl, y_vl), scaler=clone(scaler_template)),
             **inner_train_params
         )
 
@@ -704,12 +741,17 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
         epochs_tr_mee, epochs_vl_mee= train_result.epochs_tr_mee, train_result.epochs_vl_mee
         epochs_grad = train_result.epochs_grad
 
-
         # Data gathering
         fold_results.append(cr.FoldResult({
             FOLD_NR: fold_nr,
 
             # NN Specific attributes
+            EPOCHS_TR_MSE: epochs_tr_mse, EPOCHS_VL_MSE: epochs_vl_mse,
+            EPOCHS_TR_ACC: epochs_tr_acc, EPOCHS_VL_ACC: epochs_vl_acc,
+            EPOCHS_TR_MAE: epochs_tr_mae, EPOCHS_VL_MAE: epochs_vl_mae,
+            EPOCHS_TR_MEE: epochs_tr_mee, EPOCHS_VL_MEE: epochs_vl_mee,
+            EPOCHS_TR_RMSE: epochs_tr_mse,EPOCHS_VL_RMSE: epochs_vl_mse,
+
             EPOCHS_TR_MSE_MEAN: np.mean(epochs_tr_mse), EPOCHS_TR_MSE_STD: np.std(epochs_tr_mse),
             EPOCHS_VL_MSE_MEAN: np.mean(epochs_vl_mse), EPOCHS_VL_MSE_STD: np.std(epochs_vl_mse),
             EPOCHS_TR_ACC_MEAN: np.mean(epochs_tr_acc), EPOCHS_TR_ACC_STD: np.std(epochs_tr_acc),
@@ -760,10 +802,9 @@ def init_weights(m: nn.Module, method: str, nonlinearity: str = "relu") -> None:
 
 def gradient_norm(model: torch.nn.Module) -> float:
     """
-    This function computes the gradient norm of the model parameters,
-    in this implementation it corresponds
-    :param model:
-    :return:
+    This function computes the gradient norm of the model parameters.
+    :param model: the NN model
+    :return: gradient norm (float)
     """
 
     total_norm = 0.0
@@ -772,6 +813,22 @@ def gradient_norm(model: torch.nn.Module) -> float:
             param_norm = p.grad.detach().norm(2)
             total_norm += param_norm.item() ** 2
     return total_norm ** 0.5
+
+
+def max_grad(model: torch.nn.Module) -> float:
+    """
+    Computes the maximum absolute gradient across all model parameters.
+    :param model: the NN model
+    :return: max absolute gradient value (float)
+    """
+
+    max_g = 0.0
+    for p in model.parameters():
+        if p.grad is not None:
+            param_max = p.grad.detach().abs().max().item()
+            max_g = max(max_g, param_max)
+
+    return max_g
 
 
 class OutputAdapter:
@@ -822,7 +879,7 @@ def plot_epoch_mee(epochs_tr_mee, epochs_vl_mee):
     )
 
 
-def plot_epoch_loss(epochs_tr, epochs_vl):
+def plot_epoch_mse(epochs_tr, epochs_vl):
 
     plot_epochs_curves(
         [
@@ -1038,3 +1095,323 @@ def build_mlp(input_dim: int, output_dim: int, hidden_units: list[int] , activat
     layers.append(nn.Linear(prev, output_dim, bias=True))
 
     return nn.Sequential(*layers)
+
+
+class TorchRegressorRunner:
+
+    def __init__(self, model_template):
+        self._model_template = model_template
+
+    def new_model(self):
+        return copy.deepcopy(self._model_template)
+
+    def fit(self, model, X_tr, y_tr, bootstrap_params):
+
+        #X_tr, y_tr = split_strategy.X_tr, split_strategy.y_tr
+        #X_vl, y_vl = split_strategy.X_vl, split_strategy.y_vl
+        train_params = bootstrap_params["train_params"]
+        split_strategy_cls = bootstrap_params['split_strategy']
+        split_strategy = split_strategy_cls(FeatureTargetSet(X_tr, y_tr))
+        train(
+            model,
+            split_strategy,
+            **train_params
+        )
+
+        return model
+
+    def predict(self, model, X):
+        return predict(model, X)
+
+
+def suggest_trial_param(trial, name, space):
+    """
+    Suggest a trial parameter with a space
+        - suggest_trial_param(trial, "learning_rate", [1e-2, 1e-3, 1e-4, 1e-5]) --> suggest_categorical("learning_rate", [1e-2, 1e-3, 1e-4, 1e-5])
+        - suggest_trial_param(trial, "learning_rate", (0.0033, 0.003) --> suggest_float("learning_rate", 0.0033, 0.003, log=True) \n
+         results in the interval [0.00033, 0.00045,0.00060,0.00080,0.00105,0.00140,0.00190,0.00250,0.003]
+    :param trial: the trial
+    :param name: the name of the attribute
+    :param space: the space of the attribute
+    :return: a suggestion
+    """
+
+    # categorical
+    if isinstance(space, list):
+        return trial.suggest_categorical(name, space)
+
+    # float range
+    if isinstance(space, tuple) and len(space) == 2:
+        low, high = space
+        return trial.suggest_float(name, low, high, log=True)
+
+    raise ValueError(f"Invalid search space for {name}")
+
+
+def analyze_lr_curve(history, early_epoch=30):
+    """
+    Best curve
+    :param history: Can be vl_mee history or vl_mse history etc..
+    :param early_epoch: the epoch in which the curve descend more rapidly
+    :return:
+    """
+    arr = np.asarray(history, dtype=float)
+
+    if len(arr) == 0:
+        return {
+            "early_gain": np.nan,
+            "oscillation": np.nan,
+            "best_vl_metric": np.nan,
+            "best_epoch": np.nan
+        }
+
+    if len(arr) == 1:
+        return {
+            "early_gain": 0.0,
+            "oscillation": 0.0,
+            "best_vl_metric": float(arr[0]),
+            "best_epoch": 1
+        }
+
+    k = min(early_epoch - 1, len(arr) - 1)
+
+    start = arr[0]
+    early = arr[k]
+    best = np.min(arr)
+    best_epoch = int(np.argmin(arr) + 1)
+
+    # best descent in a specific epoch frame
+    # If metric is vl mee we are basically doing:
+    # early gain = (vl_mee(1) - vl_mee(k)) / vl_mee(1)
+    early_gain = (start - early) / max(abs(start), 1e-12)
+
+    # instability of the curve calculated or its oscillation
+    # oscillation = std( Delta of vl_mee(t) )
+    # where Delta of vl_mee(t) equals to:
+    # Delta vl_mee(t) = vl_mee(t) - vl_mee(t-1)
+    diffs = np.diff(arr)
+    oscillation = np.std(diffs)
+
+    return {
+        "early_gain": float(early_gain),
+        "oscillation": float(oscillation),
+        "best_vl_metric": float(best),
+        "best_epoch": best_epoch
+    }
+
+
+# def summarize_lr_from_folds(fold_results, epoch_metric:str=EPOCHS_VL_MEE, fold_metric:str=FOLD_VL_MEE, early_epoch:int=30):
+#     """
+#     fold_results: lista di dizionari, uno per fold
+#     ognuno deve contenere almeno:
+#         - EPOCHS_VL_MEE
+#         - FOLD_VL_MEE
+#     """
+#     analyses = [
+#         analyze_lr_curve(getattr(fold, epoch_metric), early_epoch=early_epoch)
+#         for fold in fold_results
+#     ]
+#
+#     return {
+#         "mean_early_gain": float(np.mean([a["early_gain"] for a in analyses])),
+#         "std_early_gain": float(np.std([a["early_gain"] for a in analyses])),
+#
+#         "mean_oscillation": float(np.mean([a["oscillation"] for a in analyses])),
+#         "std_oscillation": float(np.std([a["oscillation"] for a in analyses])),
+#
+#         "mean_best": float(np.mean([getattr(fold, fold_metric) for fold in fold_results])),
+#         "std_best": float(np.std([getattr(fold, fold_metric) for fold in fold_results])),
+#
+#         "mean_best_epoch": float(np.mean([a["best_epoch"] for a in analyses]))
+#     }
+
+
+def summarize_weight_decay_from_folds(fold_histories, vl_key:str=FOLD_VL_MEE, tr_key=FOLD_TR_MEE):
+
+    mean_best_tr_metric = float(np.mean([getattr(fold, tr_key) for fold in fold_histories]))
+    mean_best_vl_metric = float(np.mean([getattr(fold, vl_key) for fold in fold_histories]))
+    gap_tr_vl_mee = mean_best_vl_metric - mean_best_tr_metric
+
+    return {
+        "mean_best_tr": mean_best_tr_metric,
+        "mean_best_vl": mean_best_vl_metric,
+        "gap_tr_vl": gap_tr_vl_mee
+    }
+
+
+def find_best_lr_from_trials(study) -> float:
+    """
+    The learning rate is selected according to three complementary criteria derived from the training dynamics observed during K-Fold cross-validation:
+	    - Fast initial convergence: the training curve should decrease rapidly during the first 30–50 epochs, indicating that the optimizer is able to make effective progress at the beginning of training.
+	    - Stable optimization: the learning curve should exhibit low oscillation, suggesting that the step size is not too large and the optimization process is stable.
+	    - Best validation performance: among the candidate values, preference is given to the learning rate achieving the lowest mean validation metric across the K-Fold splits.
+    :param study: the study object
+    :return: the best learning rate
+    """
+
+    results = min(
+        study.best_trials,
+        key=lambda t: (
+            t.values[0],    # 1. minimize main metric as first step
+            t.values[1],    # 2. oscillation as second step in case two or more trials share the same minimum (1)
+            -t.values[2]    # 3. maximize early_gain as final step when two or more trials share the same (1) and (2)
+        )
+    )
+
+    return results.params["learning_rate"]
+
+
+def evaluate_lr(fold_results, epoch_metric:int, fold_metric:str, early_epoch:int) -> tuple[float, float,float]:
+    """
+    Extract learning rate and other metrics from fold results for being used in optuna study evaluation.
+    The returned tuple contains the following in the same exact order:
+        - mean_best: the mean main metric
+        - mean_oscillation
+        - mean_early_gain
+    :param fold_results: the fold history as returned by kfold
+    :param epoch_metric: for example epochs_vl_mee
+    :param fold_metric: for example fold_vl_mee
+    :param early_epoch:
+    :return: summary["mean_best"],summary["mean_oscillation"],summary["mean_early_gain"]
+    """
+
+    analyses = [analyze_lr_curve(getattr(fold, epoch_metric), early_epoch=early_epoch) for fold in fold_results]
+    summary = {
+        "mean_early_gain": float(np.mean([a["early_gain"] for a in analyses])),
+        "std_early_gain": float(np.std([a["early_gain"] for a in analyses])),
+
+        "mean_oscillation": float(np.mean([a["oscillation"] for a in analyses])),
+        "std_oscillation": float(np.std([a["oscillation"] for a in analyses])),
+
+        "mean_best": float(np.mean([getattr(fold, fold_metric) for fold in fold_results])),
+        "std_best": float(np.std([getattr(fold, fold_metric) for fold in fold_results])),
+
+        "mean_best_epoch": float(np.mean([a["best_epoch"] for a in analyses]))
+    }
+    # the order that will be evaluated according to find_best_lr_from_trials
+    return summary["mean_best"],summary["mean_oscillation"],summary["mean_early_gain"]
+
+
+def find_best_weight_decay_from_trials(study) -> float:
+    """
+    Select the best weight decay from trials.
+    Priority: (1) lowest mean validation metric, (2) smallest TR–VL gap.
+    This favors configurations with strong validation performance and good generalization.
+    :param study: the optuna study object
+    :return: best weight_decay
+    """
+    the_trial = min(
+        study.best_trials,
+        key=lambda t: (
+            t.values[0],   # mean_best_vl_metric
+            t.values[1]    # gap_tr_vl
+        )
+    )
+    return the_trial.params["weight_decay"]
+
+
+def evaluate_wd(fold_histories: cr.FoldResults,vl_key:str,tr_key:str) -> tuple[float,float]:
+    """
+    Find evaluation values for optuna regarding weight decay.
+    :param fold_histories:
+    :param vl_key: for example fold_vl_mee
+    :param tr_key: for example fold_tr_mee
+    :return: best vl metric and best gap
+    """
+    mean_best_tr_metric = float(np.mean([getattr(fold, tr_key) for fold in fold_histories]))
+    mean_best_vl_metric = float(np.mean([getattr(fold, vl_key) for fold in fold_histories]))
+    gap_tr_vl = mean_best_vl_metric - mean_best_tr_metric
+    return mean_best_vl_metric,gap_tr_vl
+
+
+def save_run_report(model_baseline: str, net, inner_train_params: dict, metrics: dict, folder: str = "runs"):
+    """
+    Save an NN run
+    :param model_baseline:
+    :param net:
+    :param inner_train_params:
+    :param metrics:
+    :param folder:
+    :return:
+    """
+
+    # Create folder if not exists
+    os.makedirs(folder, exist_ok=True)
+
+    # Timestamp name
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    filename = f"run_{timestamp}.txt"
+    path = os.path.join(folder, filename)
+
+    with open(path, "w") as f:
+        f.write("=" * 60 + "\n")
+        f.write(f"RUN ID: run_{timestamp}\n")
+        f.write(f"Timestamp: {timestamp}\n")
+        f.write("=" * 60 + "\n\n")
+
+        f.write("Model:\n")
+        f.write(f"{net}\n")
+        f.write("\n")
+
+        f.write("Hyperparameters:\n")
+        for k, v in inner_train_params.items():
+            f.write(f"  - {k}: {v}\n")
+
+        f.write("\nMetrics (K-Fold mean ± std):\n")
+        for k, (vl_mean, tr_mean) in metrics.items():
+            f.write(f"  VL {k.upper()}: {vl_mean[0]:.4f} ± {vl_mean[1]:.4f}\n")
+            f.write(f"  TR {k.upper()}: {tr_mean[0]:.4f} ± {tr_mean[1]:.4f}\n")
+            f.write(f"  VL - TR: {(vl_mean[0] - tr_mean[0]):.4f}")
+            f.write("\n")
+            f.write("-"*30)
+            f.write("\n")
+
+        f.write(f"  Baseline: {model_baseline:.4f}")
+        f.write("\n")
+        f.write("-"*30)
+
+        f.write("\n")
+
+    return path
+
+
+def find_best_architecture_from_trials(study) -> tuple[list[int],float,float]:
+    """
+    The best architecture is the one that minimize the vl metric and the gap between tr and vl metric
+    :param study: the study of the trials
+    :return: the best architecture
+    """
+    the_trial = min(
+        study.best_trials,
+        key=lambda t: (
+            t.values[0],   # mean_best_vl_metric
+            t.values[1]    # gap_tr_vl
+        )
+    )
+    layers = [int(item) for item in the_trial.params["hidden_layers"].split(",")]
+    return layers, the_trial.values[0], the_trial.values[1]
+
+
+def evaluate_architecture(fold_histories: cr.FoldResults, vl_key:str, tr_key:str) -> tuple[float, float]:
+    """
+    Evaluate a neural network architecture using K-Fold training histories.
+    The function computes two metrics aggregated across folds:
+     - mean_best_vl: The mean validation metric (e.g., VL_MEE) obtained from the best epoch of each fold. This is the primary indicator of generalization performance.
+     - overfit_gap: The difference between validation and training performance averaged across folds (VL − TR). Only positive values are considered, since a large positive gap indicates overfitting. Negative values are clipped to zero to avoid rewarding configurations where validation happens to be better than training.
+    These two values are used during architecture search to favor models that:
+     - achieve low validation error
+     - do not exhibit significant overfitting.
+    :fold_histories: fold results
+    :vl_key: vl metric
+    :tr_key: tr metric
+    :return: the best vl metric and the overfit_gap
+    """
+
+    # Reusing common function
+    mean_best_tr, std_best_tr = cr.extract_mean_std(fold_histories,tr_key)
+    mean_best_vl, std_best_vl = cr.extract_mean_std(fold_histories,vl_key)
+
+    # See function comment for the reason why
+    overfit_gap = max((mean_best_vl - mean_best_tr), 0.0)
+
+    return mean_best_vl,overfit_gap

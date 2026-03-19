@@ -7,27 +7,52 @@ import torch
 from matplotlib import pyplot as plt
 from numpy import ndarray
 from pandas import DataFrame
+from prometheus_client import values
 from scipy.spatial.distance import euclidean
 from sklearn import clone
 from sklearn.dummy import DummyRegressor
-from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer
+from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer, r2_score
 from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, KFold, GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 from sympy.physics.control import Series
 
-FOLD_NR = "fold_nr"
-FOLD_TR_MSE = "fold_tr_mse"
-FOLD_VL_MSE = "fold_vl_mse"
-FOLD_TR_RMSE = "fold_tr_rmse"
-FOLD_VL_RMSE = "fold_vl_rmse"
-FOLD_TR_ACC = "fold_tr_acc"
-FOLD_VL_ACC = "fold_vl_acc"
-FOLD_TR_MAE = "fold_tr_mae"
-FOLD_VL_MAE = "fold_vl_mae"
-FOLD_TR_MEE = "fold_tr_mee"
-FOLD_VL_MEE = "fold_vl_mee"
+MEE = "mee"
+MAE = "mae"
+MSE = "mse"
+RMSE = "rmse"
+R2 = "r2"
+ACC = "acc"
+MED = "med"
+BAC = "bac"
+
+_BASE = "fold"
+_TR, _VL = "tr", "vl"
+FOLD_NR = f"{_BASE}_nr"
+FOLD_TR_MSE = f"fold_tr_{MSE}"
+FOLD_VL_MSE = f"fold_vl_{MSE}"
+FOLD_TR_RMSE = f"fold_tr_{RMSE}"
+FOLD_VL_RMSE = f"fold_vl_{RMSE}"
+FOLD_TR_ACC = f"fold_tr_{ACC}"
+FOLD_VL_ACC = f"fold_vl_{ACC}"
+FOLD_TR_MAE = f"fold_tr_{MAE}"
+FOLD_VL_MAE = f"fold_vl_{MAE}"
+FOLD_TR_MEE = f"fold_tr_{MEE}"
+FOLD_VL_MEE = f"fold_vl_{MEE}"
+FOLD_TR_R2 = f"fold_tr_{R2}"
+FOLD_VL_R2 = f"fold_vl_{R2}"
+
+EPOCHS_TR_MSE = "epochs_tr_mse"
+EPOCHS_VL_MSE = "epochs_vl_mse"
+EPOCHS_TR_RMSE = "epochs_tr_rmse"
+EPOCHS_VL_RMSE = "epochs_vl_rmse"
+EPOCHS_TR_ACC = "epochs_tr_acc"
+EPOCHS_VL_ACC = "epochs_vl_acc"
+EPOCHS_TR_MAE = "epochs_tr_mae"
+EPOCHS_VL_MAE = "epochs_vl_mae"
+EPOCHS_TR_MEE = "epochs_tr_mee"
+EPOCHS_VL_MEE = "epochs_vl_mee"
 
 EPOCHS_VL_MEE_STD = "epochs_vl_mee_std"
 EPOCHS_VL_MEE_MEAN = "epochs_vl_mee_mean"
@@ -220,7 +245,7 @@ def common_fold_strategy(stratified:bool=False, n_split:int=5, shuffle:bool=True
 #     plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_mee"), "Validation MEE", "KFold Validation MEE per fold")
 
 
-def plot_kfold_metric(results: [tuple], key:str, subkey:str="vl"):
+def plot_kfold_metric(results: list[tuple[FoldResults,str]], key:str, subkey:str="vl"):
 
     data = []
     key_composed = map_key_to_metric(key, subkey)
@@ -228,33 +253,6 @@ def plot_kfold_metric(results: [tuple], key:str, subkey:str="vl"):
         values = extract_fold_history(result[0], key_composed)
         data.append((values, result[1]))
     plot_kfold_bars(data, f"Validation {key.upper()}", f"KFold Validation {key.upper()} per fold")
-
-
-def plot_kfold_mse(non_nested_result, nested_result):
-
-    plot_kfold_bars([
-        (extract_fold_history(non_nested_result, FOLD_VL_MSE), "non-nested"),
-        (extract_fold_history(nested_result, FOLD_VL_MSE), "nested")
-    ], "Validation MSE", "KFold Validation MSE per fold")
-
-
-def plot_kfold_rmse(results: [tuple]):
-    data = []
-    for result in results:
-        data.append((extract_fold_history(result[0], FOLD_VL_MSE), result[1]))
-    plot_kfold_bars(data, "Validation RMSE", "KFold Validation RMSE per fold")
-
-
-def plot_kfold_mae(non_nested_result, nested_result):
-
-    plot_kfold_bars([
-        (extract_fold_history(non_nested_result, FOLD_VL_MAE), "Non-nested"),
-        (extract_fold_history(nested_result, FOLD_VL_MAE), "Nested")
-    ], "Validation MAE", "KFold Validation MAE per fold")
-
-
-def plot_kfold_acc(kf_result):
-    plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_acc"), "Validation ACC", "KFold Validation ACC (best) per fold")
 
 
 def plot_kfold_bar(history, ylabel:str, title:str):
@@ -392,11 +390,30 @@ class FoldResults:
                 vals.append(v)
         return vals
 
+    def extract(self,key: str, subkey: str):
+
+        data = []
+        key_composed = map_key_to_metric(key, subkey)
+        for result in self.values(key_composed):
+            values = extract_fold_history(result[0], key_composed)
+            data.append((values, result[1]))
+
 
 class FoldResult:
 
     def __init__(self, fold_result):
         self._fold_nr = fold_result.get(FOLD_NR)
+
+        self._epochs_vl_acc = fold_result.get(EPOCHS_VL_ACC)
+        self._epochs_tr_acc = fold_result.get(EPOCHS_TR_ACC)
+        self._epochs_tr_mse = fold_result.get(EPOCHS_TR_MSE)
+        self._epochs_vl_mse = fold_result.get(EPOCHS_VL_MSE)
+        self._epochs_tr_rmse = fold_result.get(EPOCHS_TR_RMSE)
+        self._epochs_vl_rmse = fold_result.get(EPOCHS_VL_RMSE)
+        self._epochs_vl_mee = fold_result.get(EPOCHS_VL_MEE)
+        self._epochs_tr_mee = fold_result.get(EPOCHS_TR_MEE)
+        self._epochs_vl_mae = fold_result.get(EPOCHS_VL_MAE)
+        self._epochs_tr_mae = fold_result.get(EPOCHS_TR_MAE)
 
         self._epochs_tr_mse_mean = fold_result.get(EPOCHS_TR_MSE_MEAN)
         self._epochs_vl_mse_mean = fold_result.get(EPOCHS_VL_MSE_MEAN)
@@ -419,6 +436,8 @@ class FoldResult:
         self._fold_vl_mae = fold_result.get(FOLD_VL_MAE)
         self._fold_tr_mee = fold_result.get(FOLD_TR_MEE)
         self._fold_vl_mee = fold_result.get(FOLD_VL_MEE)
+        self._fold_tr_r2 = fold_result.get(FOLD_TR_R2)
+        self._fold_vl_r2 = fold_result.get(FOLD_VL_R2)
 
     @property
     def fold_nr(self):
@@ -501,6 +520,54 @@ class FoldResult:
     def fold_vl_mee(self):
         return self._fold_vl_mee
 
+    @property
+    def fold_tr_r2(self):
+        return self._fold_tr_r2
+
+    @property
+    def fold_vl_r2(self):
+        return self._fold_vl_r2
+
+    @property
+    def epochs_vl_mee(self):
+        return self._epochs_vl_mee
+
+    @property
+    def epochs_tr_mee(self):
+        return self._epochs_tr_mee
+
+    @property
+    def epochs_vl_mse(self):
+        return self._epochs_vl_mse
+
+    @property
+    def epochs_tr_mse(self):
+        return self._epochs_tr_mse
+
+    @property
+    def epochs_vl_rmse(self):
+        return self._epochs_vl_rmse
+
+    @property
+    def epochs_tr_rmse(self):
+        return self._epochs_tr_rmse
+
+    @property
+    def epochs_vl_acc(self):
+        return self._epochs_vl_acc
+
+    @property
+    def epochs_tr_acc(self):
+        return self._epochs_tr_acc
+
+    @property
+    def epochs_vl_mae(self):
+        return self._epochs_vl_mae
+
+    @property
+    def epochs_tr_mae(self):
+        return self._epochs_tr_mae
+
 
 def mee(y_true, y_pred):
     """
@@ -538,16 +605,7 @@ def model_baseline(X, y, cv=common_fold_strategy(), baseline=DummyRegressor(stra
 
 def map_key_to_metric(key: str, subkey:str="vl"):
 
-    if key == "mae":
-        return f"fold_{subkey}_mae"
-    elif key == "mse":
-        return f"fold_{subkey}_mse"
-    elif key == "rmse":
-        return f"fold_{subkey}_rmse"
-    elif key == "mee":
-        return f"fold_{subkey}_mee"
-
-    raise NameError
+    return f"fold_{subkey}_{key}"
 
 
 def common_scoring(name:str= "mae"):
@@ -558,23 +616,25 @@ def common_scoring(name:str= "mae"):
         - rmse: neg_root_mean_squared_error
         - med: neg_median_absolute_error
         - mee: mee_scorer()
+        - acc: accuracy
+        - bac: balanced_accuracy
     :param name: the name of the scorer
-    :return: the scorer
+    :return: the scorer full name
     """
 
-    if name == "mae":
+    if name == MAE:
         return "neg_mean_absolute_error"
-    elif name == "mse":
+    elif name == MSE:
         return "neg_mean_squared_error"
-    elif name == "rmse":
+    elif name == RMSE:
         return "neg_root_mean_squared_error"
-    elif name == "med":
+    elif name == MED:
         return "neg_median_absolute_error"
-    elif name == "mee":
+    elif name == MEE:
         return mee_scorer()
-    elif name == "acc":
+    elif name == ACC:
         return "accuracy"
-    elif name == "bacc":
+    elif name == BAC:
         return "balanced_accuracy"
     else:
         raise ValueError("Unknown scorer")
@@ -656,11 +716,17 @@ class SklearnNestedRegressorRunner:
     def new_model(self):
         return clone(self.base_grid)
 
-    def fit(self, gs, X_tr, y_tr):
+    def fit(self, gs, X_tr, y_tr, inner_params:dict=None):
         gs.fit(X_tr, y_tr)
-        grid_introspection(gs)
+
+        if inner_params:
+            silence_output = inner_params.get("silence_output", False)
+        else:
+            silence_output = False
+
+        if not silence_output:
+            grid_introspection(gs)
         return gs
-        #return gs.best_estimator_
 
     def predict(self, model, X):
         return model.predict(X)
@@ -673,7 +739,7 @@ class SklearnRegressorRunner:
     def new_model(self):
         return clone(self.base_estimator)
 
-    def fit(self, model, X_tr, y_tr):
+    def fit(self, model, X_tr, y_tr, inner_params:dict=None):
         model.fit(X_tr, y_tr)
         return model
 
@@ -751,6 +817,8 @@ def kfold(runner, X, y, folder_strategy) -> FoldResults:
         tr_rmse, vl_rmse = metrics.tr_rmse, metrics.vl_rmse
         tr_mae, vl_mae = metrics.tr_mae, metrics.vl_mae
         tr_mee, vl_mee = metrics.tr_mee, metrics.vl_mee
+        r2_tr = r2_score(y_tr, pred_tr)
+        r2_vl = r2_score(y_vl, pred_vl)
 
         print(f" ")
         print(f"Fold summary")
@@ -767,100 +835,33 @@ def kfold(runner, X, y, folder_strategy) -> FoldResults:
             FOLD_TR_MSE: tr_mse, FOLD_VL_MSE: vl_mse,
             FOLD_TR_MEE: tr_mee, FOLD_VL_MEE: vl_mee,
             FOLD_TR_MAE: tr_mae, FOLD_VL_MAE: vl_mae,
-            FOLD_TR_RMSE: np.sqrt(tr_mae), FOLD_VL_RMSE: np.sqrt(vl_mae)
+            FOLD_TR_RMSE: np.sqrt(tr_mae), FOLD_VL_RMSE: np.sqrt(vl_mae),
+            FOLD_TR_R2: r2_tr, FOLD_VL_R2: r2_vl
         }))
 
     return fold_results
 
 
-# def nested_cv(runner, X, y, outer_cv, grid, scaler=None, verbose=True) -> FoldResults:
-#     """
-#     Nested CV returning the same FoldResults structure as kfold():
-#       - Outer CV: model assessment (this is what you plot)
-#       - Inner CV: GridSearchCV hyperparameter selection
-#     """
-#
-#     yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
-#
-#     fold_results = FoldResults()
-#
-#     # OUTER loop
-#     for fold_nr, (tr_idx, vl_idx) in enumerate(outer_cv.split(X), start=1):
-#
-#         # keep pandas to preserve feature names
-#         X_tr_raw, X_vl_raw = X.iloc[tr_idx], X.iloc[vl_idx]
-#         y_tr, y_vl = yn[tr_idx], yn[vl_idx]
-#
-#         if scaler is not None:
-#             sc = clone(scaler)
-#             X_tr = sc.fit_transform(X_tr_raw)
-#             X_vl = sc.transform(X_vl_raw)
-#         else:
-#             X_tr, X_vl = X_tr_raw, X_vl_raw
-#
-#         if verbose:
-#             print(f"  ")
-#             print(f"Perform (outer) fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
-#
-#         # INNER grid search on outer-train only
-#         base_estimator = runner.new_model()          # unfitted pipeline/model template
-#         gs = clone(grid)
-#         gs.fit(X_tr, y_tr)
-#         best_model = gs.best_estimator_
-#
-#         # unfitted_model = runner.new_model()
-#         # model = runner.fit(unfitted_model, X_tr, y_tr)
-#
-#         # class SklearnNestedRegressorRunner:
-#         #     def __init__(self, grid):
-#         #         self.base_grid = grid
-#         #
-#         #     def new_model(self):
-#         #         return clone(self.grid)
-#         #
-#         #     def fit(self, gs, X_tr, y_tr):
-#         #         gs.fit(X_tr, y_tr)
-#         #         return gs.best_estimator_
-#         #
-#         #     def predict(self, model, X):
-#         #         return model.predict(X)
-#
-#         # evaluate best_model on OUTER train/val
-#         pred_tr = runner.predict(best_model, X_tr)
-#         pred_vl = runner.predict(best_model, X_vl)
-#
-#         metrics = Metrics(y_tr, pred_tr, y_vl, pred_vl)
-#
-#         if verbose:
-#             print(f"Inner fold summary")
-#             print("-" * 80)
-#             print(f"Validation MSE  | {metrics.vl_mse:.4f}")
-#             print(f"Validation RMSE | {metrics.vl_rmse:.4f}")
-#             print(f"Validation MEE  | {metrics.vl_mee:.4f}")
-#             print(f"Validation MAE  | {metrics.vl_mae:.4f}")
-#             print(f"Train           | samples: {len(y_tr)}")
-#             print(f"Validation      | samples: {len(y_vl)}")
-#             print("-" * 80)
-#             grid_introspection(gs)
-#
-#         fold_results.append(FoldResult({
-#             FOLD_NR: fold_nr,
-#             FOLD_TR_MSE: metrics.tr_mse, FOLD_VL_MSE: metrics.vl_mse,
-#             FOLD_TR_MEE: metrics.tr_mee, FOLD_VL_MEE: metrics.vl_mee,
-#             FOLD_TR_MAE: metrics.tr_mae, FOLD_VL_MAE: metrics.vl_mae,
-#
-#             "best_params": gs.best_params_,
-#         }))
-#
-#     return fold_results
+def mse(y_true, y_pred):
+    return mean_squared_error(y_true, y_pred)
 
-class Metrics():
+
+def mae(y_true, y_pred):
+    return mean_absolute_error(y_true, y_pred)
+
+
+def r2(y_true, y_pred):
+    return r2_score(y_true, y_pred)
+
+
+class Metrics:
 
     def __init__(self, y_true, y_pred):
-        self._mse = mean_squared_error(y_true, y_pred)
+        self._mse = mse(y_true, y_pred)
         self._rmse = np.sqrt(self._mse)
-        self._mae = mean_absolute_error(y_true, y_pred)
+        self._mae = mae(y_true, y_pred)
         self._mee = mee(y_true, y_pred)
+        self._r2 = r2(y_true, y_pred)
 
     @property
     def mse(self):
@@ -878,8 +879,12 @@ class Metrics():
     def mee(self):
         return self._mee
 
+    @property
+    def r2(self):
+        return self._r2
 
-class MetricsPair():
+
+class MetricsPair:
 
     def __init__(self, y_tr_true, y_tr_pred, y_vl_true, y_vl_pred):
 
@@ -893,6 +898,8 @@ class MetricsPair():
         self._vl_mae = vl_metrics.mae
         self._tr_mee = tr_metrics.mee
         self._vl_mee = vl_metrics.mee
+        self._tr_r2 = tr_metrics.r2
+        self._vl_r2 = tr_metrics.r2
 
     @property
     def tr_mse(self):
@@ -927,7 +934,7 @@ class MetricsPair():
         return self._vl_mee
 
 
-def kfold_regression_table(fold_results: FoldResults, use: str="mee", derive_rmse=False):
+def kfold_regression_table(fold_results: FoldResults, use: str="mee"):
     """
     Build a K-Fold summary table for regression.
 
@@ -959,10 +966,6 @@ def kfold_regression_table(fold_results: FoldResults, use: str="mee", derive_rms
             f'VL_{use.upper()}': vl_value,
             "Gap(TR-VL)": vl_value - tr_value
         }
-
-        if derive_rmse:
-            row["TR_RMSE"] = np.sqrt(tr_value)
-            row["VL_RMSE"] = np.sqrt(vl_value)
 
         rows.append(row)
 
@@ -996,7 +999,29 @@ def assess_sklearn_cv_robustness(cv, model, X, y, scoring="accuracy", seeds:list
         print('seed: {} - mean {:.3f} ± {:.3f}'.format(seed, scores.mean(), scores.std()))
 
 
-def plot_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, scoring: str = "accuracy"):
+def apply_score_correction(scoring, values:tuple, neg_score_list:tuple=(MEE, MAE, MSE, RMSE), pos_score_list:list[str]=None) -> tuple:
+    """
+    Apply score correction in case of scoring starting with neg_ or if the scorer has a sign.
+    :param scoring: the scorer identifier
+    :param values: the list of float to correct
+    :param neg_score_list: the list of scores to be recognized as negative
+    :param pos_score_list: the list of scores to be recognized as positive
+    :return: a list of floats
+    """
+
+    # Convert from negative score to positive loss for readability
+    if isinstance(scoring, str):
+        if scoring.startswith("neg_") or scoring in neg_score_list:
+            return tuple([-1*x for x in values])
+    # or... if it has sign we use it
+    elif hasattr(scoring,"_sign"):
+        return tuple([scoring._sign*x for x in values])
+
+    # no action in other cases
+    return values
+
+
+def plot_learning_curve(model, X, y, cv, ax=None, scoring: str = "accuracy"):
     """
     Plot a learning curve for a given model (classifier or regressor).
     If scoring is a neg_* loss, the curve is plotted as the corresponding positive loss.
@@ -1014,8 +1039,7 @@ def plot_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, scorin
         random_state=random_state
     )
 
-    train_mean = score_correction *  train_scores.mean(axis=1)
-    val_mean = score_correction * val_scores.mean(axis=1)
+    train_mean, val_mean = apply_score_correction(scoring,(train_scores.mean(axis=1), val_scores.mean(axis=1)))
 
     # Decide label + possible sign flip
     y_label = "Score"
@@ -1024,10 +1048,6 @@ def plot_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, scorin
     title_metric = scoring
 
     if isinstance(scoring, str) and scoring.startswith("neg_"):
-        # Convert from negative score to positive loss for readability
-        train_mean = -train_mean
-        val_mean = -val_mean
-
         if scoring == "neg_mean_absolute_error":
             y_label = "MAE"
             title_metric = "MAE"
@@ -1043,6 +1063,9 @@ def plot_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, scorin
 
         train_label = f"Training {y_label}"
         val_label = f"CV {y_label}"
+    elif hasattr(scoring,"_sign"):
+        y_label = "MEE"
+        title_metric = "MEE"
     elif scoring == "accuracy":
         y_label = "Accuracy"
         train_label = "Training accuracy"
@@ -1061,3 +1084,109 @@ def plot_learning_curve(model, X, y, cv, ax=None, score_correction:int=1, scorin
     ax.set_title(f"Learning curve")
     ax.legend()
     ax.grid(True)
+
+
+def generate_bootstrap_samples_from_dataset(X:pd.DataFrame, y:np.array, n_samples:int=100, random_state:int=42)->[(pd.DataFrame,np.ndarray,float)]:
+    """
+    Generate bootstrap samples following bootstrap methodology
+    :param X: the feature
+    :param y: the target
+    :param n_samples: how many samples we want
+    :param random_state: the random state for shuffling
+    :return: an array botstrap samples where each sample is a tuple (pd.DataFrame,np.ndarray,float)
+    """
+
+    rng = np.random.default_rng(random_state)
+
+    n = len(X)
+    samples = []
+
+    for _ in range(n_samples):
+        idx_boot = rng.integers(0, n, size=n)
+        X_boot, y_boot = X.iloc[idx_boot], y[idx_boot]
+        samples.append((X_boot, y_boot, idx_boot))
+
+    return samples
+
+
+def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.array, samples: list[tuple[pd.DataFrame, np.ndarray, np.ndarray]], bootstrap_params:dict=None) -> list[Metrics]:
+    """
+    Analyze bootstrap variance
+    :param model: the model
+    :param X: features
+    :param y: targets
+    :param samples: the bootstrap samples
+    :return: an array of Metrics
+    """
+
+    scores = []
+    n = len(X)
+    for sample in samples:
+
+        X_boot, y_boot, idx_boot = sample
+
+        # Return Out-Of-Bag (OOB) index, in other words the index not present in the samples
+        selected = np.zeros(n, dtype=bool)
+        selected[idx_boot] = True
+        oob_idx = np.where(~selected)[0]
+
+        # dataset OOB
+        X_oob = X.iloc[oob_idx]
+        y_oob = y[oob_idx]
+
+        # fit model on bootstrap data
+        cloned_model = runner.new_model()
+        fitted_model = runner.fit(cloned_model, X_boot, y_boot, bootstrap_params)
+        y_pred = runner.predict(fitted_model, X_oob)
+
+        # score
+        scores.append(Metrics(y_oob, y_pred ))
+
+    return scores
+
+
+def aggregate_scores(scores:[Metrics]) -> pd.DataFrame:
+    """
+    Build a dataframe from a list of metrics
+    :param scores: an array of Metrics
+    :return: a dataframe with all results
+    """
+
+    mee_mean, mee_std= np.mean([m.mee for m in scores]), np.std([m.mee for m in scores])
+    mse_mean, mse_std = np.mean([m.mse for m in scores]), np.std([m.mse for m in scores])
+    rmse_mean, rmse_std = np.mean([m.rmse for m in scores]), np.std([m.rmse for m in scores])
+    mae_mean, mae_std = np.mean([m.mae for m in scores]), np.std([m.mae for m in scores])
+    r2_mean, r2_std = np.mean([m.r2 for m in scores]), np.std([m.r2 for m in scores])
+
+    return pd.DataFrame({
+        "metric": ["mee", "mse", "rmse", "mae", "r2"],
+        "mean": [mee_mean,mse_mean,rmse_mean,mae_mean,r2_mean],
+        "std": [mee_std,mse_std,rmse_std,mae_std,r2_std],
+        "percentage": np.round(np.array([
+            mee_std/mee_mean,mse_std/mse_mean,rmse_std/rmse_mean,mae_std/mae_mean,r2_std/r2_mean
+        ])*100,2)
+    }).round(2)
+
+
+def plot_bootstrap_distribution(results, title:str="MEE Bootstrap Distribution"):
+
+    sns.set_theme(style="whitegrid")
+
+    plt.figure()
+
+    ax = sns.histplot(results, kde=True, color="skyblue", stat="density", bins=15)
+
+    mean_val = np.mean(results)
+    std_val = np.std(results)
+    # mean
+    plt.axvline(mean_val, color='red', linestyle='--', label=f'Mean: {mean_val:.2f}')
+    # std
+    plt.axvspan(mean_val - std_val, mean_val + std_val, alpha=0.1, color='red', label=f'Std: {std_val:.2f}')
+
+    plt.title(title)
+    plt.xlabel("Mean")
+    plt.ylabel("Density")
+    plt.legend()
+
+    plt.show()
+

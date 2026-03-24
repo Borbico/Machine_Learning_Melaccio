@@ -414,6 +414,8 @@ class FoldResult:
         self._epochs_tr_mee = fold_result.get(EPOCHS_TR_MEE)
         self._epochs_vl_mae = fold_result.get(EPOCHS_VL_MAE)
         self._epochs_tr_mae = fold_result.get(EPOCHS_TR_MAE)
+        self._epochs_vl_custom = fold_result.get("epochs_vl_custom")
+        self._epochs_tr_custom = fold_result.get("epochs_tr_custom")
 
         self._epochs_tr_mse_mean = fold_result.get(EPOCHS_TR_MSE_MEAN)
         self._epochs_vl_mse_mean = fold_result.get(EPOCHS_VL_MSE_MEAN)
@@ -438,10 +440,28 @@ class FoldResult:
         self._fold_vl_mee = fold_result.get(FOLD_VL_MEE)
         self._fold_tr_r2 = fold_result.get(FOLD_TR_R2)
         self._fold_vl_r2 = fold_result.get(FOLD_VL_R2)
+        self._fold_tr_custom = fold_result.get("fold_tr_custom")
+        self._fold_vl_custom = fold_result.get("fold_vl_custom")
+
+    @property
+    def epochs_tr_custom(self):
+        return self._epochs_tr_custom
+
+    @property
+    def epochs_vl_custom(self):
+        return self._epochs_vl_custom
 
     @property
     def fold_nr(self):
         return self._fold_nr
+
+    @property
+    def fold_tr_custom(self):
+        return self._fold_tr_custom
+
+    @property
+    def fold_vl_custom(self):
+        return self._fold_vl_custom
 
     # -------- loss --------
     @property
@@ -729,7 +749,13 @@ class SklearnNestedRegressorRunner:
         return gs
 
     def predict(self, model, X):
-        return model.predict(X)
+        """
+        For a regression task we return the logits, or the output of the model
+        :param model: the model
+        :param X: the feature
+        :return: the logits or the output of the model
+        """
+        return model.predict(X)[0]
 
 
 class SklearnRegressorRunner:
@@ -817,8 +843,7 @@ def kfold(runner, X, y, folder_strategy) -> FoldResults:
         tr_rmse, vl_rmse = metrics.tr_rmse, metrics.vl_rmse
         tr_mae, vl_mae = metrics.tr_mae, metrics.vl_mae
         tr_mee, vl_mee = metrics.tr_mee, metrics.vl_mee
-        r2_tr = r2_score(y_tr, pred_tr)
-        r2_vl = r2_score(y_vl, pred_vl)
+        r2_tr, r2_vl = r2_score(y_tr, pred_tr), r2_score(y_vl, pred_vl)
 
         print(f" ")
         print(f"Fold summary")
@@ -836,7 +861,8 @@ def kfold(runner, X, y, folder_strategy) -> FoldResults:
             FOLD_TR_MEE: tr_mee, FOLD_VL_MEE: vl_mee,
             FOLD_TR_MAE: tr_mae, FOLD_VL_MAE: vl_mae,
             FOLD_TR_RMSE: np.sqrt(tr_mae), FOLD_VL_RMSE: np.sqrt(vl_mae),
-            FOLD_TR_R2: r2_tr, FOLD_VL_R2: r2_vl
+            FOLD_TR_R2: r2_tr, FOLD_VL_R2: r2_vl,
+            "metrics": metrics
         }))
 
     return fold_results
@@ -844,6 +870,10 @@ def kfold(runner, X, y, folder_strategy) -> FoldResults:
 
 def mse(y_true, y_pred):
     return mean_squared_error(y_true, y_pred)
+
+
+def rmse(y_true, y_pred):
+    return np.sqrt(mean_squared_error(y_true, y_pred))
 
 
 def mae(y_true, y_pred):
@@ -954,22 +984,43 @@ def kfold_regression_table(fold_results: FoldResults, use: str="mee"):
     """
 
     rows = []
-
+    folds = []
+    trs = []
+    vls = []
+    gaps = []
+    gapsp = []
     for i, fold_result in enumerate(fold_results, start=1):
 
         tr_value = getattr(fold_result,f'fold_tr_{use}')
         vl_value = getattr(fold_result,f'fold_vl_{use}')
 
-        row = {
-            "Fold": i,
-            f'TR_{use.upper()}': tr_value,
-            f'VL_{use.upper()}': vl_value,
-            "Gap(TR-VL)": vl_value - tr_value
-        }
+        gap = vl_value - tr_value
+        rel_gap = round((abs(gap) / tr_value) * 100,2)
 
-        rows.append(row)
+        # row = {
+        #     "Fold": i,
+        #     f'TR_{use.upper()}': tr_value,
+        #     f'VL_{use.upper()}': vl_value,
+        #     "Gap(TR-VL)": vl_value - tr_value,
+        #     "Rel Gap(TR-VL)%": rel_gap,
+        # }
 
-    df = pd.DataFrame(rows).set_index("Fold")
+        folds.append(i)
+        trs.append(tr_value)
+        vls.append(vl_value)
+        gaps.append(gap)
+        gapsp.append(rel_gap)
+
+        #rows.append(row)
+
+    #df = pd.DataFrame(rows).set_index("Fold")
+    df = pd.DataFrame({
+        "Fold": folds,
+        "TR": trs,
+        "VL": vls,
+        "Gap(TR-VL)": gaps,
+        "Rel Gap(TR-VL)%": gapsp
+    }).set_index("Fold")
 
     # Add mean and std rows
     mean_row = df.mean()
@@ -978,6 +1029,7 @@ def kfold_regression_table(fold_results: FoldResults, use: str="mee"):
     df.loc["MEAN"] = mean_row
     df.loc["STD"] = std_row
 
+    df["Rel Gap(TR-VL)%"] = [f"{x:.2f}%" for x in df["Rel Gap(TR-VL)%"]]
     #print(df)
 
     return df
@@ -1086,7 +1138,7 @@ def plot_learning_curve(model, X, y, cv, ax=None, scoring: str = "accuracy"):
     ax.grid(True)
 
 
-def generate_bootstrap_samples_from_dataset(X:pd.DataFrame, y:np.array, n_samples:int=100, random_state:int=42)->[(pd.DataFrame,np.ndarray,float)]:
+def generate_bootstrap_samples_from_dataset(X:pd.DataFrame, y:np.ndarray, n_samples:int=100, random_state:int=42)->[(pd.DataFrame,np.ndarray,float)]:
     """
     Generate bootstrap samples following bootstrap methodology
     :param X: the feature
@@ -1109,7 +1161,7 @@ def generate_bootstrap_samples_from_dataset(X:pd.DataFrame, y:np.array, n_sample
     return samples
 
 
-def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.array, samples: list[tuple[pd.DataFrame, np.ndarray, np.ndarray]], bootstrap_params:dict=None) -> list[Metrics]:
+def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.ndarray, samples: list[tuple[pd.DataFrame, np.ndarray, np.ndarray]], bootstrap_params:dict=None) -> list[Metrics]:
     """
     Analyze bootstrap variance
     :param model: the model
@@ -1137,7 +1189,8 @@ def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.array, samples: li
         # fit model on bootstrap data
         cloned_model = runner.new_model()
         fitted_model = runner.fit(cloned_model, X_boot, y_boot, bootstrap_params)
-        y_pred = runner.predict(fitted_model, X_oob)
+        idx = 2 if fitted_model.model_type=="classification" else 0
+        y_pred = runner.predict(fitted_model, X_oob)[idx]
 
         # score
         scores.append(Metrics(y_oob, y_pred ))

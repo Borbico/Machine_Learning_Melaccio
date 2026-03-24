@@ -1,6 +1,7 @@
 import copy
-import datetime
+from datetime import datetime
 import os
+from typing import Any
 
 import seaborn as sns
 import numpy as np
@@ -11,19 +12,19 @@ from matplotlib.ticker import MaxNLocator
 from numpy import ndarray
 from sklearn import clone
 from sklearn.base import TransformerMixin
-from sklearn.preprocessing import StandardScaler
 from torch import nn, Tensor
 from torch.nn import MSELoss
 from torch.utils.data import TensorDataset, DataLoader
 import cross_common as cr
-from cross_common import (MEE,MAE,MSE,RMSE)
+from cross_common import (MEE,MAE,MSE,RMSE,R2)
 from cross_common import (
     FOLD_NR,
     FOLD_TR_MSE,FOLD_VL_MSE,
     FOLD_TR_RMSE,FOLD_VL_RMSE,
     FOLD_TR_MEE,FOLD_VL_MEE,
     FOLD_TR_MAE,FOLD_VL_MAE,
-    FOLD_TR_ACC,FOLD_VL_ACC)
+    FOLD_TR_ACC,FOLD_VL_ACC,
+    FOLD_TR_R2,FOLD_VL_R2)
 from cross_common import (
     EPOCHS_TR_MSE, EPOCHS_VL_MSE,
     EPOCHS_VL_ACC, EPOCHS_TR_ACC,
@@ -49,6 +50,10 @@ DEFAULT_TRAIN_VAL_RATIO = 0.2
 DEFAULT_TRAIN_SEED = 1
 
 
+def extract_prediction_from_tensor(y_pred):
+    return y_pred.detach().cpu().numpy().ravel()
+
+
 class MLP(nn.Module):
     """
     Implements a skeleton of a Multilayer Perceptron network with given parameters
@@ -58,6 +63,7 @@ class MLP(nn.Module):
         """
         MLP constructor
         :param net: the MLP architecture in form of Sequence
+        :param adapter: the adapter
         """
         super().__init__()
         self._net = net
@@ -76,16 +82,42 @@ class MLP(nn.Module):
         return self._net(x)
 
     @torch.no_grad()
-    def predict_proba(self, x: Tensor) -> Tensor:
-        self.eval()
-        logits = self.forward(x)
-        return self._adapter.probs(logits)
+    def predict(self, x: Tensor|pd.DataFrame) -> tuple[Tensor, Tensor, Tensor]:
+        """
+        Predict using the MLP architecture
+        :param x: the tensor containing the input
+        :return: the tuple containing (logits, probs, labels) each as Tensor where:
+            - logits is a tensor containing the output produced by the network
+            - probs is a tensor containing the probabilities produced by the network
+            - labels is a tensor containing the labels (or y) produced by the network
+        """
 
-    @torch.no_grad()
-    def predict(self, x: Tensor) -> Tensor:
+        # --- Input normalization ---
+        if isinstance(x, pd.DataFrame): x = x.to_numpy()
+        if isinstance(x, np.ndarray): x = torch.from_numpy(x.astype(np.float32))
+
+        # was_training = self.training
+        # self.eval()
+        # logits = self.forward(x)
+        # all_from_predict = self._adapter.predict(logits)
+        #
+        # if was_training: self.train()
+        # return all_from_predict[idx]
+
+        was_training = self.training
         self.eval()
+
         logits = self.forward(x)
-        return self._adapter.predict(logits)
+        probs = self._adapter._link_fn(logits)
+        labels = self._adapter._decision_fn(probs)
+
+        if was_training: self.train()
+
+        return logits, probs, labels
+
+    @property
+    def model_type(self):
+        return self._adapter.output_type
 
 
 class FeatureTargetSet:
@@ -131,11 +163,20 @@ class TrainResults:
         self._epochs_tr_acc, self._epochs_vl_acc = results.get(EPOCHS_TR_ACC), results.get(EPOCHS_VL_ACC)
         self._epochs_tr_mae, self._epochs_vl_mae = results.get(EPOCHS_TR_MAE), results.get(EPOCHS_VL_MAE)
         self._epochs_tr_mee, self._epochs_vl_mee = results.get(EPOCHS_TR_MEE), results.get(EPOCHS_VL_MEE)
+        self._epochs_tr_loss, self._epochs_vl_loss = results.get("epochs_tr_loss"), results.get("epochs_vl_loss")
         self._epochs_grad = results.get("epochs_grad")
 
         self._min_vl_mee = min(self._epochs_vl_mee)
         self._max_vl_mee = max(self._epochs_vl_mee)
         self._best_mee_epoch = self._epochs_vl_mee.index(self._min_vl_mee) + 1
+
+    @property
+    def epochs_tr_loss(self) -> float:
+        return self._epochs_tr_loss
+
+    @property
+    def epochs_vl_loss(self) -> float:
+        return self._epochs_vl_loss
 
     @property
     def min_vl_mee(self) -> float:
@@ -324,6 +365,9 @@ def _compute_loss(model:MLP, X:torch.Tensor, y: torch.Tensor, loss_function: nn.
     :param loss_function: The given loss algorithm as specified in torch (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :return: a tensor containing the loss i.e. tensor(0.2408)
     """
+    # check if we are in training
+    was_training = model.training
+    model.eval()
 
     # The 'output' variable corresponds to the net value
     # of the last perceptron in the network.
@@ -332,7 +376,49 @@ def _compute_loss(model:MLP, X:torch.Tensor, y: torch.Tensor, loss_function: nn.
     # Our loss function, with y representing the target
     # to be compared with the output
     loss = loss_function(output, y)
+    if was_training: model.train()
+
     return loss
+
+
+# def _compute_losses(model:MLP, X:torch.Tensor, y: torch.Tensor, loss_functions: dict) -> dict[str,float]:
+#     """
+#     This function computes the losses for a given set by invoking 'forward' on the model and applying the loss function.
+#     It is meant to be used in metric evaluation, after a training epoch is completed.
+#     It is mandatory that the output layer of the model is kept linear.
+#     The function set the model in evaluation adn disable gradient recording by running metrics under torch.nograd.
+#     :param model: MLP model with linear output
+#     :param X: the features as tensor
+#     :param y: the labels as tensor
+#     :param loss_function: a ke-value dictionary holding the metric functions i.e. {'mee': mee_function, 'mse': mse_function, ....}
+#     :return: a tensor containing the loss i.e. tensor(0.2408)
+#     """
+#
+#     # check if we are in training
+#     was_training = model.training
+#     model.eval()
+#     losses = {}
+#
+#     # disable gradient recording
+#     with torch.no_grad():
+#
+#         # The 'output' variable corresponds to the net value
+#         # of the last perceptron in the network.
+#         output = model.forward(X)
+#
+#         # Our loss function, with y representing the target
+#         # to be compared with the output
+#         for loss_name, loss_function in loss_functions.items:
+#             losses[loss_name] = loss_function(output, y)
+#
+#     # restore state if needed
+#     if was_training: model.train()
+#
+#     return losses
+
+
+def _compute_accuracy(model:MLP, X:torch.Tensor, y: torch.Tensor):
+    return
 
 
 def epoch_accuracy(model, dataloader):
@@ -343,42 +429,97 @@ def epoch_accuracy(model, dataloader):
     :return:
     """
 
+    was_training = model.training
     model.eval()
+
     correct = 0
     total = 0
 
     with torch.no_grad():
         for X, y in dataloader:
-            # logits = model(X)
-            # preds = (torch.sigmoid(logits) > 0.5).float()
-            # correct += (preds == y).sum().item()
-            # total += y.size(0)
             preds = model.predict(X) # <-- reusing the adapter
-            correct += (preds[0] == y).sum().item()
-            total += y.size(0)
+            labels = (preds[2] >= 0.5).float()
+            labels = labels.view(-1)
+            y = y.view(-1)
+            correct += (labels == y).sum().item()
+            total += y.numel()
 
     if correct/total > 1:
         print("Warning, accuracy override")
 
+    if was_training: model.train()
+
     return correct / total
 
 
-def epoch_loss(model: MLP, dataloader: DataLoader, loss_function: nn.Module) -> float:
+# def epoch_loss(model: MLP, dataloader: DataLoader, loss_function: nn.Module) -> float:
+#     """
+#     This function computes the average loss over an entire dataset by aggregating the batch-wise losses
+#     without updating the model parameters, providing a stable estimate of training or validation error per epoch.
+#     The function save the model state and turn the model into eval, then at the end of the function the original state is restored.
+#     :param model: the NN model
+#     :param dataloader: dataloader
+#     :param loss_function: the chosen algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
+#     :return: the average loss
+#     """
+#
+#     # Store training mode to restore later
+#     was_training = model.training
+#     model.eval()
+#
+#     model.train(False) # set model to evaluation only
+#     total_loss = 0.0
+#     total_n = 0
+#
+#     # Disabling the gradient (i.e. no backprop)
+#     with torch.no_grad():
+#         # Cicling trough X our data and y the target labels
+#         for X, y in dataloader:
+#
+#             number_of_labels = y.size(0)
+#
+#             # Calculating the loss
+#             # In this case the loss is a 0-dimension Tensor obtained
+#             # from our loss function (see function documentation)
+#             # this is the reason why we use Tensor.item()
+#             loss = _compute_loss(model, X, y, loss_function).item()
+#
+#             # The loss returned by PyTorch is the AVERAGE on the batch,
+#             # but we want to reconstruct the SUM of the losses on individual examples,
+#             # and then average the entire dataset, that's why we multiply for the nr of labels
+#             total_loss += loss * number_of_labels
+#             total_n += number_of_labels
+#
+#     # Restore previous state
+#     if was_training:
+#         model.train()
+#
+#     return total_loss / total_n
+
+
+def _loss_helper(loss_origin: Any)->float:
+
+    if type(loss_origin) == torch.Tensor:
+        return loss_origin.item()
+
+    # Unchanged
+    return loss_origin
+
+def epoch_losses(model: MLP, dataloader: DataLoader, loss_functions: dict) -> dict:
     """
     This function computes the average loss over an entire dataset by aggregating the batch-wise losses
     without updating the model parameters, providing a stable estimate of training or validation error per epoch.
+    The function save the model state and turn the model into eval, then at the end of the function the original state is restored.
     :param model: the NN model
     :param dataloader: dataloader
-    :param loss_function: the chosen algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
+    :param loss_functions: the chosen algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :return: the average loss
     """
 
     # Store training mode to restore later
     was_training = model.training
-    model.eval()
-
     model.train(False) # set model to evaluation only
-    total_loss = 0.0
+    losses = {loss_name: 0.0 for loss_name in loss_functions}
     total_n = 0
 
     # Disabling the gradient (i.e. no backprop)
@@ -386,48 +527,60 @@ def epoch_loss(model: MLP, dataloader: DataLoader, loss_function: nn.Module) -> 
         # Cicling trough X our data and y the target labels
         for X, y in dataloader:
 
-            number_of_labels = y.size(0)
+            batch_size = y.size(0)
 
             # Calculating the loss
             # In this case the loss is a 0-dimension Tensor obtained
             # from our loss function (see function documentation)
             # this is the reason why we use Tensor.item()
-            loss = _compute_loss(model, X, y, loss_function).item()
+
+            # The 'output' variable corresponds to the net value
+            # of the last perceptron in the network.
+            output = model.forward(X)
+
+            # Our loss function, with y representing the target
+            # to be compared with the output
+            for loss_name, loss_function in loss_functions.items():
+                batch_loss = _loss_helper(loss_function(output, y))
+                losses[loss_name] += batch_loss * batch_size
 
             # The loss returned by PyTorch is the AVERAGE on the batch,
             # but we want to reconstruct the SUM of the losses on individual examples,
             # and then average the entire dataset, that's why we multiply for the nr of labels
-            total_loss += loss * number_of_labels
-            total_n += number_of_labels
+            #total_loss += loss * number_of_labels
+            total_n += batch_size
 
     # Restore previous state
-    if was_training:
-        model.train()
+    if was_training: model.train()
 
-    return total_loss / total_n
+    #return total_loss / total_n
+    return  {
+        loss_name: total_loss / total_n
+        for loss_name, total_loss in losses.items()
+    }
 
 
 # Inference utility: run model.predict on a DataFrame
-def predict(model: 'MLP', X_test: pd.DataFrame):
-    """
-    Run inference on a test set provided as a pandas DataFrame by reusing the model's adapter-based
-    `MLP.predict(...)` method.
-    The model is assumed to output logits in `forward()` and to expose `predict()` which returns hard labels
-    (e.g., 0/1 for binary classification) according to the configured adapter.
-
-    :param model: a trained MLP instance
-    :param X_test: test features as a pandas DataFrame (already preprocessed / one-hot encoded)
-    :param return_numpy: if True returns a 1D numpy array, otherwise returns a torch.Tensor
-    :return: predictions for each sample (shape: (N,))
-    """
-
-    # Convert DataFrame to float32 numpy array and then to torch tensor
-    X_np = X_test.astype(np.float32).to_numpy()
-    X_t = torch.from_numpy(X_np)
-
-    # Delegate the decision rule to the adapter via MLP.predict(...)
-    preds_t = model.predict(X_t)  # shape (N,1) for binary adapters
-    return preds_t[0]
+# def predict(model: 'MLP', X_test: pd.DataFrame):
+#     """
+#     Run inference on a test set provided as a pandas DataFrame by reusing the model's adapter-based
+#     `MLP.predict(...)` method.
+#     The model is assumed to output logits in `forward()` and to expose `predict()` which returns hard labels
+#     (e.g., 0/1 for binary classification) according to the configured adapter.
+#
+#     :param model: a trained MLP instance
+#     :param X_test: test features as a pandas DataFrame (already preprocessed / one-hot encoded)
+#     :param return_numpy: if True returns a 1D numpy array, otherwise returns a torch.Tensor
+#     :return: predictions for each sample (shape: (N,))
+#     """
+#
+#     # Convert DataFrame to float32 numpy array and then to torch tensor
+#     X_np = X_test.astype(np.float32).to_numpy()
+#     X_t = torch.from_numpy(X_np)
+#
+#     # Delegate the decision rule to the adapter via MLP.predict(...)
+#     preds_t = model.predict(X_t)  # shape (N,1) for binary adapters
+#     return preds_t
 
 
 class EarlyStoppingStrategy:
@@ -530,36 +683,8 @@ class ManualSplitStrategy(SplitStrategy):
         self._X_vl, self._y_vl = _to_tensors(X_vl, y_vl)  # VL sets
 
 
-def train_wrapper_fn(
-    model: MLP, datasets: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
-    epochs:int, early_stopping_strategy:EarlyStoppingStrategy = None,
-    scheduler_template= None,silence_output:bool=False
-    ):
-
-    return train(
-        model,
-        datasets,
-        optimizer_template,
-        loss_function,
-        batch_size,
-        epochs,
-        early_stopping_strategy,
-        scheduler_template,
-        silence_output
-    )
-
-
-def predict_wrapper_fn(model, X):
-    # forward + numpy, coerente col tuo adapter di regressione
-    X = np.asarray(X, dtype=np.float32)
-    with torch.no_grad():
-        X_t = torch.from_numpy(X)
-        _, scores = model.predict(X_t)
-        return scores.cpu().numpy()
-
-
 def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
-          epochs:int, early_stopping_strategy:EarlyStoppingStrategy = None,
+          epochs:int, metrics:dict, early_stopping_strategy:EarlyStoppingStrategy = None,
           scheduler_template= None, silence_output:bool=False) -> TrainResults:
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
@@ -571,6 +696,7 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     :param loss_function: the loss algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :param batch_size: "batch", "online" or the mini-batch size for training
     :param epochs: the number of epochs for training
+    :param metrics: the metric used for training
     :param early_stopping_strategy: the early stopping strategy
     :param scheduler: learning rate scheduler
     :param silence_output: True/False if we want to display the train params
@@ -584,18 +710,29 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     epochs_tr_mae, epochs_vl_mae = [], []
     epochs_tr_mee, epochs_vl_mee = [], []
     epochs_grad_norm, epoch_grad_norms = [], []
+    epochs_tr_r2, epochs_vl_r2 = [], []
+    epochs_tr_loss, epochs_vl_loss = [], []
+    epochs_tr_acc, epochs_vl_acc = [], []
+
+    epochs_loss_dict = metrics
+    # epochs_loss_dict = {
+    #     MEE: cr.mee,MSE: cr.mse,MAE: cr.mae,
+    #     RMSE: cr.rmse
+    # }
+
+    if model.model_type == "regressor": epochs_loss_dict[R2] = cr.r2
+    #if model.model_type != "classifier": epochs_loss_dict["custom"] = loss_function
 
     best_vl = float("inf")
     best_state = None # used only if early stopping is enabled
-    bad_epochs = 0 # used only if early stopping is enabled
-    metric_to_watch = early_stopping_strategy.metric
+    patience_on_epochs = 0 # used only if early stopping is enabled
+    #if early_stopping_strategy is not None:
+    metric_to_watch = early_stopping_strategy.metric if early_stopping_strategy is not None else None
+    if metric_to_watch == "match": epochs_loss_dict["match"] = loss_function
 
-    # initialize optimizer
+    # initialize optimizer and scheduler
     optimizer = optimizer_template(model.parameters())
-    if scheduler_template is not None:
-        scheduler = scheduler_template(optimizer)
-    else:
-        scheduler = None
+    scheduler = scheduler_template(optimizer) if scheduler_template is not None else None
 
     X_tr, y_tr = split_strategy.train_set
     X_vl, y_vl = split_strategy.validation_set
@@ -612,7 +749,7 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     for epoch in range(epochs):
 
         # Set model in training mode
-        model.train()
+        model.train(True)
 
         # Loop trough dataset
         for X, y in dl_tr:
@@ -622,69 +759,97 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
             # the following disables such capability
             optimizer.zero_grad()
 
-            # Calculating the loss and applying the backpropagation
-            loss = _compute_loss(model, X, y, loss_function)
+            # Calculating the loss and applying the backpropagation.
+            # Here we are using the loss function suitable to PyTorch
+            # not to be misleaded with the metrics computed at the
+            # end of each epoch that rely on custom functions
+            #loss_old = _compute_loss(model, X, y, loss_function)
+            output = model.forward(X)
+
+            # Our loss function, with y representing the target
+            # to be compared with the output
+            loss = loss_function(output, y)
+
+            # Applying backward propagation
             loss.backward()
 
             # Take gradient measurement before update
             epoch_grad_norms.append(gradient_norm(model))
             optimizer.step()
 
-        # Loss estimation at the end of epoch
-        epoch_tr_mse = epoch_loss(model, dl_tr, MSELoss(reduction="mean"))
+        tr_losses = epoch_losses(model, dl_tr, epochs_loss_dict)
+        vl_losses = epoch_losses(model, dl_vl, epochs_loss_dict)
+
+        # Calculate Mean Squared Error (MSE)
+        epoch_tr_mse = tr_losses[MSE] #epoch_loss(model, dl_tr, MSELoss(reduction="mean"))
+        #epoch_tr_mse = epoch_loss(model, dl_tr, MSELoss(reduction="mean"))
         epochs_tr_mse.append(epoch_tr_mse)
-        epoch_vl_mse = epoch_loss(model, dl_vl, MSELoss(reduction="mean"))
+        epoch_vl_mse = vl_losses[MSE] #epoch_loss(model, dl_vl, MSELoss(reduction="mean"))
+        #epoch_vl_mse = epoch_loss(model, dl_vl, MSELoss(reduction="mean"))
         epochs_vl_mse.append(epoch_vl_mse)
 
         # Calculate Mean Absolute Error (MAE)
-        epoch_tr_mae = epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean"))
+        epoch_tr_mae = tr_losses[MAE] #epoch_loss(model, dl_tr, nn.L1Loss(reduction="mean"))
         epochs_tr_mae.append(epoch_tr_mae)
-        epoch_vl_mae = epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean"))
+        epoch_vl_mae = vl_losses[MAE] #epoch_loss(model, dl_vl, nn.L1Loss(reduction="mean"))
         epochs_vl_mae.append(epoch_vl_mae)
 
-        epoch_tr_mee = epoch_loss(model, dl_tr, MEELoss(reduction="mean"))
+        # Calculate Mean Euclidean Error (MEE)
+        epoch_tr_mee = tr_losses[MEE] #epoch_loss(model, dl_tr, MEELoss(reduction="mean"))
         epochs_tr_mee.append(epoch_tr_mee)
-        epoch_vl_mee = epoch_loss(model, dl_vl, MEELoss(reduction="mean"))
+        epoch_vl_mee = vl_losses[MEE] #epoch_loss(model, dl_vl, MEELoss(reduction="mean"))
         epochs_vl_mee.append(epoch_vl_mee)
 
-        epochs_tr_acc.append(epoch_accuracy(model, dl_tr))
-        epochs_vl_acc.append(epoch_accuracy(model, dl_vl))
+        # Calculate Accuracy
+        epoch_tr_acc = epoch_accuracy(model, dl_tr) if model.model_type == "classifier" else 0
+        epoch_vl_acc = epoch_accuracy(model, dl_vl) if model.model_type == "classifier" else 0
+        epochs_tr_acc.append(epoch_tr_acc)
+        epochs_vl_acc.append(epoch_vl_acc)
+
+        # Calculate R2 only for regression task
+        tr_r2 = tr_losses[R2] if model.model_type != "classifier" else 0
+        vl_r2 = tr_losses[R2] if model.model_type != "classifier" else 0
+        epochs_tr_r2.append(tr_r2)
+        epochs_vl_r2.append(vl_r2)
+
+        # Custom loss
+        epoch_vl_loss = vl_losses["custom"] if metric_to_watch == "custom" else 0
+        epoch_tr_loss = tr_losses["custom"] if metric_to_watch == "custom" else 0
+        epochs_tr_loss.append(epoch_tr_loss)
+        epochs_vl_loss.append(epoch_vl_loss)
 
         # Gradient mean
         epochs_grad_norm.append(float(np.mean(epoch_grad_norms)) if len(epoch_grad_norms) else 0.0)
 
         # Applying learning rate decay
-        if scheduler is not None:
-            scheduler.step(epoch_vl_mse)
+        if scheduler is not None: scheduler.step(epoch_vl_mse)
 
         # ---- EARLY STOPPING LOGIC ----
         if early_stopping_strategy is not None:
 
-            if metric_to_watch == MSE:
-                epoch_vl = epoch_vl_mse
-            elif metric_to_watch == MEE:
-                epoch_vl = epoch_vl_mee
-            elif metric_to_watch == MAE:
-                epoch_vl = epoch_vl_mae
-            else:
-                raise ValueError(f"{metric_to_watch} is not supported")
+            if metric_to_watch == MSE: epoch_vl = epoch_vl_mse
+            elif metric_to_watch == MEE: epoch_vl = epoch_vl_mee
+            elif metric_to_watch == MAE: epoch_vl = epoch_vl_mae
+            elif metric_to_watch == "custom": epoch_vl = epoch_vl_loss
+            else: raise ValueError(f"{metric_to_watch} is not supported")
 
-            if epoch_vl < best_vl - early_stopping_strategy.min_delta:
+            if epoch_vl < (best_vl - early_stopping_strategy.min_delta):
                 best_vl = epoch_vl
-                bad_epochs = 0
+                patience_on_epochs = 0
                 best_state = copy.deepcopy(model.state_dict())
             else:
-                bad_epochs += 1
+                patience_on_epochs += 1
 
-            if bad_epochs >= early_stopping_strategy.patience:
+            if patience_on_epochs >= early_stopping_strategy.patience:
                 if not silence_output:
                     print(f"Early stopping at epoch {epoch} (best VL {metric_to_watch} loss: {best_vl:.4f})")
                 break
 
-        # Keeping track of the latest best model
-        if best_state is not None:
-            model.load_state_dict(best_state)
-        # -----------------------------
+    # Keeping track of the latest best model
+    # at the end of the training
+    if best_state is not None:
+        model.load_state_dict(best_state)
+    # -----------------------------
 
     if not silence_output:
         _print_train_summary(model, dl_tr,dl_vl,optimizer_template,loss_function, scheduler_template, batch_size, epochs,early_stopping_strategy)
@@ -694,6 +859,8 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
         EPOCHS_TR_ACC: epochs_tr_acc, EPOCHS_VL_ACC: epochs_vl_acc,
         EPOCHS_TR_MAE: epochs_tr_mae, EPOCHS_VL_MAE: epochs_vl_mae,
         EPOCHS_TR_MEE: epochs_tr_mee, EPOCHS_VL_MEE: epochs_vl_mee,
+        "epochs_tr_loss": epochs_tr_loss, "epochs_vl_loss": epochs_vl_loss,
+        "epochs_tr_r2": epochs_tr_r2, "epochs_vl_r2": epochs_tr_r2,
         "epochs_grad": epochs_grad_norm
     })
 
@@ -727,11 +894,11 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
 
         # Model cloning
         fold_model = copy.deepcopy(untrained_base_model)
-
+        scaler = clone(scaler_template) if scaler_template else None
         # Training
         train_result = train(
             fold_model,
-            ManualSplitStrategy(FeatureTargetSet(X_tr, y_tr), FeatureTargetSet(X_vl, y_vl), scaler=clone(scaler_template)),
+            ManualSplitStrategy(FeatureTargetSet(X_tr, y_tr), FeatureTargetSet(X_vl, y_vl), scaler=scaler),
             **inner_train_params
         )
 
@@ -739,6 +906,7 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
         epochs_tr_acc, epochs_vl_acc= train_result.epochs_tr_acc, train_result.epochs_vl_acc
         epochs_tr_mae, epochs_vl_mae= train_result.epochs_tr_mae, train_result.epochs_vl_mae
         epochs_tr_mee, epochs_vl_mee= train_result.epochs_tr_mee, train_result.epochs_vl_mee
+        epochs_tr_loss, epochs_vl_loss = train_result.epochs_tr_loss, train_result.epochs_tr_loss
         epochs_grad = train_result.epochs_grad
 
         # Data gathering
@@ -765,7 +933,9 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
             FOLD_TR_RMSE: float(min(epochs_tr_mse)), FOLD_VL_RMSE: float(min(epochs_vl_mse)),
             FOLD_TR_MEE: float(min(epochs_tr_mee)), FOLD_VL_MEE: float(min(epochs_vl_mee)),
             FOLD_TR_MAE: float(min(epochs_tr_mae)), FOLD_VL_MAE: float(min(epochs_vl_mae)),
-            FOLD_TR_ACC: float(max(epochs_tr_acc)), FOLD_VL_ACC: float(max(epochs_vl_acc))
+            FOLD_TR_ACC: float(max(epochs_tr_acc)), FOLD_VL_ACC: float(max(epochs_vl_acc)),
+            "fold_vl_loss": float(min(epochs_vl_loss)), "fold_tr_loss": float(min(epochs_tr_loss))
+            #FOLD_TR_R2: , FOLD_VL_R2:
         }))
 
     return fold_results
@@ -835,9 +1005,10 @@ class OutputAdapter:
     """
     Maps raw model outputs to probabilities/scores and then to predicted labels.
     """
-    def __init__(self, link_fn, decision_fn):
+    def __init__(self, link_fn, decision_fn, output_type):
         self._link_fn = link_fn          # logits -> probs/scores
         self._decision_fn = decision_fn  # probs/scores -> labels
+        self._output_type = output_type
 
     def predict(self, logits: Tensor) -> (Tensor, Tensor):
         """
@@ -849,23 +1020,32 @@ class OutputAdapter:
         predictions = self._decision_fn(scores)
         return predictions, scores
 
+    @property
+    def output_type(self) -> str:
+        return self._output_type
+
 
 def binary_bce_adapter(threshold: float = 0.5) -> OutputAdapter:
+    """
+    Output adapter for classification task
+    :param threshold: the decision boundary used to convert predicted probabilities into binary class labels
+    :return: OutputAdapter suitable for classification task
+    """
     link = torch.sigmoid
     decision = lambda p: (p >= threshold).float()
-    return OutputAdapter(link, decision)
+    return OutputAdapter(link, decision, "classifier")
 
 
 def multiclass_ce_adapter(dim: int = 1) -> OutputAdapter:
     link = lambda z: torch.softmax(z, dim=dim)
     decision = lambda p: torch.argmax(p, dim=dim)
-    return OutputAdapter(link, decision)
+    return OutputAdapter(link, decision, "regressor")
 
 
 def regression_adapter() -> OutputAdapter:
     link = lambda z: z                 # identity
     decision = lambda z: z             # per regressione "pred" = valore
-    return OutputAdapter(link, decision)
+    return OutputAdapter(link, decision, "regressor")
 
 
 def plot_epoch_mee(epochs_tr_mee, epochs_vl_mee):
@@ -886,7 +1066,7 @@ def plot_epoch_mse(epochs_tr, epochs_vl):
             {"key": "TR MSE", "value": epochs_tr},
             {"key": "VL MSE", "value": epochs_vl}
         ],
-        x_label="Epochs", y_label="Loss", title="Training vs Validation Loss"
+        x_label="Epochs", y_label="MSE", title="Training vs Validation Loss"
     )
 
 
@@ -1004,7 +1184,7 @@ def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer
     else:
         print(f"LR Decay        | disabled")
     if early_stopping_strategy is not None:
-        print(f"Early Stopping  | patience: {early_stopping_strategy.patience} , minimum delta: {early_stopping_strategy.min_delta}")
+        print(f"Early Stopping  | metric: {early_stopping_strategy.metric},  patience: {early_stopping_strategy.patience} , minimum delta: {early_stopping_strategy.min_delta}")
     else:
         print(f"Early Stopping  | disabled")
     print("-" * 100)
@@ -1107,8 +1287,6 @@ class TorchRegressorRunner:
 
     def fit(self, model, X_tr, y_tr, bootstrap_params):
 
-        #X_tr, y_tr = split_strategy.X_tr, split_strategy.y_tr
-        #X_vl, y_vl = split_strategy.X_vl, split_strategy.y_vl
         train_params = bootstrap_params["train_params"]
         split_strategy_cls = bootstrap_params['split_strategy']
         split_strategy = split_strategy_cls(FeatureTargetSet(X_tr, y_tr))
@@ -1121,7 +1299,7 @@ class TorchRegressorRunner:
         return model
 
     def predict(self, model, X):
-        return predict(model, X)
+        return model.predict(X)
 
 
 def suggest_trial_param(trial, name, space):

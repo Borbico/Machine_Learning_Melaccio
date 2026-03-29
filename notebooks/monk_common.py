@@ -152,7 +152,7 @@ def analyze_lr_curve(history, early_epoch=30):
     }
 
 
-def evaluate_lr(fold_results, epoch_metric:int, fold_metric:str, early_epoch:int) -> tuple[float, float,float]:
+def evaluate_lr(fold_results, epoch_metric:int, fold_metric:str, early_epoch:int) -> tuple[float, float]:
     """
     Extract learning rate and other metrics from fold results for being used in optuna study evaluation.
     The returned tuple contains the following in the same exact order:
@@ -205,3 +205,66 @@ def find_best_lr_from_trials(study) -> float:
 
 def classification_helper(y_pred):
     return y_pred[2].detach().cpu().numpy().ravel().astype(int)
+
+
+def generate_monk_set(monk_type: int, nr_samples: int, noise: float = 0.0, seed: int = 42):
+    """
+    Generate a MONK dataset compatible with split_and_prepare_dataset.
+    :param monk_type: type of monk set 1, 2 or 3
+    :param nr_samples: the size of the generated set
+    :param noise: noise level if desired 0.05 = 5% noise, 0.1 = 10% noise and so on
+    :param seed: random seed to replicate set
+    :return: df : pd.DataFrame containing columns: id, a1..a6, class
+    """
+
+    np.random.seed(seed)
+
+    # -------------------------
+    # Generate features
+    # -------------------------
+    data = {
+        "id": np.arange(nr_samples),
+        "a1": np.random.randint(1, 4, nr_samples),
+        "a2": np.random.randint(1, 4, nr_samples),
+        "a3": np.random.randint(1, 3, nr_samples),
+        "a4": np.random.randint(1, 4, nr_samples),
+        "a5": np.random.randint(1, 5, nr_samples),
+        "a6": np.random.randint(1, 3, nr_samples),
+    }
+
+    df = pd.DataFrame(data)
+
+    # -------------------------
+    # Target function
+    # -------------------------
+    if monk_type == 1:
+        y = ((df["a1"] == df["a2"]) | (df["a5"] == 1)).astype(int)
+
+    elif monk_type == 2:
+        conditions = (
+                (df["a1"] == 1).astype(int) +
+                (df["a2"] == 1).astype(int) +
+                (df["a3"] == 1).astype(int) +
+                (df["a4"] == 1).astype(int) +
+                (df["a5"] == 1).astype(int) +
+                (df["a6"] == 1).astype(int)
+        )
+        y = (conditions == 2).astype(int)
+
+    elif monk_type == 3:
+        y = (((df["a5"] == 3) & (df["a4"] == 1)) | (df["a5"] != 4)).astype(int)
+
+    else:
+        raise ValueError("monk_type must be 1, 2 or 3")
+
+    df["class"] = y
+
+    # -------------------------
+    # Add noise
+    # -------------------------
+    if noise > 0.0:
+        n_noisy = int(noise * nr_samples)
+        idx = np.random.choice(nr_samples, n_noisy, replace=False)
+        df.loc[idx, "class"] = 1 - df.loc[idx, "class"]
+
+    return df

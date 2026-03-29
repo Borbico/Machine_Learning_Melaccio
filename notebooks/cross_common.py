@@ -1052,19 +1052,22 @@ def aggregate_scores(scores:dict):
             if key not in values: values[key] = []
             values[key].append(value)
 
-    #print(header,values)
-
     means = []
     stds = []
+    perc = []
     for key in header:
         v = values[key]
-        means.append(np.mean(v))
-        stds.append(np.std(v))
+        mean = np.mean(v)
+        std = np.std(v)
+        means.append(mean)
+        stds.append(std)
+        perc.append((std/mean)*100)
 
     return pd.DataFrame({
         "metric": list(header),
         "means": means,
         "stds": stds,
+        "perc %": perc
     }).round(2)
 
 def aggregate_scores_old(scores:list[Metrics]) -> pd.DataFrame:

@@ -1042,6 +1042,7 @@ def build_nn_model(net, output_adapter, manual_weight_init:bool=True) -> nn.Sequ
 
     return model
 
+
 class TorchRegressorRunner:
 
     def __init__(self, model_template):
@@ -1143,33 +1144,17 @@ def analyze_lr_curve(history, early_epoch=30):
     }
 
 
-# def summarize_lr_from_folds(fold_results, epoch_metric:str=EPOCHS_VL_MEE, fold_metric:str=FOLD_VL_MEE, early_epoch:int=30):
-#     """
-#     fold_results: lista di dizionari, uno per fold
-#     ognuno deve contenere almeno:
-#         - EPOCHS_VL_MEE
-#         - FOLD_VL_MEE
-#     """
-#     analyses = [
-#         analyze_lr_curve(getattr(fold, epoch_metric), early_epoch=early_epoch)
-#         for fold in fold_results
-#     ]
-#
-#     return {
-#         "mean_early_gain": float(np.mean([a["early_gain"] for a in analyses])),
-#         "std_early_gain": float(np.std([a["early_gain"] for a in analyses])),
-#
-#         "mean_oscillation": float(np.mean([a["oscillation"] for a in analyses])),
-#         "std_oscillation": float(np.std([a["oscillation"] for a in analyses])),
-#
-#         "mean_best": float(np.mean([getattr(fold, fold_metric) for fold in fold_results])),
-#         "std_best": float(np.std([getattr(fold, fold_metric) for fold in fold_results])),
-#
-#         "mean_best_epoch": float(np.mean([a["best_epoch"] for a in analyses]))
-#     }
-
-
-def summarize_weight_decay_from_folds(fold_histories, vl_key:str=FOLD_VL_MEE, tr_key=FOLD_TR_MEE):
+def summarize_weight_decay_from_folds(fold_histories, vl_key:str=FOLD_VL_MEE, tr_key:str=FOLD_TR_MEE) -> dict:
+    """
+    Extract weight decay metrics from folds
+    :param fold_histories: kfold histories
+    :param vl_key: the vl key to consider i.e. fold_vl_mee
+    :param tr_key: the tr key to consider i.e. fold_tr_mee
+    :return: the dict to be used with weight decay metrics
+        - "mean_best_tr": mean_best_tr_metric
+        - "mean_best_vl": mean_best_vl_metric
+        - "gap_tr_vl": gap_tr_vl_mee
+    """
 
     mean_best_tr_metric = float(np.mean([getattr(fold, tr_key) for fold in fold_histories]))
     mean_best_vl_metric = float(np.mean([getattr(fold, vl_key) for fold in fold_histories]))

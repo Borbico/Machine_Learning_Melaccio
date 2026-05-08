@@ -7,7 +7,7 @@ from sklearn.model_selection import learning_curve
 
 def compare_svfreq_vs_permutation(best_model, X_tr, y_tr, scoring:str, step_name:str="model"):
     # ---- 1) SV-frequency ----
-    best_model.fit(X_tr, y_tr)
+    best_model.fitted_model(X_tr, y_tr)
     svm = best_model.named_steps[step_name]
     SV = X_tr.iloc[svm.support_]
     sv_freq = SV.mean().sort_values(ascending=False)  # per colonna one-hot

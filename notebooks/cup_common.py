@@ -16,15 +16,6 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
-FOLD_NR = "fold_nr"
-FOLD_TR_MSE = "fold_tr_mse"
-FOLD_VL_MSE = "fold_vl_mse"
-FOLD_TR_ACC = "fold_tr_acc"
-FOLD_VL_ACC = "fold_vl_acc"
-FOLD_TR_MAE = "fold_tr_mae"
-FOLD_VL_MAE = "fold_vl_mae"
-FOLD_TR_MEE = "fold_tr_mee"
-FOLD_VL_MEE = "fold_vl_mee"
 
 output_columns = ["t1", "t2", "t3", "t4"]
 base_columns = [
@@ -127,28 +118,6 @@ def prepare_dataset_for_hold_out(df: DataFrame, ratio: float = 0.2, random_state
     return X_tr, y_tr, X_ts, y_ts
 
 
-def plot_kfold_mee(kf_result):
-    plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_mee"), "Validation MEE", "KFold Validation MEE per fold")
-
-
-def plot_kfold_mse(kf_result):
-    plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_mse"), "Validation MSE", "KFold Validation MSE per fold")
-
-
-def plot_kfold_rmse(kf_result):
-    mse = extract_fold_history(kf_result, "fold_vl_mse")
-    rmse = np.sqrt(np.array(mse, dtype=float))
-    plot_kfold_bar(rmse, "Validation RMSE", "KFold Validation RMSE per fold")
-
-
-def plot_kfold_mae(kf_result):
-    plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_mae"), "Validation MAE", "KFold Validation MAE per fold")
-
-
-def plot_kfold_acc(kf_result):
-    plot_kfold_bar(extract_fold_history(kf_result, "fold_vl_acc"), "Validation ACC", "KFold Validation ACC (best) per fold")
-
-
 def plot_kfold_bar(history, ylabel:str, title:str):
     """
     Bar plot helper for validation metric per fold + mean line (seaborn version).
@@ -184,22 +153,4 @@ def plot_kfold_bar(history, ylabel:str, title:str):
     plt.legend()
     plt.tight_layout()
     plt.show()
-
-
-def extract_fold_history(fold_histories, key):
-    return np.array([getattr(fold_history, key) for fold_history in fold_histories])
-
-
-def mean_std_from_kfold(vals):
-
-    mean_m = np.mean(vals)
-    std_m = np.std(vals)
-    return mean_m, std_m
-
-
-def extract_mean_std(fold_histories, key:str):
-
-    best_vals = extract_fold_history(fold_histories, key)
-    return mean_std_from_kfold(best_vals)
-
 

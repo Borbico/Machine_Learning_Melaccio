@@ -4,24 +4,51 @@
 
 
 import numpy as np
-from networkx.classes import non_neighbors
-from sklearn.model_selection import learning_curve
+from sklearn import clone
 from matplotlib import pyplot as plt
 import cross_common as cr
 
 
-
-def extract_best_knn_metrics_from_grid(gs):
-
-    best_model = gs.best_estimator_.named_steps["knn"]
-    clean_params = {
-        param.split("__")[-1]: value
-        for param, value in gs.best_params_.items()
-    }
-
-    return best_model, clean_params
-
 N_NEIGHBORS = "n_neighbors"
+
+
+def gaussian_weights(distances) -> np.ndarray:
+    """
+    Custom function for experimenting the weights behaviour within grid search.
+    :param distances: The distance matrix has shape (n_samples, k), where each row contains the distances between a query point and its k nearest neighbors.
+            - distances = [
+                [d(x₁, x₁₁), d(x₁, x₁₂), ..., d(x₁, x₁k)],
+                [d(x₂, x₂₁), d(x₂, x₂₂), ..., d(x₂, x₂k)],
+                ...
+            ]
+    :return: the gaussian distance
+    """
+    distances = np.asarray(distances)
+    gamma = 0.1
+    # the np.exp apply the function to
+    # each element of the array
+    return np.exp(-gamma * distances**2)
+
+
+def gaussian_weights_wrapper(gamma: float):
+    # def gaussian_weights(distances) -> np.ndarray:
+    #     distances = np.asarray(distances)
+    #     return np.exp(-gamma * distances**2)
+
+    gaussian_weights.__name__ = f"gaussian_weights_gamma_{gamma}"
+    return gaussian_weights
+
+
+class GaussianWeights:
+    def __init__(self, gamma: float):
+        self.gamma = gamma
+
+    def __call__(self, distances):
+        distances = np.asarray(distances)
+        return np.exp(-self.gamma * distances**2)
+
+    def __repr__(self):
+        return f"GaussianWeights(gamma={self.gamma})"
 
 
 def label_row(r, step_name:str="model"):
@@ -32,7 +59,7 @@ def label_row(r, step_name:str="model"):
     return f"k={k} | w={w}, m={m}, p={p}"
 
 
-def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1, step_name:str="model"):
+def plot_knn_validation_curve_from_gs(gs, y_label: str="Score", agg:str="max", step_name:str="model"):
 
     r = gs.cv_results_
     best_k = gs.best_params_[f"{step_name}__{N_NEIGHBORS}"] # best K
@@ -52,6 +79,9 @@ def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1,
         if agg == "max":
             agg_test.append(np.max(test_scores[mask]))
             agg_train.append(np.max(train_scores[mask]) if not np.isnan(train_scores[mask]).all() else np.nan)
+        elif agg == "min":
+            agg_test.append(np.min(test_scores[mask]))
+            agg_train.append(np.min(train_scores[mask]) if not np.isnan(train_scores[mask]).all() else np.nan)
         elif agg == "mean":
             agg_test.append(np.mean(test_scores[mask]))
             agg_train.append(np.mean(train_scores[mask]) if not np.isnan(train_scores[mask]).all() else np.nan)
@@ -62,27 +92,7 @@ def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1,
     agg_test = np.array(agg_test, dtype=float)
     agg_train = np.array(agg_train, dtype=float)
 
-    # 3) accuracy vs neg_*
-    scoring = gs.scoring
-    y_label = "Score"
     plot_train = not np.isnan(agg_train).all()
-
-    # Change Y axes according to scoring
-    if isinstance(scoring, str):
-        if scoring == "accuracy":
-            y_label = "Accuracy"
-        elif scoring.startswith("neg_"):
-
-            if "mean_squared_error" in scoring:
-                y_label = "MSE"
-            elif "mean_absolute_error" in scoring:
-                y_label = "MAE"
-            elif "root_mean_squared_error" in scoring:
-                y_label = "RMSE"
-            else:
-                y_label = scoring.replace("neg_", "").replace("_", " ").upper()
-
-    # 4) Plot
     plt.figure()
 
     if plot_train:
@@ -99,116 +109,19 @@ def plot_knn_validation_curve_from_gs(gs, agg:str="max", score_correction:int=1,
     plt.show()
 
 
-def plot_knn_validation_curve(cv_scores, train_scores):
-
-    k_values = [k[0] for k in cv_scores]
-    cv_scores = [c[1] for c in cv_scores]
-    train_scores = [t[1] for t in train_scores]
-    plt.figure()
-    plt.plot(k_values, train_scores, marker="o", ms=1, label="Training accuracy")
-    plt.plot(k_values, cv_scores, marker="o", ms=1, label="CV mean accuracy")
-    plt.xlabel("k (n_neighbors)")
-    plt.ylabel("Accuracy")
-    plt.title("K-NN: training vs CV (overfitting check)")
-    plt.grid(True)
-    plt.legend()
-    plt.show()
-
-
-def plot_knn_validation_curve_regression(k_values, train_mse, cv_mse):
-    plt.figure()
-    plt.plot(k_values, train_mse, marker="o", ms=3, label="Training MSE")
-    plt.plot(k_values, cv_mse, marker="o", ms=3, label="CV mean MSE")
-    plt.xlabel("k (n_neighbors)")
-    plt.ylabel("MSE")
-    plt.title("K-NN Regressor: training vs CV (overfitting check)")
-    plt.grid(True)
-    plt.legend()
-    plt.show()
-
-
-def plot_knn_learning_curve(model, X, y, cv, scoring, ax=None):
-    """
-    Plot a learning curve for a given KNN model (classifier or regressor).
-    If scoring is a neg_* loss, the curve is plotted as the corresponding positive loss.
-    """
-    k = model.n_neighbors
-    random_state = getattr(cv, "random_state", None)
-
-    # compute safe train sizes (avoid k > n_train_fold)
-    frac_train_fold = 1 - 1 / cv.get_n_splits()
-    min_frac = (k + 1) / (frac_train_fold * len(y))
-    min_frac = min(max(min_frac, 0.1), 0.9)
-    train_sizes = np.linspace(min_frac, 1.0, 15)
-
-    train_sizes_abs, train_scores, val_scores = learning_curve(
-        model,
-        X, y,
-        cv=cv,
-        scoring=scoring,
-        train_sizes=train_sizes,
-        shuffle=True,
-        random_state=random_state
-    )
-
-    train_mean, val_mean = cr.apply_score_correction(scoring,(train_scores.mean(axis=1),val_scores.mean(axis=1)))
-
-    # Decide label + possible sign flip
-    y_label = "Score"
-    train_label = "Training score"
-    val_label = "CV score"
-    title_metric = scoring
-
-    if isinstance(scoring, str) and scoring.startswith("neg_"):
-
-        if scoring == "neg_mean_absolute_error":
-            y_label = "MAE"
-            title_metric = "MAE"
-        elif scoring == "neg_mean_squared_error":
-            y_label = "MSE"
-            title_metric = "MSE"
-        elif scoring == "neg_root_mean_squared_error":
-            y_label = "RMSE"
-            title_metric = "RMSE"
-        else:
-            y_label = scoring.replace("neg_", "").replace("_", " ").upper()
-            title_metric = y_label
-
-        train_label = f"Training {y_label}"
-        val_label = f"CV {y_label}"
-    elif scoring == "accuracy":
-        y_label = "Accuracy"
-        train_label = "Training accuracy"
-        val_label = "CV accuracy"
-        title_metric = "Accuracy"
-
-    # plot
-    if ax is None:
-        _, ax = plt.subplots()
-
-    ax.plot(train_sizes_abs, train_mean, label=train_label)
-    ax.plot(train_sizes_abs, val_mean, label=val_label)
-
-    ax.set_xlabel("Training set size")
-    ax.set_ylabel(y_label)
-    ax.set_title(f"K-NN learning curve (k={k})")
-    ax.legend()
-    ax.grid(True)
-
-
-def plot_knn_learning_curves_grid(model, X, y, cv, scoring, n_cols=2):
+def plot_knn_learning_curves_grid(model, X, y, cv, scoring, n_cols=2, step_name:str="model"):
     """
     Plot learning curves for multiple KNN models in a grid layout.
     Optionally highlight the subplot whose model.n_neighbors == highlight_k.
     """
     models = []
-    model_params = model.get_params()
-    Estimator = type(model)
+    model_params = model.get_params()[step_name]
 
-    kn=model_params["n_neighbors"]
+    kn=model_params.n_neighbors
     for k in k_neighborhood(kn, len(y)):
-        params = {**model_params, "n_neighbors": k}
-        models.append(Estimator(**params))
+        clean_pipeline = clone(model)
+        clean_pipeline.named_steps["model"].n_neighbors = k
+        models.append(clean_pipeline)
 
     n_plots = len(models)
     n_rows = int(np.ceil(n_plots / n_cols))
@@ -224,13 +137,15 @@ def plot_knn_learning_curves_grid(model, X, y, cv, scoring, n_cols=2):
         ax = axes[i]
 
         # draw the learning curve on this axis
-        plot_knn_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax, scoring=scoring)
+        #plot_knn_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax, scoring=scoring)
+        cr.plot_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax, scoring=scoring)
 
         # highlight if requested
-        if model.n_neighbors == kn:
+        if model.named_steps["model"].n_neighbors == kn:
             for spine in ax.spines.values():
                 spine.set_linewidth(3.0)   # bordo più spesso
-            ax.set_title(f"K-NN learning curve (k={model.n_neighbors})  *")
+            #ax.set_title(f"K-NN learning curve (k={model.named_steps["model"].n_neighbors})  *")
+        ax.set_title(f"Learning curve (k={model.named_steps["model"].n_neighbors})")
 
     # remove unused axes
     for j in range(i + 1, len(axes)):

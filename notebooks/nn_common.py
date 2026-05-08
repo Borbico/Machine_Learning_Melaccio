@@ -442,7 +442,7 @@ class ManualSplitStrategy(SplitStrategy):
 
 
 def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
-          epochs:int, metrics:dict={}, early_stopping_strategy:EarlyStoppingStrategy = None,
+          epochs:int, additional_metrics:dict={}, early_stopping_strategy:EarlyStoppingStrategy = None,
           scheduler_template= None, silence_output:bool=False) -> TrainResults:
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
@@ -454,9 +454,9 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     :param loss_function: the loss algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :param batch_size: "batch", "online" or the mini-batch size for training
     :param epochs: the number of epochs for training
-    :param metrics: the custom metric to retrieve from training if any
+    :param additional_metrics: the custom metric to retrieve from training if any
     :param early_stopping_strategy: the early stopping strategy
-    :param scheduler: learning rate scheduler
+    :param scheduler_template: learning rate scheduler
     :param silence_output: True/False if we want to display the train params
     :return: TrainResults
     """
@@ -474,8 +474,10 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     epochs_grad_norm, epoch_grad_norms = [], []
 
     # adding real loss function to
-    epochs_loss_dict = metrics
-    epochs_loss_dict[cr.LOSS]=(loss_function,min)
+    epochs_loss_dict = {
+        cr.LOSS: (loss_function, min),
+        **additional_metrics
+    }
 
     best_vl = float("inf")
     best_state = None # used only if early stopping is enabled
@@ -600,9 +602,8 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
     """
 
     fold_results = cr.FoldResults()
-    epochs_metric_dict = inner_train_params.get("metrics")
-    if epochs_metric_dict is None:
-        epochs_metric_dict = {cr.LOSS: (inner_train_params.get("loss_function"),min)}
+    epochs_metric_dict = inner_train_params.get("additional_metrics",{})
+    epochs_metric_dict[cr.LOSS] = (inner_train_params.get("loss_function"),min)
 
     metrics = set(epochs_metric_dict.keys())
 
@@ -637,8 +638,7 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
                 value = getattr(train_result, key)
                 fr.set_metric(key, value)
 
-
-        # Use reducer for best metric
+        # Using reducer (min, max,...) for computing best metric
         for metric, (_, reducer) in epochs_metric_dict.items():
             tr_key = f"epochs_tr_{metric}"
             vl_key = f"epochs_vl_{metric}"
@@ -1044,14 +1044,34 @@ def build_nn_model(net, output_adapter, manual_weight_init:bool=True) -> nn.Sequ
 
 
 class TorchRegressorRunner:
+    """
+    To be used in NN model
+    """
 
     def __init__(self, model_template):
-        self._model_template = model_template
+        """
+        To be used in NN model
+        :param model_template: the template of the NN model
+        """
+        self._model_template = copy.deepcopy(model_template)
 
-    def new_model(self):
+    def unfitted_model(self):
+        """
+        Return an unfitted model based on the model template previously instantiated
+        :return: a brand new unfitted model
+        """
         return copy.deepcopy(self._model_template)
 
-    def fit(self, model, X_tr, y_tr, bootstrap_params):
+    def fitted_model(self, X_tr:pd.DataFrame, y_tr:ndarray, bootstrap_params: dict):
+        """
+        Return a trained model. It internally invokes the unfitted_model() function
+        :param X_tr: the training data
+        :param y_tr: the training labels
+        :param bootstrap_params: the bootstrap parameters
+        :return: a fitted model based on the model template previously instantiated
+        """
+
+        model = self.unfitted_model()
 
         train_params = bootstrap_params["train_params"]
         split_strategy_cls = bootstrap_params['split_strategy']
@@ -1064,8 +1084,8 @@ class TorchRegressorRunner:
 
         return model
 
-    def predict(self, model, X):
-        return model.predict(X)
+    def predict(self, model, X: pd.DataFrame):
+        return model.predict(X)[0] # <- we return the logits
 
 
 def suggest_trial_param(trial, name, space):
@@ -1220,6 +1240,27 @@ def evaluate_lr(fold_results, epoch_metric:int, fold_metric:str, early_epoch:int
     return summary["mean_best"],summary["mean_oscillation"],summary["mean_early_gain"]
 
 
+def find_best_batch_size_from_trials(study) -> float:
+    """
+    The learning rate is selected according to three complementary criteria derived from the training dynamics observed during K-Fold cross-validation:
+	    - Fast initial convergence: the training curve should decrease rapidly during the first 30–50 epochs, indicating that the optimizer is able to make effective progress at the beginning of training.
+	    - Stable optimization: the learning curve should exhibit low oscillation, suggesting that the step size is not too large and the optimization process is stable.
+	    - Best validation performance: among the candidate values, preference is given to the learning rate achieving the lowest mean validation metric across the K-Fold splits.
+    :param study: the study object
+    :return: the best learning rate
+    """
+
+    results = min(
+        study.best_trials,
+        key=lambda t: (
+            t.values[0],    # 1. minimize main metric as first step
+            t.values[1],    # 2. oscillation as second step in case two or more trials share the same minimum (1)
+        )
+    )
+
+    return results.params["batch_size"]
+
+
 def find_best_weight_decay_from_trials(study) -> float:
     """
     Select the best weight decay from trials.
@@ -1238,13 +1279,49 @@ def find_best_weight_decay_from_trials(study) -> float:
     return the_trial.params["weight_decay"]
 
 
-def evaluate_wd(fold_histories: cr.FoldResults,vl_key:str,tr_key:str) -> tuple[float,float]:
+def find_best_activation_from_trials(study) -> float:
     """
-    Find evaluation values for optuna regarding weight decay.
+    Select the best activation from trials.
+    Priority: (1) lowest mean validation metric, (2) smallest TR–VL gap.
+    This favors configurations with strong validation performance and good generalization.
+    :param study: the optuna study object
+    :return: best activation
+    """
+    the_trial = min(
+        study.best_trials,
+        key=lambda t: (
+            t.values[0],   # mean_best_vl_metric
+            t.values[1]    # gap_tr_vl
+        )
+    )
+    return the_trial.params["activation"]
+
+
+def find_best_batch_size_from_trials(study) -> float:
+    """
+    Select the best batch size from trials.
+    Priority: (1) lowest mean validation metric, (2) smallest TR–VL gap.
+    This favors configurations with strong validation performance and good generalization.
+    :param study: the optuna study object
+    :return: best weight_decay
+    """
+    the_trial = min(
+        study.best_trials,
+        key=lambda t: (
+            t.values[0],   # mean_best_vl_metric
+            t.values[1]    # gap_tr_vl
+        )
+    )
+    return the_trial.params["batch_size"]
+
+
+def metric_mean_and_gap_TR_VL(fold_histories: cr.FoldResults, vl_key:str, tr_key:str) -> tuple[float,float]:
+    """
+    Find values for optuna by evaluating the best VL metric and the lowest gap between VL and TR
     :param fold_histories:
-    :param vl_key: for example fold_vl_mee
-    :param tr_key: for example fold_tr_mee
-    :return: best vl metric and best gap
+    :param vl_key: the validation metric for example fold_vl_mee
+    :param tr_key: the training metric for example fold_tr_mee
+    :return: mean vl metric and gap tr -vl
     """
     mean_best_tr_metric = float(np.mean([getattr(fold, tr_key) for fold in fold_histories]))
     mean_best_vl_metric = float(np.mean([getattr(fold, vl_key) for fold in fold_histories]))

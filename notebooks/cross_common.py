@@ -1,5 +1,5 @@
 import copy
-from typing import Callable
+from typing import Callable, cast
 
 import numpy as np
 import pandas as pd
@@ -11,9 +11,12 @@ from sklearn import clone
 from sklearn.base import BaseEstimator
 from sklearn.dummy import DummyRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer, r2_score
-from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, KFold
+from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, KFold, GridSearchCV
 from sklearn.model_selection import train_test_split
 from sympy.physics.control import Series
+
+RANDOM_STATE = 42
+SEED = 1
 
 MEE = "mee"
 MAE = "mae"
@@ -86,72 +89,16 @@ tr_columns = base_columns + output_columns
 
 set_base_path = 'data/cup/ML-CUP25-{}.csv'
 
-def _read_file(cup_path: str) -> DataFrame:
+
+def sort_with_loss_first(losses: dict):
     """
-    Read a file into a DataFrame
-    :param monk_path: the monk file path
-    :return: a DataFrame containing the original data
+    Reorganize losses dictionary by putting LOSS key first
+    :param losses:
+    :return:
     """
-    orig = pd.read_csv(cup_path, sep=r",", header=None, skiprows=7)
-    return orig
-
-
-def load_set() -> (DataFrame, DataFrame):
-    """
-    Load the monk training and testing sets by passing the monk set id, such as 1,2 or 3
-    :return: the corresponding red and wine as DataFrames
-    """
-    tr_path = set_base_path.format("TR")
-    ts_path = set_base_path.format("TS")
-
-    # Load dataframe and add a specific
-    # type column to each set
-    df_tr_orig = _read_file(tr_path)
-    df_tr_orig.columns=tr_columns
-    df_ts_orig = _read_file(ts_path)
-    df_ts_orig.columns=base_columns
-
-    return df_tr_orig, df_ts_orig
-
-
-def prepare_dataset(df: DataFrame, scaler=None, fit_scaler: bool = False):
-    """
-    Prepare ML-CUP dataset:
-    - Extract X (features) and y (targets, if present)
-    - Optionally scale X using a provided scaler
-      * fit_scaler=True  -> fit_transform (ONLY for training set)
-      * fit_scaler=False -> transform (for validation/test set)
-    Returns:
-      X: pandas DataFrame (float32)
-      y: numpy ndarray (float32) or None
-    """
-
-    # Extract X and y
-    if np.isin(np.array(output_columns), df.columns.values).all():
-        y = df[output_columns].to_numpy(dtype=np.float32)
-        X_unscaled = df.drop(columns=["id"] + output_columns)
-    else:
-        y = None
-        X_unscaled = df.drop(columns=["id"])
-
-    # Ensure float32
-    X_unscaled = X_unscaled.astype(np.float32)
-
-    # Scale if requested
-    if scaler is not None:
-        if fit_scaler:
-            X_scaled = scaler.fit_transform(X_unscaled)
-        else:
-            X_scaled = scaler.transform(X_unscaled)
-
-        X = pd.DataFrame(X_scaled, columns=X_unscaled.columns, index=X_unscaled.index)
-    else:
-        X = X_unscaled.copy()
-
-    # Keep consistent indexing
-    X = X.reset_index(drop=True)
-
-    return X, y
+    if "LOSS" in losses:
+        return {"LOSS": losses["LOSS"], **{k: v for k, v in losses.items() if k != "LOSS"}}
+    return losses
 
 
 def _class_counts_str(df, target="quality") -> str:
@@ -390,8 +337,10 @@ class FoldResults:
 
 class FoldResult:
 
-    def __init__(self, allowed_keys: dict=None):
-
+    def __init__(self):
+        """
+        Holds a kfold cross validation results
+        """
         self._data = dict()
         return
 
@@ -418,7 +367,7 @@ def mee(y_true:ndarray, y_pred:ndarray) -> float:
     MEE calc helper function returning np.mean
     :param y_true: the true label
     :param y_pred: the predicted label
-    :return: float
+    :return: float(np.mean(np.linalg.norm(np.asarray(y_true) - np.asarray(y_pred), axis=1)))
     """
     return float(np.mean(np.linalg.norm(np.asarray(y_true) - np.asarray(y_pred), axis=1)))
 
@@ -452,9 +401,58 @@ def map_key_to_metric(key: str, subkey:str="vl"):
     return f"fold_{subkey}_{key}"
 
 
-def common_scoring(name:str= "mae"):
+class Scoring:
+
+    def __init__(self, name: str):
+
+        if name == MAE:
+            self._scoring_fn = mae
+            self._grid_scoring = self._scoring_name = "neg_mean_absolute_error"
+            self._reducer = min
+        elif name == MSE:
+            self._scoring_fn = mse
+            self._reducer = min
+            self._grid_scoring = self._scoring_name = "neg_mean_squared_error"
+        elif name == RMSE:
+            self._scoring_fn = rmse
+            self._reducer = min
+            self._grid_scoring = self._scoring_name = "neg_root_mean_squared_error"
+        # elif name == MED: not implemented yet
+        #     self._fn = med
+        #     self._scoring = "neg_median_absolute_error"
+        elif name == MEE:
+            self._scoring_fn = mee_scorer
+            self._reducer = min
+            self._grid_scoring = mee_scorer()
+            self._scoring_name = "neg_mean_euclidean_error"
+        elif name == ACC:
+            self._scoring_fn = None
+            self._reducer = max
+            self._grid_scoring = self._scoring_name = "accuracy"
+        elif name == BAC:
+            self._scoring_fn = None
+            self._reducer = max
+            self._grid_scoring = self._scoring_name = "balanced_accuracy"
+        else:
+            raise ValueError("Unknown scorer")
+
+    @property
+    def scoring_fn(self):
+        return self._scoring_fn
+
+    @property
+    def grid_scoring(self):
+        return self._grid_scoring
+
+
+class ScoringFactory:
+    def __init__(self, scores_dict: dict):
+        return
+
+
+def common_scoring(name:str= "mae") -> str:
     """
-    Return a scorer given a name:
+    Return a scorer identifier given a name:
         - mae: neg_mean_absolute_error
         - mse: neg_mean_squared_error
         - rmse: neg_root_mean_squared_error
@@ -557,28 +555,52 @@ def plot_top_models(results, scoring_name:str, label_row:Series, TOP_N=10):
 
 
 class SklearnNestedRegressorRunner:
-    def __init__(self, grid):
-        self.base_grid = grid
-        self._model_type = None
+    """
+    To be used in nested CV
+    """
+    def __init__(self, grid: GridSearchCV):
+        """
+        Utility class for wrapping a GridSearchCV that needs to be instantiated and fitted
+        from scratch and then being used in kfold or predictions.
+        Steps are:
+            - runner = SklearnNestedRegressorRunner(grid)
+            - model = runner.new_model()
+            - runner.fit(model, X, y)
+            - runner.predict(model, X)
+        The grid is cloned internally both in 'init' and at each new_model invocation to avoid unintentional fitting or modification
+        of the model made externally.
+        :param grid: the grid search to be used as a template
+        """
+        self.base_grid = clone(grid)
 
-    def new_model(self):
+    def unfitted_model(self) -> GridSearchCV:
+        """
+        Return a cloned unfitted GridSearchCV model
+        :return: GridSearchCV
+        """
         return clone(self.base_grid)
 
-    def fit(self, gs, X_tr, y_tr, inner_params:dict=None):
+    def fitted_model(self, X_tr: DataFrame, y_tr: ndarray, inner_params:dict | None=None) -> GridSearchCV:
+        """
+        Fit a given GridSearchCV model with a X and y data
+        :param X_tr: the training data
+        :param y_tr: the training labels
+        :param inner_params: an utility dictionary for passing parameters during fit phase
+        :return: GridSearchCV
+        """
+        gs = self.unfitted_model()
         gs.fit(X_tr, y_tr)
 
-        if inner_params:
-            silence_output = inner_params.get("silence_output", False)
-        else:
-            silence_output = False
-
-        #if "model_type" in inner_params: self._model_type = inner_params["model_type"]
+        inner_params = inner_params or {}
+        silence_output = inner_params.get("silence_output", False)
 
         if not silence_output:
             grid_introspection(gs)
+
         return gs
 
-    def predict(self, model, X):
+
+    def predict(self, model: GridSearchCV, X: DataFrame) -> ndarray:
         """
         For a regression task we return the logits, or the output of the model
         :param model: the model
@@ -587,27 +609,56 @@ class SklearnNestedRegressorRunner:
         """
         return model.predict(X)
 
-    def model_type(self):
-        return self._model_type
-
 
 class SklearnRegressorRunner:
-    def __init__(self, base_estimator):
-        self.base_estimator = base_estimator
-        self._model_type = None
+    """
+    To be used in non-nested CV
+    """
 
-    def new_model(self):
-        return clone(self.base_estimator)
+    def __init__(self, grid:GridSearchCV):
+        """
+        Utility class for wrapping a best estimator that needs to be instantiated and fitted
+        from scratch and then being used in predictions.
+        The grid is used to derive the estimator which is cloned first in 'init' and at each new_model invocation to avoid fitting or modification
+        of the model made externally.
+        Steps are:
+            - runner = SklearnRegressorRunner(grid)
+            - model = runner.new_model()
+            - runner.fit(model, X, y)
+            - runner.predict(model, X)
+        :param grid: a fitted GridSearchCV object. Its best_estimator_ is cloned
+                 and used as the fixed model template for non-nested CV.
+        """
+        self._base_estimator = clone(grid.best_estimator_)
 
-    def fit(self, model, X_tr, y_tr, inner_params:dict=None):
+    def unfitted_model(self) -> BaseEstimator:
+        """
+        Return a cloned unfitted estimator
+        :return: unfitted estimator
+        """
+        return cast(BaseEstimator, clone(self._base_estimator))
+
+    def fitted_model(self, X_tr: DataFrame, y_tr: ndarray, inner_params:dict=None) -> BaseEstimator:
+        """
+        Fit an estimator with a feature and a target. The runner invokes unfitted_model internally
+        :param X_tr: the training features
+        :param y_tr: the training targets
+        :param inner_params: an eventual dictionary to be used for tuning the fitting phase
+        :return: a fitted estimator
+        """
+
+        model = self.unfitted_model()
         model.fit(X_tr, y_tr)
         return model
 
-    def predict(self, model, X):
+    def predict(self, model:BaseEstimator, X: DataFrame) -> ndarray:
+        """
+        Predict using the fitted estimator
+        :param model: the fitted estimator
+        :param X: the features
+        :return: the predictions
+        """
         return model.predict(X)
-
-    def model_type(self):
-        return self._model_type
 
 
 def extract_best_pipeline_metrics_from_grid(gs, step_name:str="model"):
@@ -654,12 +705,21 @@ def kfold_losses(y_true: ndarray,y_pred:ndarray, loss_functions:dict) -> dict:
 
 
 def kfold(runner, X, y, folder_strategy, metrics: dict) -> FoldResults:
+    """
+    Run a kfold cross validation based on passed parameters.
+    :param runner: the regressor runner
+    :param X: the training features
+    :param y: the training targets
+    :param folder_strategy: the CV folder strategy
+    :param metrics: the metrics to calculate
+    :return: a FoldResults object
+    """
 
     Xn = X.to_numpy() if hasattr(X, "to_numpy") else np.asarray(X)
     yn = y.to_numpy() if hasattr(y, "to_numpy") else np.asarray(y)
 
     loss_dict = metrics
-    metrics_key = set(metrics.keys())
+    metrics_key = list(set(metrics.keys()))
 
     # loop folds
     fold_results = FoldResults()
@@ -671,17 +731,14 @@ def kfold(runner, X, y, folder_strategy, metrics: dict) -> FoldResults:
         print(f"  ")
         print(f"Perform fold: {fold_nr}, train size: {len(y_tr)}, val size: {len(vl_idx)}")
 
-        unfitted_model = runner.new_model()
-        model = runner.fit(unfitted_model, X_tr, y_tr)
+        model = runner.fitted_model(X_tr, y_tr)
 
         y_pred_tr = runner.predict(model, X_tr)
         y_pred_vl = runner.predict(model, X_vl)
 
-        tr_losses = kfold_losses(y_tr, y_pred_tr, loss_dict)
-        vl_losses = kfold_losses(y_vl, y_pred_vl, loss_dict)
         all_losses = {
-            'tr': tr_losses,
-            'vl': vl_losses,
+            'tr': kfold_losses(y_tr, y_pred_tr, loss_dict),
+            'vl': kfold_losses(y_vl, y_pred_vl, loss_dict),
         }
 
         # Print fold summary
@@ -689,7 +746,7 @@ def kfold(runner, X, y, folder_strategy, metrics: dict) -> FoldResults:
         print(f"Fold summary")
         print("-" * 80)
         for key, value in all_losses['vl'].items():
-            print(f"{f'Validation {key}':<20} | {value:.4f}")
+            print(f"{f'Validation {key.upper()}':<20} | {value:.4f}")
         print(f"{'Train':<20} | samples: {len(y_tr)}")
         print(f"{'Validation':<20} | samples: {len(y_vl)}")
 
@@ -707,122 +764,74 @@ def kfold(runner, X, y, folder_strategy, metrics: dict) -> FoldResults:
     return fold_results
 
 
-def mse(y_true, y_pred):
+def mse(y_true, y_pred) -> float:
+    """
+    Implements mean squared error
+    :param y_true: the true labels
+    :param y_pred: the predicted labels
+    :return: the mean squared error
+    """
     return mean_squared_error(y_true, y_pred)
 
 
-def rmse(y_true, y_pred):
+def rmse(y_true, y_pred) -> float:
+    """
+    Implements root mean squared error
+    :param y_true: the true labels
+    :param y_pred: the predicted labels
+    :return: the root mean squared error
+    """
     return np.sqrt(mean_squared_error(y_true, y_pred))
 
 
-def mae(y_true, y_pred):
+def mae(y_true, y_pred) -> float:
+    """
+    Implements mean absolute error
+    :param y_true: the true labels
+    :param y_pred: the predicted labels
+    :return: the mean absolute error
+    """
     return mean_absolute_error(y_true, y_pred)
 
 
-def r2(y_true, y_pred):
+def r2_mee(y_true, y_pred) -> float:
+    """
+    MEE-based relative score:
+    1 = perfect
+    0 = equal to mean baseline
+    < 0 = worse than baseline
+    """
+    y_true = np.asarray(y_true)
+    y_pred = np.asarray(y_pred)
+
+    baseline_pred = np.tile(np.mean(y_true, axis=0), (len(y_true), 1))
+
+    mee_model = mee(y_true, y_pred)
+    mee_baseline = mee(y_true, baseline_pred)
+
+    return 1.0 - (mee_model / mee_baseline)
+
+
+def r2(y_true, y_pred) -> float:
+    """
+    Implements R squared
+    :param y_true: the true labels
+    :param y_pred: the predicted labels
+    :return: the R squared
+    """
     return r2_score(y_true, y_pred)
 
 
-class Metrics:
-
-    def __init__(self, y_true, y_pred):
-        self._mse = mse(y_true, y_pred)
-        self._rmse = np.sqrt(self._mse)
-        self._mae = mae(y_true, y_pred)
-        self._mee = mee(y_true, y_pred)
-        self._r2 = r2(y_true, y_pred)
-
-    @property
-    def mse(self):
-        return self._mse
-
-    @property
-    def rmse(self):
-        return self._rmse
-
-    @property
-    def mae(self):
-        return self._mae
-
-    @property
-    def mee(self):
-        return self._mee
-
-    @property
-    def r2(self):
-        return self._r2
-
-
-class MetricsPair:
-
-    def __init__(self, y_tr_true, y_tr_pred, y_vl_true, y_vl_pred):
-
-        tr_metrics = Metrics(y_tr_true, y_tr_pred)
-        vl_metrics = Metrics(y_vl_true, y_vl_pred)
-        self._tr_mse = tr_metrics.mse
-        self._tr_rmse = tr_metrics.rmse
-        self._vl_mse = vl_metrics.mse
-        self._vl_rmse = vl_metrics.rmse
-        self._tr_mae = tr_metrics.mae
-        self._vl_mae = vl_metrics.mae
-        self._tr_mee = tr_metrics.mee
-        self._vl_mee = vl_metrics.mee
-        self._tr_r2 = tr_metrics.r2
-        self._vl_r2 = tr_metrics.r2
-
-    @property
-    def tr_mse(self):
-        return self._tr_mse
-
-    @property
-    def tr_rmse(self):
-        return self._tr_rmse
-
-    @property
-    def vl_mse(self):
-        return self._vl_mse
-
-    @property
-    def vl_rmse(self):
-        return self._vl_rmse
-
-    @property
-    def tr_mae(self):
-        return self._tr_mae
-
-    @property
-    def vl_mae(self):
-        return self._vl_mae
-
-    @property
-    def tr_mee(self):
-        return self._tr_mee
-
-    @property
-    def vl_mee(self):
-        return self._vl_mee
-
-
-def kfold_regression_table(fold_results: FoldResults, use: str="mee"):
+def kfold_summary(fold_results: FoldResults, use: str= "mee") -> DataFrame:
     """
-    Build a K-Fold summary table for regression.
-
-    Parameters
-    ----------
-    kfold_results : list[dict]
+    Build a K-Fold summary table for a specific metric.
+    :param fold_results: list[dict]
         Output histories from training (one per fold).
-    use : {"best", "last"}
-        Whether to use best or last validation loss.
-    derive_rmse : bool
-        If True, derive RMSE from MSE (sqrt).
-
-    Returns
-    -------
-    pandas.DataFrame
-        Table with per-fold metrics + mean/std.
+    :param use: metric to extract from fold results such as "mee", "rmse, etc..
+    :return: pandas.DataFrame
+        Table with per-fold metrics + mean/std for TR, VL and gap TR - VL
     """
 
-    rows = []
     folds = []
     trs = []
     vls = []
@@ -832,17 +841,14 @@ def kfold_regression_table(fold_results: FoldResults, use: str="mee"):
 
         tr_value = getattr(fold_result,f'fold_tr_{use}')
         vl_value = getattr(fold_result,f'fold_vl_{use}')
-
+        # rel_gap = round((abs(gap) / tr_value) * 100,2)
         gap = vl_value - tr_value
-        rel_gap = round((abs(gap) / tr_value) * 100,2)
 
-        # row = {
-        #     "Fold": i,
-        #     f'TR_{use.upper()}': tr_value,
-        #     f'VL_{use.upper()}': vl_value,
-        #     "Gap(TR-VL)": vl_value - tr_value,
-        #     "Rel Gap(TR-VL)%": rel_gap,
-        # }
+        eps = 1e-12
+        if abs(tr_value) < eps:
+            rel_gap = None
+        else:
+            rel_gap = round((abs(gap) / abs(tr_value)) * 100, 2)
 
         folds.append(i)
         trs.append(tr_value)
@@ -850,31 +856,32 @@ def kfold_regression_table(fold_results: FoldResults, use: str="mee"):
         gaps.append(gap)
         gapsp.append(rel_gap)
 
-        #rows.append(row)
-
-    #df = pd.DataFrame(rows).set_index("Fold")
     df = pd.DataFrame({
         "Fold": folds,
         "TR": trs,
         "VL": vls,
-        "Gap(TR-VL)": gaps,
-        "Rel Gap(TR-VL)%": gapsp
+        "|TR-VL|": gaps,
     }).set_index("Fold")
 
     # Add mean and std rows
-    mean_row = df.mean()
-    std_row = df.std()
-
-    df.loc["MEAN"] = mean_row
-    df.loc["STD"] = std_row
-
-    df["Rel Gap(TR-VL)%"] = [f"{x:.2f}%" for x in df["Rel Gap(TR-VL)%"]]
-    #print(df)
+    df.loc["MEAN"] = df.mean()
+    df.loc["STD"] = df.std()
+    #df["Rel Gap(TR-VL)%"] = [f"{x:.2f}%" for x in df["Rel Gap(TR-VL)%"]]
 
     return df
 
 
 def assess_sklearn_cv_robustness(cv, model, X, y, scoring="accuracy", seeds:list=[10, 20, 30, 40, 50]):
+    """
+    Show variability of sklearn scoring by running cross_val_score with varable seed
+    :param cv: cross validation object
+    :param model: the model
+    :param X: training data
+    :param y: training labels
+    :param scoring: metric to be used
+    :param seeds: list of seeds to try
+    :return:
+    """
 
     params = cv.__dict__.copy()
     for seed in seeds:
@@ -890,13 +897,12 @@ def assess_sklearn_cv_robustness(cv, model, X, y, scoring="accuracy", seeds:list
         print('seed: {} - mean {:.3f} ± {:.3f}'.format(seed, scores.mean(), scores.std()))
 
 
-def apply_score_correction(scoring, values:tuple, neg_score_list:tuple=(MEE, MAE, MSE, RMSE), pos_score_list:list[str]=None) -> tuple:
+def apply_score_correction(scoring, values:tuple, neg_score_list:tuple=(MEE, MAE, MSE, RMSE)) -> tuple:
     """
     Apply score correction in case of scoring starting with neg_ or if the scorer has a sign.
     :param scoring: the scorer identifier
     :param values: the list of float to correct
     :param neg_score_list: the list of scores to be recognized as negative
-    :param pos_score_list: the list of scores to be recognized as positive
     :return: a list of floats
     """
 
@@ -912,9 +918,9 @@ def apply_score_correction(scoring, values:tuple, neg_score_list:tuple=(MEE, MAE
     return values
 
 
-def plot_learning_curve(model, X, y, cv, ax=None, scoring: str = "accuracy"):
+def plot_learning_curve(model, X, y, cv, ax=None, scoring="accuracy", title:str="Learning curve"):
     """
-    Plot a learning curve for a given model (classifier or regressor).
+    Plot a learning curve for a given model.
     If scoring is a neg_* loss, the curve is plotted as the corresponding positive loss.
     """
 
@@ -925,54 +931,70 @@ def plot_learning_curve(model, X, y, cv, ax=None, scoring: str = "accuracy"):
         X, y,
         cv=cv,
         scoring=scoring,
-        train_sizes = np.linspace(0.2, 1.0, 15),
+        train_sizes=np.linspace(0.2, 1.0, 25),   # più punti
         shuffle=True,
-        random_state=random_state
+        random_state=random_state,
+        n_jobs=-1
     )
 
-    train_mean, val_mean = apply_score_correction(scoring,(train_scores.mean(axis=1), val_scores.mean(axis=1)))
+    train_mean, val_mean = apply_score_correction(
+        scoring,
+        (train_scores.mean(axis=1), val_scores.mean(axis=1))
+    )
 
-    # Decide label + possible sign flip
+    train_std, val_std = apply_score_correction(
+        scoring,
+        (train_scores.std(axis=1), val_scores.std(axis=1))
+    )
+
     y_label = "Score"
     train_label = "Training score"
     val_label = "CV score"
-    title_metric = scoring
 
     if isinstance(scoring, str) and scoring.startswith("neg_"):
         if scoring == "neg_mean_absolute_error":
             y_label = "MAE"
-            title_metric = "MAE"
         elif scoring == "neg_mean_squared_error":
             y_label = "MSE"
-            title_metric = "MSE"
         elif scoring == "neg_root_mean_squared_error":
             y_label = "RMSE"
-            title_metric = "RMSE"
         else:
             y_label = scoring.replace("neg_", "").replace("_", " ").upper()
-            title_metric = y_label
 
         train_label = f"Training {y_label}"
         val_label = f"CV {y_label}"
-    elif hasattr(scoring,"_sign"):
+
+    elif hasattr(scoring, "_sign"):
         y_label = "MEE"
-        title_metric = "MEE"
+
     elif scoring == "accuracy":
         y_label = "Accuracy"
         train_label = "Training accuracy"
         val_label = "CV accuracy"
-        title_metric = "Accuracy"
 
-    # plot
     if ax is None:
-        _, ax = plt.subplots()
+        _, ax = plt.subplots(figsize=(8, 5))
 
-    ax.plot(train_sizes_abs, train_mean, label=train_label)
-    ax.plot(train_sizes_abs, val_mean, label=val_label)
+    ax.plot(train_sizes_abs, train_mean, marker="o", markersize=0,label=train_label)
+    ax.plot(train_sizes_abs, val_mean, marker="o", markersize=0, label=val_label)
+
+    # bande di variabilità
+    ax.fill_between(
+        train_sizes_abs,
+        train_mean - train_std,
+        train_mean + train_std,
+        alpha=0.15
+    )
+    ax.fill_between(
+        train_sizes_abs,
+        val_mean - val_std,
+        val_mean + val_std,
+        alpha=0.15
+    )
 
     ax.set_xlabel("Training set size")
     ax.set_ylabel(y_label)
-    ax.set_title(f"Learning curve")
+    ax.set_title(title)
     ax.legend()
     ax.grid(True)
 
@@ -1000,7 +1022,7 @@ def generate_bootstrap_samples_from_dataset(X:pd.DataFrame, y:np.ndarray, n_samp
     return samples
 
 
-def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.ndarray, samples: list[tuple[pd.DataFrame, np.ndarray, np.ndarray]], metrics_fn, bootstrap_params:dict=None) -> list[Metrics]:
+def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.ndarray, samples: list[tuple[pd.DataFrame, np.ndarray, np.ndarray]], metrics_fn, bootstrap_params:dict=None) -> list:
     """
     Analyze bootstrap variance
     :param model: the model
@@ -1011,8 +1033,6 @@ def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.ndarray, samples: 
     """
 
     scores = []
-    #score = dict()
-    scores2 = []
     n = len(X)
     for sample in samples:
 
@@ -1028,8 +1048,7 @@ def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.ndarray, samples: 
         y_oob = y[oob_idx]
 
         # fit model on bootstrap data
-        cloned_model = runner.new_model()
-        fitted_model = runner.fit(cloned_model, X_boot, y_boot, bootstrap_params)
+        fitted_model = runner.fitted_model(X_boot, y_boot, bootstrap_params)
         #idx = 2 if fitted_model.model_type=="classification" else 0
         y_pred = runner.predict(fitted_model, X_oob)
 
@@ -1064,33 +1083,10 @@ def aggregate_scores(scores:dict):
         perc.append((std/mean)*100)
 
     return pd.DataFrame({
-        "metric": list(header),
-        "means": means,
-        "stds": stds,
-        "perc %": perc
-    }).round(2)
-
-def aggregate_scores_old(scores:list[Metrics]) -> pd.DataFrame:
-    """
-    Build a dataframe from a list of metrics
-    :param scores: an array of Metrics
-    :return: a dataframe with all results
-    """
-
-    mee_mean, mee_std= np.mean([m.mee for m in scores]), np.std([m.mee for m in scores])
-    mse_mean, mse_std = np.mean([m.mse for m in scores]), np.std([m.mse for m in scores])
-    rmse_mean, rmse_std = np.mean([m.rmse for m in scores]), np.std([m.rmse for m in scores])
-    mae_mean, mae_std = np.mean([m.mae for m in scores]), np.std([m.mae for m in scores])
-    r2_mean, r2_std = np.mean([m.r2 for m in scores]), np.std([m.r2 for m in scores])
-
-
-    return pd.DataFrame({
-        "metric": ["mee", "mse", "rmse", "mae", "r2"],
-        "mean": [mee_mean,mse_mean,rmse_mean,mae_mean,r2_mean],
-        "std": [mee_std,mse_std,rmse_std,mae_std,r2_std],
-        "percentage": np.round(np.array([
-            mee_std/mee_mean,mse_std/mse_mean,rmse_std/rmse_mean,mae_std/mae_mean,r2_std/r2_mean
-        ])*100,2)
+        "Metric": [m.upper() for m in list(header)],
+        "Mean": means,
+        "Std": stds,
+        "%": perc
     }).round(2)
 
 
@@ -1115,4 +1111,39 @@ def plot_bootstrap_distribution(results, title:str="Bootstrap Distribution"):
     plt.legend()
 
     plt.show()
+
+
+class CustomRBFKernel:
+    def __init__(self, gamma=0.1):
+        self._gamma = gamma
+
+    # def __call__(self, X, Y):
+    #     X = np.asarray(X)
+    #     Y = np.asarray(Y)
+    #
+    #     X_sq = np.sum(X ** 2, axis=1).reshape(-1, 1)
+    #     Y_sq = np.sum(Y ** 2, axis=1).reshape(1, -1)
+    #     sq_dist = X_sq + Y_sq - 2 * X @ Y.T
+    #
+    #     return np.exp(-self.gamma * sq_dist)
+
+    def __call__(self, X, Y, alpha=0.5, beta=1.0):
+        X = np.asarray(X)
+        Y = np.asarray(Y)
+
+        linear_part = X @ Y.T
+        X_sq = np.sum(X ** 2, axis=1).reshape(-1, 1)
+        Y_sq = np.sum(Y ** 2, axis=1).reshape(1, -1)
+
+        sq_dist = X_sq + Y_sq - 2 * X @ Y.T
+        rbf_part = np.exp(-self._gamma * sq_dist)
+        return alpha * linear_part + beta * rbf_part
+
+    def get_params(self, deep=True):
+        return {"gamma": self._gamma}
+
+    def set_params(self, **params):
+        for key, value in params.items():
+            setattr(self, key, value)
+        return self
 

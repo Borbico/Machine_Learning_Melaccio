@@ -13,7 +13,7 @@ from sklearn.dummy import DummyRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer, r2_score
 from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, KFold, GridSearchCV
 from sklearn.model_selection import train_test_split
-from sympy.physics.control import Series
+from pandas import Series
 
 RANDOM_STATE = 42
 SEED = 1

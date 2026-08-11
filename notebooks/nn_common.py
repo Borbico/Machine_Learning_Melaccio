@@ -404,9 +404,17 @@ class FullTrainingStrategy(SplitStrategy):
     """
     The class defines the full training strategy.
     """
-    def __init__(self, train_set: FeatureTargetSet):
+    def __init__(self, train_set: FeatureTargetSet, scaler: TransformerMixin=None):
         super().__init__()
-        self._X_tr, self._y_tr = _to_tensors(train_set.X, train_set.y)  # TR sets
+        X_tr = train_set.X
+        y_tr = train_set.y
+
+        # applying scaling if needed
+        if scaler is not None:
+            scaler.fit(X_tr)
+            X_tr = scaler.transform(X_tr)
+
+        self._X_tr, self._y_tr = _to_tensors(X_tr, y_tr)
 
 
 class HoldOutStrategy(SplitStrategy):
@@ -455,7 +463,7 @@ class ManualSplitStrategy(SplitStrategy):
 
 def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
           epochs:int, additional_metrics:dict={}, early_stopping_strategy:EarlyStoppingStrategy = None,
-          scheduler_template= None, silence_output:bool=False) -> TrainResults:
+          scheduler_template= None, train_control:float=None, silence_output:bool=False) -> TrainResults:
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
     while monitoring performance on a validation set to track generalization and detect overfitting.
@@ -478,6 +486,7 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     :param additional_metrics: the custom metric to retrieve from training if any.
     :param early_stopping_strategy: the early stopping strategy
     :param scheduler_template: learning rate scheduler
+    :param train_control: used for full retraining, if passed the train will be interrupted when train error reach this value
     :param silence_output: True/False if we want to display the train params
     :return: TrainResults
     """
@@ -492,7 +501,7 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
         epochs_tr["acc"]=[]
         epochs_vl["acc"]=[]
 
-    epochs_grad_norm, epoch_grad_norms = [], []
+    epochs_grad_norm = []
 
     # adding real loss function to
     epochs_loss_dict = {
@@ -527,6 +536,8 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
 
     # Performing epochs loop
     for epoch in range(epochs):
+
+        epoch_grad_norms = []
 
         # Set model in training mode
         model.train(True)
@@ -564,7 +575,6 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
 
         # Gathering results from training
         for losses, epochs_record in [(tr_losses, epochs_tr), (vl_losses, epochs_vl)]:
-        #for losses, epochs_record in [(tr_losses, epochs_tr)]:
             for key, value in losses.items():
                 if key not in epochs_record: epochs_record[key] = []
                 epochs_record[key].append(value)
@@ -581,6 +591,13 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
         # metric to watch
         current_epoch_vl = epochs_vl[metric_to_watch][-1] if has_validation else None
 
+        # Training control to be used with full retraining
+        current_epoch_tr = epochs_tr[cr.LOSS][-1] if train_control else None
+        if current_epoch_tr is not None and current_epoch_tr <= train_control:
+            print(f"Train control at epoch {epoch+1} ({current_epoch_tr} <= {train_control})")
+            break
+
+
         # Applying learning rate decay if present
         if scheduler is not None:
             if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
@@ -589,7 +606,7 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
                         "ReduceLROnPlateau is configured to monitor validation performance, but no validation set is available"
                     )
 
-                # only ReduceLROnPlateau needs a step based
+                # ReduceLROnPlateau needs a step based
                 # on current validation
                 scheduler.step(current_epoch_vl)
             else:
@@ -618,7 +635,7 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     # -----------------------------
 
     if not silence_output:
-        _print_train_summary(model, dl_tr, dl_vl, optimizer_template, loss_function, scheduler_template, batch_size, epochs, early_stopping_strategy, best_epoch)
+        _print_train_summary(model, dl_tr, dl_vl, optimizer_template, loss_function, scheduler_template, batch_size, epochs, early_stopping_strategy, best_epoch, train_control)
 
     train_results = TrainResults()
 
@@ -882,25 +899,25 @@ def compute_bce_from_numpy(y_pred: np.ndarray, y_true: np.ndarray) -> float:
     return (nn.BCELoss(reduction="mean")(y_pred, (y_true >= 0).float())).item()
 
 
-def plot_epoch_mee(epochs_tr_mee, epochs_vl_mee):
-
+def plot_epoch_mee(epochs_tr_mee, epochs_vl_mee, best_epoch:int=None, title:str = None):
+    title="Training vs Validation Loss" if title is None else title
     plot_epochs_curves(
         [
             {"key": "TR MEE", "value": epochs_tr_mee},
             {"key": "VL MEE", "value": epochs_vl_mee}
         ],
-        x_label="Epochs", y_label="MEE", title="Training vs Validation Loss"
+        x_label="Epochs", y_label="MEE", title=title, best_epoch=best_epoch
     )
 
 
-def plot_epoch_mse(epochs_tr, epochs_vl, best_epoch:int = None):
+def plot_epoch_mse(epochs_tr, epochs_vl, best_epoch:int = None, title:str = None):
 
     plot_epochs_curves(
         [
             {"key": "TR MSE", "value": epochs_tr},
             {"key": "VL MSE", "value": epochs_vl},
         ],
-        x_label="Epochs", y_label="MSE", title="Training vs Validation Loss", best_epoch=best_epoch
+        x_label="Epochs", y_label="MSE", title=title, best_epoch=best_epoch
     )
 
 
@@ -982,7 +999,7 @@ def plot_gradient_norm_bars(grad_norms, step=10):
     plt.show()
 
 
-def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer_template,loss_function,scheduler_template, batch_size, epochs,early_stopping_strategy, best_epoch:int=None):
+def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer_template,loss_function,scheduler_template, batch_size, epochs,early_stopping_strategy, best_epoch:int=None, train_control:float=False):
     """
     Display a nice and formatted table containing the train hyperparameters
     :param model: the model
@@ -995,6 +1012,7 @@ def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer
     :param epochs: the number of epochs
     :param early_stopping_strategy: the early stopping strategy
     :param best_epoch: the best epoch if early stopping strategy is enabled
+    :param train_control: the training control
     :return: None
     """
 
@@ -1014,6 +1032,8 @@ def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer
         print(f"Validation      | samples: {len(validation_dataloader.dataset)}")
     else:
         print(f"Validation      | samples: None")
+    if train_control is not None:
+        print(f"Train control   | limit: {train_control}")
     print(f"Batch type      | {batch_size_desc}")
     print(f"Loss function   | {loss_function}")
     print(f"Optimizer       | class: {optimizer_template.func} , params: {optimizer_template.keywords}")

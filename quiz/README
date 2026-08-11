@@ -1,8 +1,13 @@
+# Per il setup dell'ambiente
 python3 -m venv quiz
 source quiz/bin/activate
 pip install streamlit pandas
 
+# Per far girare il programma
+# lanciare il comando 'source' per attivare l'ambiente
+# se non è già attivo
+source quiz/bin/activate
 streamlit run quiz_app.py
 
-# per uscire
+# Per terminare
 deactivate

@@ -41,7 +41,7 @@ from cross_common import (
     EPOCHS_VL_MAE_MEAN,EPOCHS_VL_MAE_STD,
     EPOCHS_TR_MEE_MEAN,EPOCHS_TR_MEE_STD,
     EPOCHS_VL_MEE_MEAN,EPOCHS_VL_MEE_STD)
-
+from notebooks.cross_common import FOLD_BEST_EPOCH
 
 # Default train params
 DEFAULT_TRAIN_EPOCHS = 500
@@ -219,7 +219,7 @@ def _to_tensors(X: ndarray, y: ndarray) -> (ndarray, ndarray):
     return torch.from_numpy(X), torch.from_numpy(y)
 
 
-def _make_loaders(X_tr: torch.Tensor, y_tr: torch.Tensor, X_vl: torch.Tensor, y_vl: torch.Tensor, batch_size: int):
+def _make_loaders(X_tr: torch.Tensor, y_tr: torch.Tensor, X_vl: torch.Tensor | None, y_vl: torch.Tensor | None, batch_size: int):
     """
     Implements a batch stochastic gradient descent, handles data shuffling across epochs,
     and defines the notion of an epoch in the training procedure.
@@ -227,8 +227,8 @@ def _make_loaders(X_tr: torch.Tensor, y_tr: torch.Tensor, X_vl: torch.Tensor, y_
 	On the opposite the validation is instead kept unshuffled.
     :param X_tr:
     :param y_tr:
-    :param X_vl:
-    :param y_vl:
+    :param X_vl: may be None in case of FullTrainStrategy
+    :param y_vl: may be None in case of FullTrainStrategy
     :param batch_size:
     :return:
     """
@@ -238,10 +238,13 @@ def _make_loaders(X_tr: torch.Tensor, y_tr: torch.Tensor, X_vl: torch.Tensor, y_
     # allowing to retrieve a sample with a single index
     # i.e. dataset[i]  →  (X[i], y[i])
     ds_tr = TensorDataset(X_tr, y_tr)
-    ds_vl = TensorDataset(X_vl, y_vl)
-
     dl_tr = DataLoader(ds_tr, batch_size=batch_size, shuffle=True) # <- shuffle
-    dl_vl = DataLoader(ds_vl, batch_size=batch_size, shuffle=False) # <- no shuffle
+
+    # Full training strategy does not require a validation set
+    dl_vl = None
+    if X_vl is not None and y_vl is not None:
+        ds_vl = TensorDataset(X_vl, y_vl)
+        dl_vl = DataLoader(ds_vl, batch_size=batch_size, shuffle=False)  # <- no shuffle
 
     return dl_tr, dl_vl
 
@@ -397,6 +400,15 @@ class SplitStrategy:
         return (self._X_vl, self._y_vl)
 
 
+class FullTrainingStrategy(SplitStrategy):
+    """
+    The class defines the full training strategy.
+    """
+    def __init__(self, train_set: FeatureTargetSet):
+        super().__init__()
+        self._X_tr, self._y_tr = _to_tensors(train_set.X, train_set.y)  # TR sets
+
+
 class HoldOutStrategy(SplitStrategy):
     """
     The classic split strategy to be applied to a single set, according to the ratio and seed
@@ -447,6 +459,15 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
     while monitoring performance on a validation set to track generalization and detect overfitting.
+    The function will return a TrainResults containing at least the loss function used for training and the accuracy
+    in case of a classification task.
+    The additional metrics entry must be in the form of "id":(function, reducer):
+        additional_metrics_dict = {
+            "mse": (cr.mse,min),
+            "mae": (cr.mae,min),
+            "rmse": (cr.rmse,min)
+        }
+
     :param scheduler_template: The learning decay strategy
     :param model: the model to be trained
     :param split_strategy: the split strategy (i.e. SplitByRatioStrategy, ManualSplitStrategy, etc.)
@@ -454,7 +475,7 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     :param loss_function: the loss algorithm (i.e. BCEWithLogitsLoss(), MSELoss(), etc.)
     :param batch_size: "batch", "online" or the mini-batch size for training
     :param epochs: the number of epochs for training
-    :param additional_metrics: the custom metric to retrieve from training if any
+    :param additional_metrics: the custom metric to retrieve from training if any.
     :param early_stopping_strategy: the early stopping strategy
     :param scheduler_template: learning rate scheduler
     :param silence_output: True/False if we want to display the train params
@@ -481,8 +502,9 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
 
     best_vl = float("inf")
     best_state = None # used only if early stopping is enabled
+    best_epoch = -99 # used only if early stopping is enabled
     patience_on_epochs = 0 # used only if early stopping is enabled
-    metric_to_watch = early_stopping_strategy.metric if early_stopping_strategy is not None else None
+    metric_to_watch = early_stopping_strategy.metric if early_stopping_strategy is not None else cr.LOSS
 
     # initialize optimizer and scheduler
     optimizer = optimizer_template(model.parameters())
@@ -490,6 +512,10 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
 
     X_tr, y_tr = split_strategy.train_set
     X_vl, y_vl = split_strategy.validation_set
+    has_validation = (
+            X_vl is not None
+            and y_vl is not None
+    )
 
     # Build DataLoader (or the batch as it is known in ML)
     if batch_size=="batch":
@@ -531,10 +557,14 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
             optimizer.step()
 
         tr_losses = epoch_losses(model, dl_tr, epochs_loss_dict)
-        vl_losses = epoch_losses(model, dl_vl, epochs_loss_dict)
+        if has_validation:
+            vl_losses = epoch_losses(model, dl_vl, epochs_loss_dict)
+        else:
+            vl_losses = {}
 
         # Gathering results from training
         for losses, epochs_record in [(tr_losses, epochs_tr), (vl_losses, epochs_vl)]:
+        #for losses, epochs_record in [(tr_losses, epochs_tr)]:
             for key, value in losses.items():
                 if key not in epochs_record: epochs_record[key] = []
                 epochs_record[key].append(value)
@@ -542,22 +572,35 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
         # added accuracy as special case if needed
         if model.model_type == "classifier":
             epochs_tr[cr.ACC].append(epoch_accuracy(model, dl_tr))
-            epochs_vl[cr.ACC].append(epoch_accuracy(model, dl_vl))
+            if has_validation:
+                epochs_vl[cr.ACC].append(epoch_accuracy(model, dl_vl))
 
         # Gradient mean
         epochs_grad_norm.append(float(np.mean(epoch_grad_norms)) if len(epoch_grad_norms) else 0.0)
 
         # metric to watch
-        current_epoch_vl = epochs_vl[metric_to_watch][-1]
+        current_epoch_vl = epochs_vl[metric_to_watch][-1] if has_validation else None
 
         # Applying learning rate decay if present
-        if scheduler is not None: scheduler.step(current_epoch_vl)
+        if scheduler is not None:
+            if isinstance(scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
+                if current_epoch_vl is None:
+                    raise ValueError(
+                        "ReduceLROnPlateau is configured to monitor validation performance, but no validation set is available"
+                    )
+
+                # only ReduceLROnPlateau needs a step based
+                # on current validation
+                scheduler.step(current_epoch_vl)
+            else:
+                scheduler.step()
 
         # ---- EARLY STOPPING LOGIC ----
         if early_stopping_strategy is not None:
 
             if current_epoch_vl < (best_vl - early_stopping_strategy.min_delta):
                 best_vl = current_epoch_vl
+                best_epoch = epoch + 1
                 patience_on_epochs = 0
                 best_state = copy.deepcopy(model.state_dict())
             else:
@@ -575,7 +618,7 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
     # -----------------------------
 
     if not silence_output:
-        _print_train_summary(model, dl_tr, dl_vl, optimizer_template, loss_function, scheduler_template, batch_size, epochs, early_stopping_strategy)
+        _print_train_summary(model, dl_tr, dl_vl, optimizer_template, loss_function, scheduler_template, batch_size, epochs, early_stopping_strategy, best_epoch)
 
     train_results = TrainResults()
 
@@ -584,6 +627,8 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
             train_results.set_metric(f"epochs_{prefix}_{key}", value)
 
     train_results.set_metric("epochs_grad_norm", epochs_grad_norm)
+    if early_stopping_strategy is not None:
+        train_results.set_metric("best_epoch", best_epoch) # epoch loop is zero based
 
     return train_results
 
@@ -638,6 +683,9 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
                 value = getattr(train_result, key)
                 fr.set_metric(key, value)
 
+        # Holds our best epoch
+        selection_epoch = None
+
         # Using reducer (min, max,...) for computing best metric
         for metric, (_, reducer) in epochs_metric_dict.items():
             tr_key = f"epochs_tr_{metric}"
@@ -649,22 +697,54 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
             if tr_values is None or vl_values is None:
                 continue
 
-            fr.set_metric(f"fold_tr_{metric}", float(reducer(tr_values)))
-            fr.set_metric(f"fold_vl_{metric}", float(reducer(vl_values)))
+            # Find best epoch
+            if reducer is min:
+                best_epoch = int(np.argmin(vl_values))
+            elif reducer is max:
+                best_epoch = int(np.argmax(vl_values))
+            else:
+                raise ValueError(
+                    f"Unsupported reducer for metric '{metric}'"
+                )
+
+            # Set best metric based on best epoch
+            fr.set_metric(f"fold_tr_{metric}", float(tr_values[best_epoch]))
+            fr.set_metric(f"fold_vl_{metric}", float(vl_values[best_epoch]))
+
+            # Preferred best epoch
+            if metric == cr.LOSS:
+                selection_epoch = best_epoch
 
         # Custom accuracy metric if found
         epochs_tr_acc = getattr(train_result,EPOCHS_TR_ACC, None)
         epochs_vl_acc = getattr(train_result, EPOCHS_VL_ACC, None)
         if epochs_tr_acc is not None:
+            if selection_epoch is None: raise ValueError(f"Cannot calculate accuracy, Validation-loss best epoch is missing")
+
             fr.set_metric(EPOCHS_TR_ACC, epochs_tr_acc)
             fr.set_metric(EPOCHS_VL_ACC, epochs_vl_acc)
-            fr.set_metric(FOLD_TR_ACC, float(max(epochs_tr_acc)))
-            fr.set_metric(FOLD_VL_ACC, float(max(epochs_vl_acc)))
+            fr.set_metric(FOLD_TR_ACC, float(epochs_tr_acc[selection_epoch]))
+            fr.set_metric(FOLD_VL_ACC, float(epochs_vl_acc[selection_epoch]))
+
+        # manually set best epochs
+        if hasattr(train_result, "best_epoch"):
+            fr.set_metric(FOLD_BEST_EPOCH,train_result.best_epoch)
 
         # Finally appending...
         fold_results.append(fr)
 
     return fold_results
+
+
+def find_best_median_epochs(fold_histories: cr.FoldResults):
+    """
+    Calculate the median between all ther best kfold epochs
+    :param fold_histories: the FoldResults object
+    :return: the median
+    """
+
+    fold_best_epochs = [fold.fold_best_epoch for fold in fold_histories]
+    return int(np.median(fold_best_epochs))
 
 
 def init_weights(m: nn.Module, method: str, nonlinearity: str = "relu") -> None:
@@ -813,14 +893,14 @@ def plot_epoch_mee(epochs_tr_mee, epochs_vl_mee):
     )
 
 
-def plot_epoch_mse(epochs_tr, epochs_vl):
+def plot_epoch_mse(epochs_tr, epochs_vl, best_epoch:int = None):
 
     plot_epochs_curves(
         [
             {"key": "TR MSE", "value": epochs_tr},
-            {"key": "VL MSE", "value": epochs_vl}
+            {"key": "VL MSE", "value": epochs_vl},
         ],
-        x_label="Epochs", y_label="MSE", title="Training vs Validation Loss"
+        x_label="Epochs", y_label="MSE", title="Training vs Validation Loss", best_epoch=best_epoch
     )
 
 
@@ -902,7 +982,7 @@ def plot_gradient_norm_bars(grad_norms, step=10):
     plt.show()
 
 
-def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer_template,loss_function,scheduler_template, batch_size, epochs,early_stopping_strategy):
+def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer_template,loss_function,scheduler_template, batch_size, epochs,early_stopping_strategy, best_epoch:int=None):
     """
     Display a nice and formatted table containing the train hyperparameters
     :param model: the model
@@ -914,6 +994,7 @@ def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer
     :param batch_size: the mini-batch or batch size
     :param epochs: the number of epochs
     :param early_stopping_strategy: the early stopping strategy
+    :param best_epoch: the best epoch if early stopping strategy is enabled
     :return: None
     """
 
@@ -929,7 +1010,10 @@ def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer
     print("-" * 100)
     print(f"Epochs          | {epochs}")
     print(f"Train           | samples: {len(train_dataloader.dataset)}")
-    print(f"Validation      | samples: {len(validation_dataloader.dataset)}")
+    if validation_dataloader is not None:
+        print(f"Validation      | samples: {len(validation_dataloader.dataset)}")
+    else:
+        print(f"Validation      | samples: None")
     print(f"Batch type      | {batch_size_desc}")
     print(f"Loss function   | {loss_function}")
     print(f"Optimizer       | class: {optimizer_template.func} , params: {optimizer_template.keywords}")
@@ -938,18 +1022,18 @@ def _print_train_summary(model, train_dataloader,validation_dataloader,optimizer
     else:
         print(f"LR Decay        | disabled")
     if early_stopping_strategy is not None:
-        print(f"Early Stopping  | metric: {early_stopping_strategy.metric},  patience: {early_stopping_strategy.patience} , minimum delta: {early_stopping_strategy.min_delta}")
+        print(f"Early Stopping  | best epoch: {best_epoch} metric: {early_stopping_strategy.metric},  patience: {early_stopping_strategy.patience} , minimum delta: {early_stopping_strategy.min_delta}")
     else:
         print(f"Early Stopping  | disabled")
     print("-" * 100)
 
 
-def plot_epochs_curves(plots: list[dict], x_label: str, y_label: str, title:str=None):
+def plot_epochs_curves(plots: list[dict], x_label: str, y_label: str, title:str=None, best_epoch:int=None):
 
     rows = []
 
     for p in plots:
-        for i, v in enumerate(p["value"]):
+        for i, v in enumerate(p["value"], start = 1):
             rows.append({
                 x_label: i,
                 y_label: v,
@@ -961,6 +1045,14 @@ def plot_epochs_curves(plots: list[dict], x_label: str, y_label: str, title:str=
     plt.figure()
     fig, ax = plt.subplots()
     sns.lineplot(data=df, x=x_label, y=y_label, hue="Series")
+
+    # best epoch if present
+    if best_epoch is not None:
+        ax.axvline(x=best_epoch, color="red", linestyle="--", linewidth=0.9,
+            label=f"Best epoch: {best_epoch}"
+        )
+
+    ax.legend(title="Series")
     ax.xaxis.set_major_locator(MaxNLocator(integer=True))
     plt.grid(True, alpha=0.3)
     plt.title(title)

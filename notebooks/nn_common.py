@@ -41,7 +41,7 @@ from cross_common import (
     EPOCHS_VL_MAE_MEAN,EPOCHS_VL_MAE_STD,
     EPOCHS_TR_MEE_MEAN,EPOCHS_TR_MEE_STD,
     EPOCHS_VL_MEE_MEAN,EPOCHS_VL_MEE_STD)
-from notebooks.cross_common import FOLD_BEST_EPOCH
+from cross_common import FOLD_BEST_EPOCH
 
 # Default train params
 DEFAULT_TRAIN_EPOCHS = 500

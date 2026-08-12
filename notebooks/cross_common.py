@@ -1044,14 +1044,26 @@ def bootstrap_out_of_bag_scores(runner, X: pd.DataFrame, y:np.ndarray, samples: 
         selected[idx_boot] = True
         oob_idx = np.where(~selected)[0]
 
+        # rare but it can happens
+        if len(oob_idx) == 0: continue
+
         # dataset OOB
         X_oob = X.iloc[oob_idx]
         y_oob = y[oob_idx]
 
+        scaler_template = bootstrap_params.get("scaler")
+        scaler = clone(scaler_template) if scaler_template is not None else None
+        if scaler is not None:
+            X_boot_scaled = scaler.fit_transform(X_boot)
+            X_oob_scaled = scaler.transform(X_oob)
+        else:
+            X_boot_scaled = X_boot
+            X_oob_scaled = X_oob
+
         # fit model on bootstrap data
-        fitted_model = runner.fitted_model(X_boot, y_boot, bootstrap_params)
+        fitted_model = runner.fitted_model(X_boot_scaled, y_boot, bootstrap_params)
         #idx = 2 if fitted_model.model_type=="classification" else 0
-        y_pred = runner.predict(fitted_model, X_oob)
+        y_pred = runner.predict(fitted_model, X_oob_scaled)
 
         # score
         score = dict()

@@ -127,8 +127,17 @@ class FeatureTargetSet:
     This class is a wrapper for a dataset that is represented with X (the feature), and y (the labels).
     """
 
-    def __init__(self, X: pd.DataFrame, y: ndarray):
-        self._X = X.astype(np.float32).to_numpy()
+    def __init__(self, X: pd.DataFrame|ndarray, y: ndarray):
+        """
+        Initialise the feature target set with X (the feature) and y (the labels).
+        :param X: the data, if x is a dataframe it will be converted to a numpy array
+        :param y: the label
+        """
+        self._X = (
+            X.astype(np.float32).to_numpy()
+            if isinstance(X, pd.DataFrame)
+            else np.asarray(X, dtype=np.float32)
+        )
         self._y = y
         return
 
@@ -594,7 +603,8 @@ def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_fu
         # Training control to be used with full retraining
         current_epoch_tr = epochs_tr[cr.LOSS][-1] if train_control else None
         if current_epoch_tr is not None and current_epoch_tr <= train_control:
-            print(f"Train control at epoch {epoch+1} ({current_epoch_tr} <= {train_control})")
+            if not silence_output:
+                print(f"Train control at epoch {epoch+1} ({current_epoch_tr} <= {train_control})")
             break
 
 
@@ -1174,7 +1184,7 @@ class TorchRegressorRunner:
         """
         return copy.deepcopy(self._model_template)
 
-    def fitted_model(self, X_tr:pd.DataFrame, y_tr:ndarray, bootstrap_params: dict):
+    def fitted_model(self, X_tr:pd.DataFrame|ndarray, y_tr:ndarray, bootstrap_params: dict):
         """
         Return a trained model. It internally invokes the unfitted_model() function
         :param X_tr: the training data
@@ -1506,7 +1516,8 @@ def find_best_architecture_from_trials(study) -> tuple[list[int],float,float]:
         )
     )
     layers = [int(item) for item in the_trial.params["hidden_layers"].split(",")]
-    return layers, the_trial.values[0], the_trial.values[1]
+    activation = the_trial.params["activation"]
+    return layers, activation, the_trial.values[0], the_trial.values[1]
 
 
 def evaluate_architecture(fold_histories: cr.FoldResults, vl_key:str, tr_key:str) -> tuple[float, float]:

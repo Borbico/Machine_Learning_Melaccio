@@ -471,8 +471,12 @@ class ManualSplitStrategy(SplitStrategy):
 
 
 def train(model: MLP, split_strategy: SplitStrategy, optimizer_template, loss_function, batch_size: int | str,
-          epochs:int, additional_metrics:dict={}, early_stopping_strategy:EarlyStoppingStrategy = None,
-          scheduler_template= None, train_control:float=None, silence_output:bool=False) -> TrainResults:
+          epochs:int, additional_metrics:dict=None, early_stopping_strategy:EarlyStoppingStrategy = None,
+          scheduler_template= None, train_control:float=None, silence_output:bool=False, metrics:dict=None) -> TrainResults:
+    if additional_metrics is None:
+        additional_metrics = {}
+    if metrics is not None:
+        additional_metrics = {**additional_metrics, **metrics}
     """
     This function trains the neural network for a fixed number of epochs using parametrized batch gradient descent,
     while monitoring performance on a validation set to track generalization and detect overfitting.

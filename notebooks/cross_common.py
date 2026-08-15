@@ -583,7 +583,7 @@ class SklearnNestedRegressorRunner:
 
     def fitted_model(self, X_tr: DataFrame, y_tr: ndarray, inner_params:dict | None=None) -> GridSearchCV:
         """
-        Fit a given GridSearchCV model with a X and y data
+        The model implements the nested CV by entirely cloning a given GridSearchCV and performing a fit on it with a X and y data
         :param X_tr: the training data
         :param y_tr: the training labels
         :param inner_params: an utility dictionary for passing parameters during fit phase
@@ -616,7 +616,7 @@ class SklearnRegressorRunner:
     To be used in non-nested CV
     """
 
-    def __init__(self, grid:GridSearchCV):
+    def __init__(self, grid:GridSearchCV | BaseEstimator):
         """
         Utility class for wrapping a best estimator that needs to be instantiated and fitted
         from scratch and then being used in predictions.
@@ -630,7 +630,11 @@ class SklearnRegressorRunner:
         :param grid: a fitted GridSearchCV object. Its best_estimator_ is cloned
                  and used as the fixed model template for non-nested CV.
         """
-        self._base_estimator = clone(grid.best_estimator_)
+        # Model-selection notebooks pass an already fitted GridSearchCV, while
+        # consumers such as an ensemble may already have the selected fixed
+        # estimator.  In both cases keep an unfitted clone as template.
+        estimator = grid.best_estimator_ if hasattr(grid, "best_estimator_") else grid
+        self._base_estimator = clone(estimator)
 
     def unfitted_model(self) -> BaseEstimator:
         """
@@ -754,6 +758,10 @@ def kfold(runner, X, y, folder_strategy, metrics: dict) -> FoldResults:
         # Dinamically building a FoldResult
         fr = FoldResult()
         fr.set_metric(FOLD_NR, fold_nr)
+        # Keep the information required to reconstruct strict out-of-fold
+        # predictions. Existing consumers only reading metrics are unaffected.
+        fr.set_metric("vl_indices", np.asarray(vl_idx))
+        fr.set_metric("vl_predictions", np.asarray(y_pred_vl))
         for prefix in ("tr", "vl"):
             for metric in metrics_key:
                 key = f"fold_{prefix}_{metric}"
@@ -1159,4 +1167,3 @@ class CustomRBFKernel:
         for key, value in params.items():
             setattr(self, key, value)
         return self
-

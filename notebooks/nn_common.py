@@ -757,6 +757,22 @@ def kfold(untrained_base_model: MLP, X, y, fold_strategy, inner_train_params: di
         if hasattr(train_result, "best_epoch"):
             fr.set_metric(FOLD_BEST_EPOCH,train_result.best_epoch)
 
+        # Expose validation predictions so ensemble notebooks can reconstruct
+        # OOF arrays while reusing this exact training/scaling implementation.
+        if scaler is not None:
+          X_vl_array = (
+            X_vl.to_numpy(dtype=np.float32)
+            if isinstance(X_vl, pd.DataFrame)
+            else np.asarray(X_vl, dtype=np.float32)
+          )
+          X_vl_for_prediction = scaler.transform(X_vl_array)
+        else:
+          X_vl_for_prediction = X_vl
+          
+        y_pred_vl = fold_model.predict(X_vl_for_prediction)[0]
+        fr.set_metric("vl_indices", np.asarray(vl_idx))
+        fr.set_metric("vl_predictions", y_pred_vl.detach().cpu().numpy())
+
         # Finally appending...
         fold_results.append(fr)
 

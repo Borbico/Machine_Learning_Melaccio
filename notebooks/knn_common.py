@@ -109,6 +109,34 @@ def plot_knn_validation_curve_from_gs(gs, y_label: str="Score", agg:str="max", s
     plt.show()
 
 
+def plot_knn_learning_curve(model, X, y, cv, ax=None, scoring=None, title:str=None):
+    """
+    Wrapper to cr.plot_learning_curve to avoid size error in plotting KNN learning curves.
+    :param model: the model to plot
+    :param X_tr: training data
+    :param y_tr: training labels
+    :param cv: cross-validation generator
+    :return: None
+    """
+
+    selected_k = model.named_steps.model.n_neighbors
+
+    max_train_size = min(
+        len(train_indices)
+        for train_indices, _ in cv.split(X, y)
+    )
+
+    safe_train_sizes = np.unique(
+        np.linspace(
+            selected_k,
+            max_train_size,
+            20,
+            dtype=int
+        )
+    )
+    cr.plot_learning_curve(model, X, y, cv, ax, scoring, title, train_sizes=safe_train_sizes)
+
+
 def plot_knn_learning_curves_grid(model, X, y, cv, scoring, n_cols=2, step_name:str="model"):
     """
     Plot learning curves for multiple KNN models in a grid layout.
@@ -137,8 +165,8 @@ def plot_knn_learning_curves_grid(model, X, y, cv, scoring, n_cols=2, step_name:
         ax = axes[i]
 
         # draw the learning curve on this axis
-        #plot_knn_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax, scoring=scoring)
-        cr.plot_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax, scoring=scoring)
+        plot_knn_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax, scoring=scoring)
+        #cr.plot_learning_curve(model=model, X=X, y=y, cv=cv, ax=ax, scoring=scoring)
 
         # highlight if requested
         if model.named_steps["model"].n_neighbors == kn:

@@ -1,8 +1,10 @@
 import copy
+import random
 from datetime import datetime
 import os
 from typing import Any
 
+import optuna
 import seaborn as sns
 import numpy as np
 import pandas as pd
@@ -51,9 +53,29 @@ DEFAULT_TRAIN_DELTA = 1e-4
 DEFAULT_TRAIN_VAL_RATIO = 0.2
 DEFAULT_TRAIN_SEED = 1
 
+def set_global_seed(seed: int, deterministic: bool = True, warn_only: bool = True) -> None:
+    """
+    Configure Python, NumPy and PyTorch random generators to improve
+    reproducibility across neural-network training runs. Mainly used in Optuna workflow.
+    :param seed: seed assigned to Python, NumPy, PyTorch and CUDA
+    :param deterministic: enable deterministic PyTorch algorithms
+    :param warn_only: warn instead of failing when a deterministic implementation is unavailable
+    """
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
 
-def extract_prediction_from_tensor(y_pred):
-    return y_pred.detach().cpu().numpy().ravel()
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed(seed)
+        torch.cuda.manual_seed_all(seed)
+
+    torch.backends.cudnn.deterministic = deterministic
+    torch.backends.cudnn.benchmark = not deterministic
+
+    torch.use_deterministic_algorithms(
+        deterministic,
+        warn_only=warn_only,
+    )
 
 
 class MLP(nn.Module):
@@ -947,14 +969,14 @@ def plot_epoch_mse(epochs_tr, epochs_vl, best_epoch:int = None, title:str = None
     )
 
 
-def plot_epoch_accuracy(epochs_tr_acc, epochs_vl_acc):
+def plot_epoch_accuracy(epochs_tr_acc, epochs_vl_acc, best_epoch:int=None):
 
     plot_epochs_curves(
         [
             {"key": "TR Accuracy", "value": epochs_tr_acc},
             {"key": "VL Accuracy", "value": epochs_vl_acc}
         ],
-        x_label="Epochs", y_label="Loss", title="Training vs Validation Accuracy"
+        x_label="Epochs", y_label="Accuracy", title="Training vs Validation Accuracy", best_epoch=best_epoch
     )
 
 
@@ -1250,7 +1272,117 @@ def suggest_trial_param(trial, name, space):
     raise ValueError(f"Invalid search space for {name}")
 
 
-def analyze_lr_curve(history, early_epoch=30):
+def analyze_lr_curve(history, early_epoch: int = 30, smoothing_window: int = 5):
+    """
+    Analyze validation-loss dynamics for learning-rate selection.
+    :param history: Can be vl_mee history or vl_mse history etc..
+    :param early_epoch: the epoch in which the curve descend more rapidly
+    :param smoothing_window: the smoothing window
+    :return:
+        - early_gain: relative validation-loss reduction during the
+          initial optimization phase;
+        - oscillation: normalized robust deviation from the local trend;
+        - best_vl_metric: minimum observed validation loss;
+        - best_epoch: epoch corresponding to the minimum validation loss.
+    """
+
+    arr = np.asarray(history, dtype=float)
+
+    # Remove NaN and infinite values
+    arr = arr[np.isfinite(arr)]
+
+    if len(arr) == 0:
+        return {
+            "early_gain": np.nan,
+            "oscillation": np.nan,
+            "best_vl_metric": np.nan,
+            "best_epoch": np.nan,
+        }
+
+    if len(arr) == 1:
+        return {
+            "early_gain": 0.0,
+            "oscillation": 0.0,
+            "best_vl_metric": float(arr[0]),
+            "best_epoch": 1,
+        }
+
+    # The smoothing window must be valid and preferably odd
+    window = min(smoothing_window, len(arr))
+
+    if window % 2 == 0 and window > 1:
+        window -= 1
+
+    smooth = (
+        pd.Series(arr)
+        .rolling(
+            window=window,
+            center=True,
+            min_periods=1,
+        )
+        .mean()
+        .to_numpy()
+    )
+
+    # ------------------------------
+    # Best validation performance
+    # ------------------------------
+    best_idx = int(np.argmin(arr))
+    best_vl_metric = float(arr[best_idx])
+    best_epoch = best_idx + 1
+
+    # ------------------------------
+    # Initial convergence
+    # ------------------------------
+    k = min(max(early_epoch - 1, 1), len(arr) - 1)
+
+    start = float(smooth[0])
+    early = float(smooth[k])
+
+    early_gain = (
+        (start - early)
+        / max(abs(start), 1e-12)
+    )
+
+    # ------------------------------
+    # Optimization instability
+    # ------------------------------
+    # Difference between the observed loss and its local trend
+    residuals = arr - smooth
+
+    # Concentrate the stability analysis after the initial phase,
+    # when large improvements should no longer dominate the measure.
+    stability_residuals = residuals[k:]
+
+    if len(stability_residuals) < 2:
+        stability_residuals = residuals
+
+    # Robust variability estimate based on the median absolute deviation
+    residual_median = np.median(stability_residuals)
+
+    mad = np.median(
+        np.abs(stability_residuals - residual_median)
+    )
+
+    robust_std = 1.4826 * mad
+
+    # Normalize to make oscillation comparable across loss scales
+    reference_scale = max(
+        abs(np.median(smooth[k:])),
+        1e-12,
+    )
+
+    oscillation = robust_std / reference_scale
+
+    return {
+        "early_gain": float(early_gain),
+        "oscillation": float(oscillation),
+        "best_vl_metric": best_vl_metric,
+        "best_epoch": best_epoch,
+    }
+
+
+def analyze_lr_curve_old(history, early_epoch=30):
     """
     Best curve
     :param history: Can be vl_mee history or vl_mse history etc..
@@ -1325,26 +1457,80 @@ def summarize_weight_decay_from_folds(fold_histories, vl_key:str=FOLD_VL_MEE, tr
     }
 
 
-def find_best_lr_from_trials(study) -> float:
+def find_best_lr_from_trials(study, validation_weight: float = 0.60, stability_weight: float = 0.25, convergence_weight: float = 0.15) -> float:
     """
-    The learning rate is selected according to three complementary criteria derived from the training dynamics observed during K-Fold cross-validation:
-	    - Fast initial convergence: the training curve should decrease rapidly during the first 30–50 epochs, indicating that the optimizer is able to make effective progress at the beginning of training.
-	    - Stable optimization: the learning curve should exhibit low oscillation, suggesting that the step size is not too large and the optimization process is stable.
-	    - Best validation performance: among the candidate values, preference is given to the learning rate achieving the lowest mean validation metric across the K-Fold splits.
+    Select the learning rate using a weighted, scale-independent rank score.
+    The three Optuna objectives are expected in this order:
+        1. mean validation metric (minimize);
+        2. curve oscillation (minimize);
+        3. early gain (maximize).
+
+    Each objective is converted to a normalized rank in [0, 1], where zero
+    denotes the best observed value. The final score is the weighted sum of
+    these ranks. This makes all three criteria effective while keeping
+    validation performance as the primary criterion by default.
     :param study: the study object
+    :param validation_weight: weight assigned to validation performance
+    :param stability_weight: weight assigned to optimization stability
+    :param convergence_weight: weight assigned to early convergence
     :return: the best learning rate
     """
 
-    results = min(
-        study.best_trials,
-        key=lambda t: (
-            t.values[0],    # 1. minimize main metric as first step
-            t.values[1],    # 2. oscillation as second step in case two or more trials share the same minimum (1)
-            -t.values[2]    # 3. maximize early_gain as final step when two or more trials share the same (1) and (2)
-        )
+    weights = np.asarray(
+        [validation_weight, stability_weight, convergence_weight],
+        dtype=float,
     )
+    if np.any(~np.isfinite(weights)) or np.any(weights < 0) or weights.sum() <= 0:
+        raise ValueError("Learning-rate selection weights must be finite, non-negative, and not all zero.")
+    weights /= weights.sum()
 
-    return results.params["learning_rate"]
+    valid_trials = [
+        trial
+        for trial in study.trials
+        if trial.values is not None
+        and len(trial.values) == 3
+        and "learning_rate" in trial.params
+        and np.all(np.isfinite(trial.values))
+    ]
+    if not valid_trials:
+        raise ValueError("The study contains no valid completed learning-rate trials.")
+
+    trial_results = pd.DataFrame({
+        "learning_rate": [trial.params["learning_rate"] for trial in valid_trials],
+        "validation": [trial.values[0] for trial in valid_trials],
+        "oscillation": [trial.values[1] for trial in valid_trials],
+        "early_gain": [trial.values[2] for trial in valid_trials],
+    })
+    # Repeated categorical trials must not receive additional influence.
+    candidates = (
+        trial_results
+        .groupby("learning_rate", as_index=False)
+        .mean(numeric_only=True)
+    )
+    objective_values = candidates[
+        ["validation", "oscillation", "early_gain"]
+    ].to_numpy(dtype=float)
+
+    # Ascending ranks for the objectives to minimize. Negating early gain
+    # converts its maximization objective into the same convention.
+    ranking_values = objective_values.copy()
+    ranking_values[:, 2] *= -1.0
+
+    normalized_ranks = np.column_stack([
+        pd.Series(ranking_values[:, index]).rank(method="average").to_numpy() - 1.0
+        for index in range(ranking_values.shape[1])
+    ])
+    if len(candidates) > 1:
+        normalized_ranks /= len(candidates) - 1
+
+    composite_scores = normalized_ranks @ weights
+
+    # Raw validation metric is the deterministic tie-breaker.
+    best_index = min(
+        range(len(candidates)),
+        key=lambda index: (composite_scores[index], objective_values[index, 0]),
+    )
+    return float(candidates.iloc[best_index]["learning_rate"])
 
 
 def evaluate_lr(fold_results, epoch_metric:int, fold_metric:str, early_epoch:int) -> tuple[float, float,float]:
@@ -1378,61 +1564,43 @@ def evaluate_lr(fold_results, epoch_metric:int, fold_metric:str, early_epoch:int
     return summary["mean_best"],summary["mean_oscillation"],summary["mean_early_gain"]
 
 
-def find_best_batch_size_from_trials(study) -> float:
-    """
-    The learning rate is selected according to three complementary criteria derived from the training dynamics observed during K-Fold cross-validation:
-	    - Fast initial convergence: the training curve should decrease rapidly during the first 30–50 epochs, indicating that the optimizer is able to make effective progress at the beginning of training.
-	    - Stable optimization: the learning curve should exhibit low oscillation, suggesting that the step size is not too large and the optimization process is stable.
-	    - Best validation performance: among the candidate values, preference is given to the learning rate achieving the lowest mean validation metric across the K-Fold splits.
-    :param study: the study object
-    :return: the best learning rate
-    """
-
-    results = min(
-        study.best_trials,
-        key=lambda t: (
-            t.values[0],    # 1. minimize main metric as first step
-            t.values[1],    # 2. oscillation as second step in case two or more trials share the same minimum (1)
-        )
-    )
-
-    return results.params["batch_size"]
-
-
-def find_best_weight_decay_from_trials(study) -> float:
-    """
-    Select the best weight decay from trials.
-    Priority: (1) lowest mean validation metric, (2) smallest TR–VL gap.
-    This favors configurations with strong validation performance and good generalization.
-    :param study: the optuna study object
-    :return: best weight_decay
-    """
-    the_trial = min(
-        study.best_trials,
-        key=lambda t: (
-            t.values[0],   # mean_best_vl_metric
-            t.values[1]    # gap_tr_vl
-        )
-    )
-    return the_trial.params["weight_decay"]
+# def find_best_batch_size_from_trials(study) -> float:
+#     """
+#     The learning rate is selected according to three complementary criteria derived from the training dynamics observed during K-Fold cross-validation:
+# 	    - Fast initial convergence: the training curve should decrease rapidly during the first 30–50 epochs, indicating that the optimizer is able to make effective progress at the beginning of training.
+# 	    - Stable optimization: the learning curve should exhibit low oscillation, suggesting that the step size is not too large and the optimization process is stable.
+# 	    - Best validation performance: among the candidate values, preference is given to the learning rate achieving the lowest mean validation metric across the K-Fold splits.
+#     :param study: the study object
+#     :return: the best learning rate
+#     """
+#
+#     results = min(
+#         study.best_trials,
+#         key=lambda t: (
+#             t.values[0],    # 1. minimize main metric as first step
+#             t.values[1],    # 2. oscillation as second step in case two or more trials share the same minimum (1)
+#         )
+#     )
+#
+#     return results.params["batch_size"]
 
 
-def find_best_activation_from_trials(study) -> float:
-    """
-    Select the best activation from trials.
-    Priority: (1) lowest mean validation metric, (2) smallest TR–VL gap.
-    This favors configurations with strong validation performance and good generalization.
-    :param study: the optuna study object
-    :return: best activation
-    """
-    the_trial = min(
-        study.best_trials,
-        key=lambda t: (
-            t.values[0],   # mean_best_vl_metric
-            t.values[1]    # gap_tr_vl
-        )
-    )
-    return the_trial.params["activation"]
+# def find_best_weight_decay_from_trials(study) -> float:
+#     """
+#     Select the best weight decay from trials.
+#     Priority: (1) lowest mean validation metric, (2) smallest TR–VL gap.
+#     This favors configurations with strong validation performance and good generalization.
+#     :param study: the optuna study object
+#     :return: best weight_decay
+#     """
+#     the_trial = min(
+#         study.best_trials,
+#         key=lambda t: (
+#             t.values[0],   # mean_best_vl_metric
+#             t.values[1]    # gap_tr_vl
+#         )
+#     )
+#     return the_trial.params["weight_decay"]
 
 
 def find_best_batch_size_from_trials(study) -> float:
@@ -1453,7 +1621,7 @@ def find_best_batch_size_from_trials(study) -> float:
     return the_trial.params["batch_size"]
 
 
-def metric_mean_and_gap_TR_VL(fold_histories: cr.FoldResults, vl_key:str, tr_key:str) -> tuple[float,float]:
+def metric_mean_and_gap_TR_VL_old(fold_histories: cr.FoldResults, vl_key:str, tr_key:str) -> tuple[float,float]:
     """
     Find values for optuna by evaluating the best VL metric and the lowest gap between VL and TR
     :param fold_histories:
@@ -1465,6 +1633,35 @@ def metric_mean_and_gap_TR_VL(fold_histories: cr.FoldResults, vl_key:str, tr_key
     mean_best_vl_metric = float(np.mean([getattr(fold, vl_key) for fold in fold_histories]))
     gap_tr_vl = mean_best_vl_metric - mean_best_tr_metric
     return mean_best_vl_metric,gap_tr_vl
+
+
+def metric_mean_and_gap_TR_VL(fold_histories: cr.FoldResults, vl_key: str, tr_key: str, alpha: float = 0.1,) -> float:
+    """
+    Find values for optuna by evaluating the best VL metric and the lowest gap between VL and TR
+        by combining mean validation performance with a weighted penalty alpha for the training-validation gap.
+    :param fold_histories:
+    :param vl_key: the validation metric for example fold_vl_mee
+    :param tr_key: the training metric for example fold_tr_mee
+    :param alpha: weighted penalty alpha
+    :return: mean vl metric and gap tr -vl
+    """
+
+    mean_best_tr_metric = float(np.mean([
+        getattr(fold, tr_key)
+        for fold in fold_histories
+    ]))
+
+    mean_best_vl_metric = float(np.mean([
+        getattr(fold, vl_key)
+        for fold in fold_histories
+    ]))
+
+    overfit_gap = max(
+        mean_best_vl_metric - mean_best_tr_metric,
+        0.0,
+    )
+
+    return mean_best_vl_metric + alpha * overfit_gap
 
 
 def save_run_report(model_baseline: str, net, inner_train_params: dict, metrics: dict, folder: str = "runs"):
@@ -1559,3 +1756,25 @@ def evaluate_architecture(fold_histories: cr.FoldResults, vl_key:str, tr_key:str
     overfit_gap = max((mean_best_vl - mean_best_tr), 0.0)
 
     return mean_best_vl,overfit_gap
+
+
+def find_target_training_loss(fold_histories: cr.FoldResults, reduction:str="mean"):
+    """
+    From: ML-25-Valid3-v.0.1.pdf -> "So, much BETTER, if you consider the mean of TR error at the best point for VL
+    and use it to gain the same level of fitting in the retraining (avoiding undertraning effects)."
+    For each cross-validation fold, the training loss corresponding to the minimum validation loss is recorded.
+    Their mean is then used as the target training loss for full-data retraining. Using the minimum training loss
+    across folds would select an overly optimistic fitting level and could lead to overtraining.
+    :param fold_histories: fold results
+    :param reduction: 'mean' or 'median'
+    :return:
+    """
+
+    tr_fitting = [fold.fold_tr_loss for fold in fold_histories]
+
+    if reduction == "mean":
+        return float(np.mean(tr_fitting))
+    elif reduction == "median":
+        return float(np.median(tr_fitting))
+    else:
+        raise ValueError("Reduction must be either 'mean' or 'median'")

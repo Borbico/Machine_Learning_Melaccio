@@ -1,0 +1,5 @@
+We address ML-CUP25 with an ensemble of KNN, RBF-SVR, and a feed-forward neural network. All relevant functions and metrics have been centralized and reused throughout all notebooks.
+Model selection and ensemble weights are determined using shared K-fold out-of-fold predictions on a 400-pattern development set.
+An independent 100-pattern internal test set is used only once to estimate final generalization performance.
+The ensemble combines complementary models through non-negative weights optimized to minimize the out-of-fold Mean Euclidean Error.
+After validation, the selected models are retrained from scratch on all 500 labeled patterns to predict the 1000-pattern blind test set.

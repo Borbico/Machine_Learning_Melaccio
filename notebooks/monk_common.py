@@ -2,6 +2,8 @@ import numpy as np
 import pandas as pd
 from numpy import ndarray
 from pandas import DataFrame
+import nn_common as nnc
+import matplotlib.pyplot as plt
 from sklearn.metrics import classification_report
 
 columns = [
@@ -268,3 +270,86 @@ def generate_monk_set(monk_type: int, nr_samples: int, noise: float = 0.0, seed:
         df.loc[idx, "class"] = 1 - df.loc[idx, "class"]
 
     return df
+
+
+def _moving_average(values, window=5):
+    return (
+        pd.Series(values)
+        .rolling(window=window, center=True, min_periods=1)
+        .mean()
+        .to_numpy()
+    )
+
+
+def plot_smooth_epoch_mse(tr_mse, vl_mse, best_epoch=None, window:int = 5, title:str=None):
+
+    tr_mse_smooth = _moving_average(tr_mse, window=window)
+    vl_mse_smooth = _moving_average(vl_mse, window=window)
+
+    if title is None: title="TR and VL trough epochs"
+
+    nnc.plot_epoch_mse(tr_mse_smooth, vl_mse_smooth, best_epoch, title=title)
+
+
+def plot_smooth_epoch_accuracy(tr_acc, vl_acc, best_epoch: int=None, smoothing_span:int = 5, title:str=None):
+
+    tr_acc_smooth = (
+        pd.Series(tr_acc)
+        .ewm(span=smoothing_span, adjust=False)
+        .mean()
+        .to_numpy()
+    )
+
+    vl_acc_smooth = (
+        pd.Series(vl_acc)
+        .ewm(span=smoothing_span, adjust=False)
+        .mean()
+        .to_numpy()
+    )
+
+    if title is None: title="Training vs Validation accuracy"
+
+    nnc.plot_epoch_accuracy(tr_acc_smooth, vl_acc_smooth, best_epoch=best_epoch, title=title)
+
+#epochs = np.arange(1, len(tr_acc) + 1)
+
+# plt.figure(figsize=(8, 5))
+#
+# # Original curves, shown faintly
+# plt.plot(
+#     epochs, tr_acc,
+#     color="tab:blue", alpha=0.20, linewidth=1
+# )
+# plt.plot(
+#     epochs, vl_acc,
+#     color="tab:orange", alpha=0.20, linewidth=1
+# )
+#
+# # Smoothed curves
+# plt.plot(
+#     epochs, tr_acc_smooth,
+#     color="tab:blue", linewidth=2,
+#     label="TR Accuracy"
+# )
+# plt.plot(
+#     epochs, vl_acc_smooth,
+#     color="tab:orange", linewidth=2,
+#     label="VL Accuracy"
+# )
+#
+# plt.axvline(
+#     best_holdout_epoch + 1,
+#     color="red",
+#     linestyle="--",
+#     linewidth=1,
+#     label=f"Best epoch: {best_holdout_epoch + 1}"
+# )
+#
+# plt.xlabel("Epochs")
+# plt.ylabel("Accuracy")
+# plt.title("Training vs Validation Accuracy")
+# plt.ylim(0.50, 1.01)
+# plt.grid(alpha=0.25)
+# plt.legend()
+# plt.tight_layout()
+# plt.show()

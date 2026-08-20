@@ -1,3 +1,9 @@
 .venv
 .idea
+.codex*
+.ppt*
+.tmp*
+tmp
+runs
+ML-2025*
 __pycache__

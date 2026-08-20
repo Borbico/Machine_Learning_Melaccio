@@ -4,6 +4,7 @@ from typing import Callable, cast
 import numpy as np
 import pandas as pd
 import seaborn as sns
+import torch
 from matplotlib import pyplot as plt
 from numpy import ndarray
 from pandas import DataFrame
@@ -12,8 +13,9 @@ from sklearn.base import BaseEstimator
 from sklearn.dummy import DummyRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer, r2_score
 from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, KFold, GridSearchCV
-from sklearn.model_selection import train_test_split
+import torch.nn.functional as F
 from pandas import Series
+
 
 RANDOM_STATE = 42
 SEED = 1
@@ -583,7 +585,7 @@ class SklearnNestedRegressorRunner:
 
     def fitted_model(self, X_tr: DataFrame, y_tr: ndarray, inner_params:dict | None=None) -> GridSearchCV:
         """
-        Fit a given GridSearchCV model with a X and y data
+        The model implements the nested CV by entirely cloning a given GridSearchCV and performing a fit on it with a X and y data
         :param X_tr: the training data
         :param y_tr: the training labels
         :param inner_params: an utility dictionary for passing parameters during fit phase
@@ -616,7 +618,7 @@ class SklearnRegressorRunner:
     To be used in non-nested CV
     """
 
-    def __init__(self, grid:GridSearchCV):
+    def __init__(self, grid:GridSearchCV | BaseEstimator):
         """
         Utility class for wrapping a best estimator that needs to be instantiated and fitted
         from scratch and then being used in predictions.
@@ -630,7 +632,11 @@ class SklearnRegressorRunner:
         :param grid: a fitted GridSearchCV object. Its best_estimator_ is cloned
                  and used as the fixed model template for non-nested CV.
         """
-        self._base_estimator = clone(grid.best_estimator_)
+        # Model-selection notebooks pass an already fitted GridSearchCV, while
+        # consumers such as an ensemble may already have the selected fixed
+        # estimator.  In both cases keep an unfitted clone as template.
+        estimator = grid.best_estimator_ if hasattr(grid, "best_estimator_") else grid
+        self._base_estimator = clone(estimator)
 
     def unfitted_model(self) -> BaseEstimator:
         """
@@ -754,6 +760,10 @@ def kfold(runner, X, y, folder_strategy, metrics: dict) -> FoldResults:
         # Dinamically building a FoldResult
         fr = FoldResult()
         fr.set_metric(FOLD_NR, fold_nr)
+        # Keep the information required to reconstruct strict out-of-fold
+        # predictions. Existing consumers only reading metrics are unaffected.
+        fr.set_metric("vl_indices", np.asarray(vl_idx))
+        fr.set_metric("vl_predictions", np.asarray(y_pred_vl))
         for prefix in ("tr", "vl"):
             for metric in metrics_key:
                 key = f"fold_{prefix}_{metric}"
@@ -763,6 +773,23 @@ def kfold(runner, X, y, folder_strategy, metrics: dict) -> FoldResults:
         fold_results.append(fr)
 
     return fold_results
+
+
+def mse_from_probability(logits:torch.Tensor, targets:torch.Tensor):
+    """
+    Computes the Mean Squared Error between the predicted probabilities
+    and the binary target values.
+
+    Since the neural network returns raw logits, the sigmoid function is
+    applied first to convert them into probabilities in the [0, 1] range.
+    The resulting MSE is used as an additional evaluation metric, while
+    BCEWithLogitsLoss remains the objective function used for training.
+    :param logits: the predicted probabilities, torch.Tensor, Raw outputs produced by the neural network.
+    :param targets: the target values, torch.Tensor, Ground-truth binary labels.
+    :return: the Mean Squared Error between predicted probabilities and targets.
+    """
+    probabilities = torch.sigmoid(logits)
+    return F.mse_loss(probabilities, targets)
 
 
 def mse(y_true, y_pred) -> float:
@@ -919,7 +946,7 @@ def apply_score_correction(scoring, values:tuple, neg_score_list:tuple=(MEE, MAE
     return values
 
 
-def plot_learning_curve(model, X, y, cv, ax=None, scoring="accuracy", title:str="Learning curve"):
+def plot_learning_curve(model, X, y, cv, ax=None, scoring="accuracy", title:str="Learning curve", train_sizes=None):
     """
     Plot a learning curve for a given model.
     If scoring is a neg_* loss, the curve is plotted as the corresponding positive loss.
@@ -927,12 +954,17 @@ def plot_learning_curve(model, X, y, cv, ax=None, scoring="accuracy", title:str=
 
     random_state = getattr(cv, "random_state", None)
 
+    # if safe_train_sizes is None:
+    #     train_sizes = safe_train_sizes
+    # else:
+    #     train_sizes = np.linspace(0.2, 1.0, 25),   # più punti
+
     train_sizes_abs, train_scores, val_scores = learning_curve(
         model,
         X, y,
         cv=cv,
         scoring=scoring,
-        train_sizes=np.linspace(0.2, 1.0, 25),   # più punti
+        train_sizes= np.linspace(0.2, 1.0, 25) if train_sizes is None else train_sizes,   # più punti
         shuffle=True,
         random_state=random_state,
         n_jobs=-1
@@ -1159,4 +1191,3 @@ class CustomRBFKernel:
         for key, value in params.items():
             setattr(self, key, value)
         return self
-

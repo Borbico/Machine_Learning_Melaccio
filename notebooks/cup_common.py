@@ -3,19 +3,12 @@ import copy
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import torch
 from matplotlib import pyplot as plt
 from numpy import ndarray
 from pandas import DataFrame
-from scipy.spatial.distance import euclidean
-from sklearn import clone
-from sklearn.dummy import DummyRegressor
-from sklearn.metrics import mean_absolute_error, mean_squared_error, make_scorer
-from sklearn.model_selection import cross_val_score, StratifiedKFold, learning_curve, KFold
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.model_selection import train_test_split
 
+INTERNAL_TEST_RANDOM_STATE = 50
 
 output_columns = ["t1", "t2", "t3", "t4"]
 base_columns = [

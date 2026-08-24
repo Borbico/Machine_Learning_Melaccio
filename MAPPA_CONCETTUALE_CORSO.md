@@ -1,5 +1,6 @@
-# Mappa Concettuale, Compendio Formule e Guida al Codice
+# Mappa Concettuale e Compendio delle Formule: Machine Learning
 **Corso del Prof. Alessio Micheli — Università di Pisa**
+*(Arricchito con le note d'esame e le dimostrazioni dai quaderni di studio Notion)*
 
 ---
 

@@ -1,6 +1,6 @@
 # Mappa Concettuale e Compendio delle Formule: Machine Learning
 **Corso del Prof. Alessio Micheli — Università di Pisa**
-*(Arricchito con le note d'esame, dimostrazioni Notion e Spiegazione dell'Origine Teorica di ogni Formula)*
+*(Arricchito con le note d'esame, dimostrazioni Notion e Sezione Compendio per lo Scritto ed Orale)*
 
 ---
 
@@ -18,7 +18,7 @@ flowchart TD
 
     P1 --> F1["Dati X, y"]
     P1 --> F2["Spazio delle Ipotesi H"]
-    P1 --> F3["Loss Function L (Origini: MLE, Geometria, Entropia)"]
+    P1 --> F3["Loss Function L"]
     P1 --> F4["Algoritmo di Ottimizzazione"]
 
     P2 --> M1["Modelli Lineari (Perceptron, LMS, Logistic)"]
@@ -52,19 +52,9 @@ flowchart TD
 * **Dati**: $D = \{(x_1, y_1), \dots, (x_N, y_N)\}$ dove $x_i \in \mathbb{R}^D$ e $y_i \in \mathcal{Y}$ (coppie input-target).
 * **Spazio Ipotesi $\mathcal{H}$**: L'insieme di tutte le funzioni rappresentabili dal modello.
 * **Loss Function $\mathcal{L}$**:
-
-> [!NOTE]
-> **📌 ORIGINE TEORICA DELLE 3 FUNZIONI DI PERDITA PRINCIPALI**
-> 1. **MSE Loss (Mean Squared Error)**:
->    $$L_{MSE} = \frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2$$
->    * **Da dove viene?** Deriva dal **Principio di Massima Verosimiglianza (MLE - Maximum Likelihood Estimation)** sotto l'assunzione probabilistica che il rumore nei dati $\epsilon_i = y_i - \hat{y}_i$ segua una **distribuzione Gaussiana** $\mathcal{N}(0, \sigma^2)$. Minimizzare il logaritmo negativo della verosimiglianza gaussiana ammonta algebricamente a minimizzare la somma dei quadrati dei residui.
-> 2. **MEE Loss (Mean Euclidean Error - Target Multivariato CUP)**:
->    $$L_{MEE} = \frac{1}{N} \sum_{i=1}^N \|\mathbf{y}_i - \hat{\mathbf{y}}_i\|_2 = \frac{1}{N} \sum_{i=1}^N \sqrt{\sum_{m=1}^K (y_{i,m} - \hat{y}_{i,m})^2}$$
->    * **Da dove viene?** Deriva dalla **Geometria Euclidea N-Dimensionale**. Rappresenta la distanza fisica in linea retta (norma $L_2$) tra il punto reale e quello predetto nello spazio target $\mathbb{R}^K$. Per la ML CUP ($K=4$), misura l'errore assoluto di posizione spaziale delle 4 componenti fisiche.
-> 3. **BCE Loss (Binary Cross-Entropy)**:
->    $$L_{BCE} = -\frac{1}{N} \sum_{i=1}^N \big[ y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i) \big]$$
->    * **Da dove viene?** Deriva dalla **Teoria dell'Informazione (Entropia di Shannon e Divergenza di Kullback-Leibler)** e dalla Massima Verosimiglianza per variabili di **Bernoulli**. Se la probabilità di successo è $\hat{y}_i \in [0, 1]$, la verosimiglianza di $N$ eventi binari indipendenti è $P(Y|\hat{Y}) = \prod \hat{y}_i^{y_i} (1-\hat{y}_i)^{1-y_i}$. Calcolando $-\frac{1}{N} \log P(Y|\hat{Y})$ si ottiene esattamente la Cross-Entropy.
-
+  * **MSE Loss**: $L_{MSE} = \frac{1}{N} \sum_{i=1}^N (y_i - \hat{y}_i)^2$ *(Nota di Micheli: N è il numero di coppie dato-target!)*
+  * **MEE Loss (ML CUP)**: $L_{MEE} = \frac{1}{N} \sum_{i=1}^N \|\mathbf{y}_i - \hat{\mathbf{y}}_i\|_2 = \frac{1}{N} \sum_{i=1}^N \sqrt{\sum_{m=1}^K (y_{i,m} - \hat{y}_{i,m})^2}$
+  * **BCE Loss**: $L_{BCE} = -\frac{1}{N} \sum_{i=1}^N \big[ y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i) \big]$
 * **Ottimizzazione**: Discesa del gradiente $w^{(t+1)} = w^{(t)} - \eta \nabla L(w)$.
 
 ---
@@ -72,33 +62,28 @@ flowchart TD
 ### 2. Perceptron (LTU) & Teorema di Convergenza
 * **Funzione di Attivazione a Gradino**: $f(x) = \text{sign}(w^T x + b)$.
 * **Regola di Aggiornamento Pesi**: $w \leftarrow w + \eta (y_i - o_i) x_i$.
-
-> [!NOTE]
-> **📌 ORIGINE TEORICA DELLA REGOLA DI APPRENDIMENTO DEL PERCEPTRONE**
-> * **Da dove viene?** Ispirata dal modello di attivazione neurobiologico di **McCulloch-Pitts (1943)** e sviluppata da **Frank Rosenblatt (1958)**. Deriva dall'**Apprendimento Hebbiano** (*"neurons that fire together, wire together"*). Se il neurone sbaglia ($o_i \neq y_i$), il vettore dei pesi $w$ viene ruotato nella direzione dell'input $x_i$ (se il segnale mancava di attivarsi) o nella direzione opposta (se si è attivato erroneamente), modificando l'inclinazione dell'iperpiano di separazione $w^T x + b = 0$.
-
-* **Teorema di Convergenza del Perceptron**: Se un dataset è linearmente separabile con un margine $\gamma > 0$, l'algoritmo convergerà in un numero finito di passi:
+* **Teorema di Convergenza del Perceptron**: Se un dataset è linearmente separabile con un margine $\gamma > 0$ (ovvero esiste un peso $w^*$ tale che $y_i (w^{*T} x_i) \ge \gamma$), allora l'algoritmo convergerà commettendo al massimo un numero finito di errori:
   $$k \le \frac{R^2}{\gamma^2}$$
+  dove $R = \max_i \|x_i\|$ è il raggio del dataset.
 
-> [!NOTE]
-> **📌 ORIGINE TEORICA DELLA FORMULA DI NOVIKOFF (1962)**
-> * **Da dove viene?** Dimostrata da **Albert Novikoff (1962)** usando la geometria dello spazio di Hilbert. Deriva dal confronto tra due grandezze algebriche durante gli errori di aggiornamento:
->   1. La crescita **lineare** della proiezione pesata lungo la direzione dell'iperpiano ideale $w^*$ ($w_k^T w^* \ge k\gamma$).
->   2. La crescita **sub-lineare (radice quadrata)** della norma totale del vettore pesi $\|w_k\| \le \sqrt{k}R$ (dovuta agli errori di aggiornamento ortogonali). Applicando la disuguaglianza di Cauchy-Schwarz $w_k^T w^* \le \|w_k\|$ si ottiene la barriera $k \le \frac{R^2}{\gamma^2}$.
+#### 💡 Domanda Frequente: Creare la porta NOT con 1 Perceptrone
+* Input $x \in \{0, 1\}$, Target $y = 1 - x$.
+* Pesi: $w = -2$, bias $b = 1$.
+* Output: $f(x) = \text{sign}(-2x + 1)$. Se $x=0 \rightarrow \text{sign}(1)=+1$. Se $x=1 \rightarrow \text{sign}(-1)=-1$.
 
 ---
 
-### 3. Funzioni di Attivazione e loro Derivate
-
-> [!NOTE]
-> **📌 ORIGINE E DERIVAZIONE DI SIGMOIDE E RELU**
-> 1. **Sigmoide**: $\sigma(z) = \frac{1}{1 + e^{-z}}$
->    * **Da dove viene?** Nasce dalla modellizzazione delle curve di saturazione biologica e dalla funzione **Logit** (il log-odds statistico $\ln\frac{p}{1-p} = z$).
->    * **Derivazione della Derivata**: Ponendo $u = 1 + e^{-z}$:
->      $$\sigma'(z) = \frac{d}{dz}(u^{-1}) = -u^{-2}(-e^{-z}) = \frac{e^{-z}}{(1+e^{-z})^2} = \frac{1}{1+e^{-z}} \cdot \frac{e^{-z}}{1+e^{-z}} = \sigma(z)(1-\sigma(z))$$
-> 2. **ReLU**: $f(x) = \max(0, x)$
->    * **Da dove viene?** Deriva dalla biologia del potenziale d'azione dei neuroni corticali (Nair & Hinton 2010): un neurone rimane silente per stimoli sotto-soglia ($0$) e risponde con frequenza di scarica proporzionale al di sopra della soglia.
->    * **Derivata**: $f'(x) = \mathbb{I}(x > 0)$ (Funzione Indicatore). In termini matematici è una maschera binaria che lascia passare inalterato il gradiente per $x > 0$ ed azzera il flusso per $x \le 0$.
+### 3. Funzioni di Attivazione e loro Proprietà
+* **Sigmoide**: $\sigma(z) = \frac{1}{1 + e^{-z}}$. Derivata: $\sigma'(z) = \sigma(z)(1 - \sigma(z))$.
+  * *Perché si usa invece del gradino?* È continua e **derivabile** (essenziale per la Backpropagation).
+  * *Svantaggi*: Satura per $|z|$ grandi, causando il fenomeno del *Vanishing Gradient*.
+* **ReLU (Rectified Linear Unit)**: $f(x) = \max(0, x)$.
+  * Derivata: $f'(x) = 1$ se $x > 0$, $0$ se $x \le 0$.
+  * *Significato della derivata (Domanda d'Esame)*: Agisce come una **maschera binaria (0/1)** basata sul valore di $net$, stabilendo quali neuroni trasmettono il flusso del gradiente all'indietro.
+  * *Perché aiuta per il Vanishing Gradient?* Per $x > 0$ la derivata è esattamente 1, permettendo al gradiente di fluire inalterato senza degradarsi.
+  * *Svantaggi*: "Dying ReLU" (se un neurone va sotto zero, la derivata vale 0 ed il peso non si aggiorna più). Alternative: LeakyReLU $f(x) = \max(\alpha x, x)$, GELU, ELU.
+* **Perché NON usare solo attivazioni lineari?**
+  * Se usassimo funzioni lineari $f(x) = c \cdot x$, la composizione di più strati collasserebbe algebricamente in un'unica trasformazione lineare finale $W_{tot} x$, perdendo tutta la capacità espressiva non lineare.
 
 ---
 
@@ -106,97 +91,131 @@ flowchart TD
 
 ### 1. Iperparametri dell'Aggiornamento dei Pesi
 $$\Delta w(t) = -\eta \frac{\partial E}{\partial w(t)} + \alpha \Delta w(t-1) - \eta \lambda w(t)$$
-
-> [!NOTE]
-> **📌 ORIGINE FISICA E STATISTICA DEI TERMINI DI REGOLARIZZAZIONE**
-> * **Momentum ($\alpha \Delta w(t-1)$)**: Deriva dalla **Fisica Classica (II Legge di Newton)**. Aggiunge una "massa virtuale" all'ottimizzatore: la velocità acquisita nelle epoche precedenti permette di superare piccoli avvallamenti e smorzare le oscillazioni ad alta frequenza nei canyon della loss surface.
-> * **Weight Decay ($-\eta \lambda w(t)$)**: Deriva dalla **Regolarizzazione di Tikhonov** e dalla stima Bayesiana *MAP (Maximum A Posteriori)* assumendo una prior Gaussiana $\mathcal{N}(0, \sigma_w^2)$ a media zero sui pesi. Riduce l'energia totale $\|w\|^2$, costringendo la rete ad utilizzare soluzioni con pesi piccoli e levigati.
+* **$\eta$ (Learning Rate)**: Controlla la lunghezza del passo di discesa.
+* **$\alpha$ (Momentum / Inerzia)**: Mantiene una frazione dell'aggiornamento dell'epoca precedente per smorzare le oscillazioni ed evitare minimi locali poco profondi.
+* **$\lambda$ (Weight Decay / Regolarizzazione $L_2$)**: Aggiunge una sanzione $\frac{\lambda}{2} \|w\|^2$ alla loss, riducendo progressivamente la norma dei pesi per evitare l'overfitting.
 
 ---
 
-### 2. Dimostrazione della Backpropagation (Chain Rule)
+### 2. Dimostrazione della Backpropagation (Derivazione dei $\delta$)
+Vogliamo calcolare $\Delta_p w_{tu} = -\frac{\partial E_p}{\partial w_{tu}}$.
 
-> [!NOTE]
-> **📌 ORIGINE TEORICA DELLA BACKPROPAGATION (Rumelhart, Hinton & Williams 1986)**
-> * **Da dove viene?** Deriva dalla rigorosa applicazione della **Regola della Catena (Chain Rule)** del calcolo infinitesimale multivariato ai grafi computazionali diretti.
-> * **Significato del $\delta_t$**: Il fattore $\delta_t = -\frac{\partial E_p}{\partial net_t}$ rappresenta la sensibilità dell'errore globale $E_p$ rispetto alla variazione del potenziale d'ingresso del neurone $t$. Fattorizzare e propagare i $\delta$ all'indietro dal layer di output verso gli strati nascosti evita di ricalcolare derivate ridondanti, riducendo la complessità computazionale da $O(|W|^2)$ a $O(|W|)$.
+Usando la Chain Rule:
+$$\Delta_p w_{tu} = -\frac{\partial E_p}{\partial net_t} \cdot \frac{\partial net_t}{\partial w_{tu}} = \delta_t \cdot o_u$$
+
+I due casi per il calcolo di $\delta_t$:
+* **Neurone di Output ($t = k$)**:
+  $$\delta_k = -\frac{\partial E_p}{\partial o_k} \frac{\partial o_k}{\partial net_k} = (d_k - o_k) f'_k(net_k)$$
+* **Neurone Nascosto ($t = j$)**:
+  $$\delta_j = \left( \sum_{k} \delta_k w_{kj} \right) f'_j(net_j)$$
+* **Fattorizzazione ed Efficienza**: Calcolare un solo $\delta_t$ per neurone riduce il costo computazionale da $O(|W|^2)$ a $O(|W|)$ (lineare nel numero di pesi!).
 
 ---
 
 # 📌 SEZIONE 3: Support Vector Machines (SVM & SVR)
 
-### 1. Hard Margin e Soft Margin SVM
-
-> [!NOTE]
-> **📌 ORIGINE GEOMETRICA E FISICA DEL MARGINE NELLE SVM**
-> * **Margine Geometrico $M = \frac{2}{\|w\|}$**: Deriva dalla **Geometria Analitica**. La distanza di un punto $x$ dall'iperpiano $w^T x + b = 0$ è la proiezione ortogonale $d = \frac{|w^T x + b|}{\|w\|}$. Imponendo la condizione canonica $y_i(w^T x_i + b) = 1$ per i punti sul bordo, la distanza tra le due bande è $\frac{1}{\|w\|} - \left(-\frac{1}{\|w\|}\right) = \frac{2}{\|w\|}$.
-> * **Formulazione Primate con Slack Variables ($\xi_i$)**:
->   $$\min_{w, b, \xi} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^N \xi_i \quad \text{sotto vincoli } y_i(w^T x_i + b) \ge 1 - \xi_i, \,\, \xi_i \ge 0$$
->   * **Da dove viene $C$?** $C$ è il moltiplicatore di penalizzazione del trade-off tra massimizzazione della larghezza del margine (semplicità del modello) ed allettamento degli errori sui dati di addestramento (regolarizzazione di Vapnik).
+### 1. Hard Margin SVM (Margine Rigido)
+* **Margine Geometrico**: $M = \frac{2}{\|w\|}$.
+* **Formulazione Primate**:
+  $$\min_{w, b} \frac{1}{2} \|w\|^2 \quad \text{sotto i vincoli } y_i(w^T x_i + b) \ge 1 \quad \forall i$$
 
 ---
 
-### 2. Formulazione Duale & Kernel Trick
+### 2. Soft Margin SVM ($C$ e Slack Variables $\xi_i$)
+* **Formulazione Primate**:
+  $$\min_{w, b, \xi} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^N \xi_i \quad \text{sotto i vincoli } y_i(w^T x_i + b) \ge 1 - \xi_i, \quad \xi_i \ge 0$$
+* **Ruolo di $C$ (Domanda da Scritto/Orale)**:
+  * $C \to \infty$: Penalizzazione massima degli errori $\rightarrow$ Margine stretto $\rightarrow$ **Rischio Overfitting**.
+  * $C$ piccolo: Maggiore tolleranza per le violazioni $\rightarrow$ Margine ampio $\rightarrow$ **Regolarizzazione (Underfitting se troppo piccolo)**.
 
-> [!NOTE]
-> **📌 ORIGINE TEORICA DEL DUALISMO DI LAGRANGE E DEL KERNEL TRICK**
-> * **Formulazione Duale**:
->   $$\max_{\alpha} \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j K(x_i, x_j) \quad \text{sotto } 0 \le \alpha_i \le C, \,\, \sum \alpha_i y_i = 0$$
->   * **Da dove viene?** Deriva dalle **Condizioni KKT (Karush-Kuhn-Tucker)** per l'ottimizzazione convessa vincolata. La trasformazione duale sposta la dipendenza dalla dimensione del vettore di input $D$ al numero di campioni $N$.
-> * **Kernel RBF (Gaussiano)**: $K(x, z) = \exp(-\gamma \|x - z\|^2)$
->   * **Da dove viene?** Deriva dal **Teorema di Mercer**. Sviluppando in serie di Taylor la funzione esponenziale $e^{x^T z} = \sum_{k=0}^\infty \frac{(x^T z)^k}{k!}$, il Kernel RBF proietta implicitamente i dati d'ingresso in uno **spazio di Hilbert a dimensione infinita**, rendendo sempre linearmente separabile qualsiasi dataset privo di punti sovrapposti con etichette discordi.
+---
+
+### 3. Formulazione Duale & Kernel Trick
+* **Formulazione Duale**:
+  $$\max_{\alpha} \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j K(x_i, x_j) \quad \text{sotto } 0 \le \alpha_i \le C, \,\, \sum \alpha_i y_i = 0$$
+* **Sparsità KKT**: Solo i punti sul margine hanno $\alpha_i > 0$ (**Vettori di Supporto**).
+* **Kernel RBF (Gaussiano)**:
+  $$K(x, z) = \exp(-\gamma \|x - z\|^2)$$
+  * $\gamma$ alto $\rightarrow$ raggio di influenza piccolo $\rightarrow$ **Overfitting**.
+  * $\gamma$ basso $\rightarrow$ raggio di influenza ampio $\rightarrow$ **Underfitting**.
+
+---
+
+### 4. Support Vector Regression (SVR ed la $\epsilon$-Tube)
+* **$\epsilon$-Insensitive Loss**:
+  $$|y - f(x)|_\epsilon = \max(0, |y - f(x)| - \epsilon)$$
+* L'errore è pari a zero se il punto rientra nel tubo di tolleranza $\pm \epsilon$ attorno alla funzione predetta.
 
 ---
 
 # 📌 SEZIONE 4: Statistical Learning Theory (SLT) & Validazione
 
 ### 1. Dimostrazione della Decomposizione Bias-Varianza-Rumore
-
-> [!NOTE]
-> **📌 ORIGINE STATISTICA DELLA DECOMPOSIZIONE BIAS-VARIANZA (Geman et al. 1992)**
-> * **Da dove viene?** Deriva dall'applicazione dell'identità del secondo momento in teoria della probabilità: per qualunque variabile casuale $X$ rispetto al suo valore atteso $c$, vale $\mathbb{E}[(X - c)^2] = \text{Var}(X) + (\mathbb{E}[X] - c)^2$.
-> * Sostituendo la variabile casuale $h_D(x)$ (modello stimato dal dataset stocastico $D$) e la costante di target reale $f(x)$, il termine quadratico si scompone esattamente in Bias al quadrato (errore di approssimazione sistematico del modello) + Varianza (sensibilità del modello alla specifica realizzazione del dataset) + Rumore stocastico irriducibile $\sigma^2$.
+Dato $y = f(x) + \epsilon$ con $\mathbb{E}[\epsilon]=0$ e $\mathbb{E}[\epsilon^2]=\sigma^2$:
+$$\mathbb{E}_{D, \epsilon} \big[ (y - h_D(x))^2 \big] = \underbrace{(f(x) - \bar{h}(x))^2}_{\text{Bias}(x)^2} + \underbrace{\mathbb{E}_D [ (h_D(x) - \bar{h}(x))^2 ]}_{\text{Varianza}(x)} + \underbrace{\sigma^2}_{\text{Rumore Irriducibile}}$$
 
 ---
 
-### 2. VC-Dimension & Generalization Bounds
-
-> [!NOTE]
-> **📌 ORIGINE TEORICA DEI BOUND DI GENERALIZZAZIONE DI VAPNIK**
-> * **Generalization Bound**:
->   $$R(h) \le R_{emp}(h) + \sqrt{\frac{h_{VC} \big(\ln(2N/h_{VC}) + 1\big) - \ln(\eta/4)}{N}}$$
-> * **Da dove viene?** Deriva dalla **Teoria delle Grandi Deviazioni (Disuguaglianza di Hoeffding per variabili limitate)** combinata con il **Lemma di Sauer-Shelah**, che dimostra che la funzione di frammentazione di uno spazio di ipotesi con dimensione $VC = h_{VC}$ cresce al massimo come un polinomio $S(\mathcal{H}, N) \le \left(\frac{eN}{h_{VC}}\right)^{h_{VC}}$, anziché esponenzialmente $2^N$.
-
----
-
-# 📌 SEZIONE 5: Architetture Avanzate
-
-### 1. Cascade Correlation
-
-> [!NOTE]
-> **📌 ORIGINE TEORICA DELLA FUNZIONE OBIETTIVO $S$ (Fahlman & Lebiere 1990)**
-> * **Covarianza del Candidato**:
->   $$S = \sum_{k \in \text{Output}} \left| \sum_{p} (o_p - \bar{o})(E_{p,k} - \bar{E}_k) \right|$$
-> * **Da dove viene?** Deriva dalla **Statistica Descrittiva (Covarianza Campionaria)**. Anziché ri-addestrare l'intera rete, l'algoritmo costruttivo addestra un singolo neurone candidato per massimizzare la sua correlazione lineare con la componente residua dell'errore non spiegata dai neuroni precedenti.
+### 2. VC-Dimension (Vapnik-Chervonenkis)
+* **Shattering (Frammentazione)**: Un insieme di $N$ punti è shatterato da $\mathcal{H}$ se il modello può realizzare tutte le $2^N$ dicotomie (+1 / -1).
+* **Definizione**: $VC(\mathcal{H})$ è la **massima cardinalità $N$** di punti shatterabili da $\mathcal{H}$.
+* **VC-Dimension nei vari modelli**:
+  * Iperpiani in $\mathbb{R}^D$ (Perceptron): $VC = D + 1$.
+  * Reti Neurali: Cresce col numero di pesi $O(|W| \log |W|)$.
+  * **SVM**: $VC \le \min\left(D, \frac{R^2}{\gamma^2}\right) + 1$. **NON dipende dalla dimensione $D$ dell'input**, ma dipende inversamente dal margine $\gamma$! (Ecco perché l'SVM evita la *curse of dimensionality*).
+  * **1-NN**: $VC = \infty$ (memorizza qualsiasi dataset).
 
 ---
 
-### 2. Self-Organizing Maps (SOM di Kohonen)
-
-> [!NOTE]
-> **📌 ORIGINE NEUROBIOLOGICA DELLE SOM (Teuvo Kohonen 1982)**
-> * **Regola di Aggiornamento del BMU e dei Vicini**:
->   $$w_i(t+1) = w_i(t) + \eta(t) h_{ic}(t) \big( x(t) - w_i(t) \big)$$
-> * **Da dove viene?** Modellizza l'**organizzazione topografica della corteccia somatosensoriale umana**. La funzione di vicinato $h_{ic}(t) = \exp\left(-\frac{\|r_i - r_c\|^2}{2\sigma(t)^2}\right)$ simula la funzione a "cappello messicano" dell'inibizione laterale biologica: i neuroni vicini al neurone vincitore (BMU) adattano i propri pesi per somigliare al dato d'ingresso $x(t)$.
+### 3. Structural Risk Minimization (SRM)
+$$R(h) \le R_{emp}(h) + \Omega\left(\frac{h_{VC}}{N}\right)$$
+* SRM organizza le ipotesi in strutture annidate $\mathcal{H}_1 \subset \mathcal{H}_2 \dots \subset \mathcal{H}_k$ e sceglie l'ipotesi che minimizza la somma dell'errore empirico e della confidenza VC.
+* **Early Stopping come Regolarizzazione**: Limitando il numero di epoche, si limita implicitamente la norma dei pesi e la dimensione VC della rete!
 
 ---
 
-### 3. Graph Neural Networks (Message Passing)
+# 📌 SEZIONE 5: Architetture Avanzate (Domande Scritte e Orali 2026)
 
-> [!NOTE]
-> **📌 ORIGINE FISICO-MATEMATICA DEL MESSAGE PASSING SUI GRAFI (Gilmer et al. 2017)**
-> * **Formule**: $m_v^{(k)} = \text{AGGREGATE}\left(\{h_u^{(k-1)} : u \in N(v)\}\right), \quad h_v^{(k)} = \text{UPDATE}(h_v^{(k-1)}, m_v^{(k)})$
-> * **Da dove viene?** Deriva dalla **Fisica Statistica (Modelli di Spin di Ising)** e dalle convoluzioni non-euclidee su grafi. Poiché la struttura dei grafi non ha un ordine spaziale fisso come la griglia di un'immagine, l'operatore di `AGGREGATE` (es. somma, media) deve essere una **funzione simmetrica invariante rispetto alle permutazioni dei nodi vicini**.
+### 1. Cascade Correlation (Algoritmo Costruttivo)
+* **Principio**: Parte da una rete senza hidden unit e aggiunge un neurone alla volta **in cascata** (collegato all'input e a tutti i neuroni nascosti precedenti).
+* **Funzione Obiettivo del Candidato**: Massimizzare la covarianza $S$ con l'errore residuo:
+  $$S = \sum_k \left| \sum_p (o_p - \bar{o})(E_{p,k} - \bar{E}_k) \right|$$
+* **Aggiornamento pesi del candidato**: Ascesa del gradiente $\Delta w_j = +\eta \frac{\partial S}{\partial w_j}$.
+* **Congelamento (Frozen Weights)**: Una volta inserito il candidato, i suoi pesi d'ingresso vengono **congelati per sempre**, e si ri-addestrerà solo il layer di output.
+
+---
+
+### 2. Autoencoders (Undercomplete vs Overcomplete)
+* **Undercomplete Autoencoder**: La dimensione dello strato nascosto $z$ (bottleneck) è **inferiore** all'input ($dim(z) < dim(x)$). Forzano la rete ad apprendere una rappresentazione latente compressa (simile alla PCA non lineare).
+* **Overcomplete Autoencoder**: La dimensione dello strato nascosto è **superiore** all'input ($dim(z) > dim(x)$). Usati con regolarizzazione (es. Sparsity o Denoising) per apprendere feature ricche e ridondanti senza memorizzare l'input.
+
+---
+
+### 3. Random Neural Networks & Reservoir Computing (Echo State Networks)
+* **Principio**: I pesi degli strati nascosti (o del bacino/reservoir) vengono **inizializzati casualmente e CONGELATI**.
+* **Addestramento**: Si addestrano solo i pesi del layer di output tramite una semplice regressione lineare chiusa (LMS / Ridge Regression). Vantaggio: velocità di addestramento istantanea e assenza di minima locali.
+
+---
+
+### 4. Self-Organizing Maps (SOM di Kohonen)
+* **Apprendimento Non Supervisionato Topologico**: Mappa dati ad alta dimensione su una griglia a 2D.
+* **Regola di Aggiornamento del Neurone Vincitore (BMU) e dei Vicini**:
+  $$w_i(t+1) = w_i(t) + \eta(t) h_{ic}(t) \big( x(t) - w_i(t) \big)$$
+  dove $h_{ic}(t)$ è la funzione di vicinato gaussiana che decresce con la distanza dal BMU.
+
+---
+
+### 5. Graph Neural Networks (Message Passing)
+* **Messaggio dal Vicinato**:
+  $$m_v^{(k)} = \text{AGGREGATE}^{(k)} \left( \left\{ h_u^{(k-1)} : u \in N(v) \right\} \right)$$
+* **Aggiornamento dello Stato del Nodo**:
+  $$h_v^{(k)} = \text{UPDATE}^{(k)} \left( h_v^{(k-1)}, m_v^{(k)} \right)$$
+
+---
+
+### 6. Fenomeni Moderni: Double Descent & Lottery Ticket Hypothesis
+* **Double Descent**: All'aumentare della complessità del modello, l'errore di test prima decresce, poi sale vicini al limite di interpolazione (overfitting classico), e poi **scende di nuovo** quando il modello diventa fortemente sopra-parametrizzato (over-parametrized regime).
+* **Lottery Ticket Hypothesis (Frankle & Carbin)**: All'interno di una rete neurale grande inizializzata casualmente, esiste una sottorete ("biglietto vincente") che, se addestrata da sola con i pesi iniziali originari, raggiunge prestazioni pari all'intera rete in tempi minori.
 
 ---
 

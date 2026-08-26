@@ -1,8 +1,9 @@
 # ❓ Compendio Integrale Quiz d'Esame — Machine Learning
 **Corso del Prof. Alessio Micheli — Università di Pisa**
-*(Raccolta completa di tutte le 128 domande dei quiz con risposte corrette e spiegazioni dettagliate)*
+*(Raccolta completa, revisionata nell'ortografia ed arricchita con spiegazioni teorico-matematiche approfondite per tutte le 128 domande dei quiz)*
 
 ---
+
 ### 📌 Domanda 1 (ID: 1)
 **Testo**: The gradient can be exploited to provide the direction toward local maxima of a function
 
@@ -10,8 +11,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The gradient shows the direction where the function grows, while the negative of the gradient show the direction where the function decreases.
+> **Spiegazione & Derivazione Teorica**:
+> Il gradiente $\nabla f(x)$ indica la direzione di MASSIMA CRESCITA (ripidezza positiva) di una funzione. Pertanto, seguire la direzione del gradiente consente di muoversi verso un massimo locale (Gradient Ascent).
 
 ---
 
@@ -22,8 +23,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The gradient shows the direction where the function grows, while the negative of the gradient show the direction where the function decreases.
+> **Spiegazione & Derivazione Teorica**:
+> L'opposto del gradiente $-\nabla f(x)$ indica la direzione di MASSIMA DECRESCITA (ripidezza negativa) di una funzione. Seguire questa direzione è la base dell'algoritmo di Discesa del Gradiente (Gradient Descent) per raggiungere i minimi locali della loss function.
 
 ---
 
@@ -34,8 +35,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Euclidean norm of a vector is given by $$\sqrt{\sum_i x_i^2} = \|x\|_2$$
+> **Spiegazione & Derivazione Teorica**:
+> La norma Euclidea (o norma $L_2$) di un vettore $x$ è definita come la radice quadrata della somma dei quadrati delle componenti: $\|x\|_2 = \sqrt{\sum_i x_i^2}$. La formula indicata senza radice rappresenta la norma al quadrato $\|x\|_2^2$, quindi la risposta è FALSO.
 
 ---
 
@@ -46,20 +47,20 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Euclidean norm of a vector is given by $$\sqrt{\sum_i x_i^2} = \|x\|_2$$
+> **Spiegazione & Derivazione Teorica**:
+> La norma Euclidea al quadrato $\|x\|_2^2$ coincide esattamente con il prodotto scalare del vettore con se stesso $x^T x = \sum_i x_i^2$.
 
 ---
 
 ### 📌 Domanda 5 (ID: 5)
-**Testo**: There exits the search inductive bias
+**Testo**: There exists the search inductive bias
 
 * **Tipo**: Vero / Falso
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> There exist two types of inductive bias, the language bias and the search bias.
+> **Spiegazione & Derivazione Teorica**:
+> Esistono due tipi fondamentali di Inductive Bias (bias induttivo): il **Language Bias** (o Restriction Bias, legato alla scelta dello spazio delle ipotesi $\mathcal{H}$) e il **Search Bias** (o Preference Bias, legato al modo in cui l'ottimizzatore esplora $\mathcal{H}$, es. Occam's Razor).
 
 ---
 
@@ -70,8 +71,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The version space VS , with respect to hypothesis space H and training set TR, is the subset of H,TR hypotheses from H consistent with all training examples. The only examples that are unambiguously classified by an unbiased learner represented with the VS are the training examples themselves (we are implementing a lookup table). An unbiased learner is unable to generalize (on new instances). Each unobserved instance will be classified 1 (or positive) by precisely half the hypothesis in VS and 0 (or negative) by the other half.
+> **Spiegazione & Derivazione Teorica**:
+> Un learner privo di bias induttivo (Unbiased Learner) può classificare univocamente solo i punti già visti nel Training Set (comportandosi come una tabella di consultazione / Lookup Table). Non ha alcuna base razionale per generalizzare su nuovi punti non visti, assegnando loro probabilità del 50% di appartenere a ciascuna classe.
 
 ---
 
@@ -82,8 +83,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The Loss measures the “distance” between and (the output and the target).
+> **Spiegazione & Derivazione Teorica**:
+> Nell'apprendimento supervisionato la Loss Function misura la discrepanza o 'distanza' tra la risposta del modello $h(x)$ e il target reale $y$ (non rispetto agli input $x$).
 
 ---
 
@@ -94,8 +95,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The Loss measures the “distance” between h(x) and d (the output and the target).
+> **Spiegazione & Derivazione Teorica**:
+> La Loss Function valuta la distanza tra l'output predetto dal modello $h(x)$ e l'etichetta target $y$ (non tra il target e gli input).
 
 ---
 
@@ -106,8 +107,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> A learner that makes no prior assumptions regarding the identity of the target function/concept has no rational basis for classifying any unseen instances. The bias (restriction, preference) is not only assumed for efficiency, but it is also needed for the generalization capability. However, it does not tell us (quantify) which one is the best solution for generalization yet.
+> **Spiegazione & Derivazione Teorica**:
+> Rimuovere il bias induttivo rende impossibile la generalizzazione su dati futuri non visti. Il bias induttivo è una condizione NECESSARIA per il Machine Learning.
 
 ---
 
@@ -118,8 +119,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> With a 0th order polynomial we have complexity M=0, and increasing the polynomial coefficient we are increasing the complexity.
+> **Spiegazione & Derivazione Teorica**:
+> Aumentando il grado $M$ di un polinomio, il modello diventa più complesso e tenta di interpolare perfettamente tutti i punti di train. Ciò causa un aumento notevole della magnitudo dei coefficienti polinomiali (fenomeno tipico dell'overfitting), non una diminuzione.
 
 ---
 
@@ -130,8 +131,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> With a 0th order polynomial we have complexity M=0, and increasing the polynomial coefficient we are increasing the complexity
+> **Spiegazione & Derivazione Teorica**:
+> Aumentando la complessità $M$, i coefficienti del polinomio crescono in magnitudo per seguire le fluttuazioni ad alta frequenza del rumore nel training set.
 
 ---
 
@@ -142,8 +143,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The Validation Set is used to select the best model (hyper-parameters tuning, model selection)
+> **Spiegazione & Derivazione Teorica**:
+> La Model Selection (scelta degli iperparametri e dell'architettura) deve essere effettuata ESCLUSIVAMENTE sul Validation Set, mai sul Test Set (che deve rimanere incontaminato per la stima finale del rischio).
 
 ---
 
@@ -154,8 +155,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The Validation Set is used to select the best model (hyper-parameters tuning, model selection)
+> **Spiegazione & Derivazione Teorica**:
+> Il Validation Set è lo strumento dedicato alla scelta del modello migliore e all'ottimizzazione degli iperparametri.
 
 ---
 
@@ -166,8 +167,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The Validation Set is used to select the best model (hyper-parameters tuning, model selection)
+> **Spiegazione & Derivazione Teorica**:
+> Selezionare il modello in base all'errore di Training porterebbe a scegliere sempre il modello più complesso e overfitato.
 
 ---
 
@@ -178,8 +179,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Typically, the number of parameters K can exceed the number of original features n (K>n, before it was n)
+> **Spiegazione & Derivazione Teorica**:
+> La Linear Basis Expansion (LBE) proietta gli input originali $n$-dimensionali in uno spazio di feature $K$-dimensionale con $K > n$, aumentando il numero di parametri liberi $w_k$.
 
 ---
 
@@ -190,8 +191,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The model is linear in the parameters w_k (also in ϕ, not in x), even though the transformed features are non-linear. This approach can model more complicated relationships (than the linear).
+> **Spiegazione & Derivazione Teorica**:
+> Un modello lineare applicato a feature trasformate tramite LBE $h(x) = \sum w_k \phi_k(x)$ può definire confini di decisione non lineari nello spazio di input originale, risolvendo problemi non linearmente separabili.
 
 ---
 
@@ -202,8 +203,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> A polynomial expansion is a form of linear basis expansion, where polynomials are used as bases to represent the function.
+> **Spiegazione & Derivazione Teorica**:
+> L'espansione polinomiale (es. inserire $x_1^2, x_2^2, x_1 x_2$) è una forma classica di Linear Basis Expansion (LBE).
 
 ---
 
@@ -214,8 +215,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> A perceptron is a specific form of Linear Threshold Unit (LTU) where the activation function is a step function. It returns 1 if the weighted sum of inputs exceeds a certain threshold, otherwise, it returns 0. In simpler terms, a perceptron can be viewed as a simplification of an LTU with a binary activation function.
+> **Spiegazione & Derivazione Teorica**:
+> Il Perceptrone (Rosenblatt 1958) è un'Unità a Soglia Lineare (Linear Threshold Unit - LTU) avente la funzione a gradino $\text{sign}(z)$ come attivazione.
 
 ---
 
@@ -226,8 +227,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For each training pa]ern (x,d) , where d can be +1 or –1, we compute the output activation $$out = sign(w^Tx)$$
+> **Spiegazione & Derivazione Teorica**:
+> L'output del Perceptrone per un pattern $x$ con bias incorporato è calcolato come $o = \text{sign}(w^T x)$.
 
 ---
 
@@ -238,8 +239,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For the XOR (exclusive OR), it’s not possible using a linear separation because no linear separation surface exists.
+> **Spiegazione & Derivazione Teorica**:
+> Il Perceptrone singolo limita i confini di decisione ad iperpiani lineari e pertanto non può separare il problema logico dell'XOR.
 
 ---
 
@@ -250,8 +251,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For the XOR we can’t use a linear separation, but we can use a NN. We can implement the network by introducing two additional variables and connecting them appropriately, such that the points are linearly separable in the new space.
+> **Spiegazione & Derivazione Teorica**:
+> Una rete neurale a 2 strati con un layer nascosto di perceptroni può combinare più iperpiani per risolvere il problema dell'XOR.
 
 ---
 
@@ -262,20 +263,20 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The perceptron is guaranteed to converge (classifying correctly all the input pa]erns) in a finite number of steps if the problem is linearly separable.
+> **Spiegazione & Derivazione Teorica**:
+> Il Teorema di Convergenza del Perceptrone (Novikoff 1962) garantisce la convergenza in un numero finito di passi $k \le \frac{R^2}{\gamma^2}$ a patto che il dataset sia linearmente separabile con margine $\gamma > 0$.
 
 ---
 
 ### 📌 Domanda 23 (ID: 23)
-**Testo**: The perceptron learning algorithm solves only tasks with all positive pa[erns
+**Testo**: The perceptron learning algorithm solves only tasks with all positive patterns
 
 * **Tipo**: Vero / Falso
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The perceptron learning algorithm solves tasks with positive and negative pa]erns.
+> **Spiegazione & Derivazione Teorica**:
+> L'algoritmo del Perceptrone funziona sia con pattern positivi (+1) che negativi (-1).
 
 ---
 
@@ -286,8 +287,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The sigmoidal logistic is a differentiable function because there exists its derivative.
+> **Spiegazione & Derivazione Teorica**:
+> La funzione Sigmoide $\sigma(z) = \frac{1}{1+e^{-z}}$ è una funzione continua e derivabile ovunque, con derivata $\sigma'(z) = \sigma(z)(1-\sigma(z))$.
 
 ---
 
@@ -298,8 +299,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The identity activation function is a linear function. So, if you consider an artificial neural unit (neuron) with an identity activation function, it means that the output of the unit will be simply a linear combination of its inputs.
+> **Spiegazione & Derivazione Teorica**:
+> Usando l'attivazione Identità $f(x) = x$, l'uscita dell'unità è una combinazione lineare pura degli input $w^T x + b$, ottenendo un modello lineare.
 
 ---
 
@@ -310,8 +311,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The perceptron uses the threshold activation function that is non differentiable at every point because it lacks a defined derivative at points where there is a discrete jump. In such points, the derivative is practically zero.
+> **Spiegazione & Derivazione Teorica**:
+> La funzione di attivazione a gradino del Perceptrone presenta una discontinuità a salto in zero e derivata nulla quasi ovunque, rendendola non derivabile in senso classico per il gradiente.
 
 ---
 
@@ -322,8 +323,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> A NN can be seen as a LBE for both regression and classification
+> **Spiegazione & Derivazione Teorica**:
+> Le Reti Neurali agiscono come Linear Basis Expansion (LBE) sia nei compiti di classificazione che in quelli di regressione.
 
 ---
 
@@ -334,8 +335,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The phi function of the LBE is the NN’s hidden neurons function. So in $$h(x) = f\!\left(\sum_j w_j \phi_j(x, w)\right)$$, we have that $$\phi_j(x, w) = f_j\!\left(\sum_i w_{ji} x_i\right)$$ is the hidden units output.
+> **Spiegazione & Derivazione Teorica**:
+> Nelle Reti Neurali viste come LBE, le funzioni di base $\phi_j(x)$ sono le uscite dei neuroni NASCOSTI ($\phi_j(x) = f_{hidden}(\sum w_{ji} x_i)$), non dei neuroni di output.
 
 ---
 
@@ -346,8 +347,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> A NN can address both a regression task and a classification tasks
+> **Spiegazione & Derivazione Teorica**:
+> Le Reti Neurali sono approssimatori universali sia per compiti di classificazione binaria/multiclasse che per la regressione continua.
 
 ---
 
@@ -358,8 +359,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The backpropagation is based on the minimization of different minimization functions, not only the MSE.
+> **Spiegazione & Derivazione Teorica**:
+> La Backpropagation è un algoritmo generico di calcolo del gradiente (tramite Chain Rule) applicabile a qualsiasi loss function derivabile (MSE, BCE, MEE, Cross-Entropy), non solo all'MSE.
 
 ---
 
@@ -368,6 +369,10 @@
 
 * **Tipo**: Vero / Falso
 * **Risposta Corretta**: **TRUE**
+
+> [!NOTE]
+> **Spiegazione & Derivazione Teorica**:
+> La Backpropagation calcola l'errore locale $\delta_t$ per ogni neurone $t$, permettendo di ricavare la regola di aggiornamento pesi $\Delta w_{tu} = \eta \delta_t o_u$.
 
 ---
 
@@ -378,8 +383,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> high initial values don’t accelerate the training but can lead to saturation issues. Saturation occurs when neurons in the network reach extreme values, causing the gradients during backpropagation to become very small
+> **Spiegazione & Derivazione Teorica**:
+> Inizializzare i pesi con valori elevati porta le attivazioni sigmoidali/tanh in saturazione ($|z| > 4$), azzerando le derivate e bloccando l'apprendimento (Vanishing Gradient).
 
 ---
 
@@ -390,8 +395,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> If all weights are initialized to zero, all neurons in the network will produce the same output during forward propagation.
+> **Spiegazione & Derivazione Teorica**:
+> Inizializzare tutti i pesi a zero distrugge la simmetria della rete: tutti i neuroni dello strato nascosto calcolano lo stesso output e ricevono lo stesso gradiente, rimanendo identici.
 
 ---
 
@@ -402,8 +407,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The eta value can be high or low and depends on different situations. Sometimes a high eta value can lead to overfijng.
+> **Spiegazione & Derivazione Teorica**:
+> Un valore di learning rate $\eta$ troppo alto causa oscillazioni instabili o divergenza attorno al minimo della superficie d'errore.
 
 ---
 
@@ -414,20 +419,20 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The momentum in gradient optimization, particularly in the gradient descent algorithm with momentum, is not primarily introduced for the purpose of model regularization. Momentum is a technique used to accelerate convergence during the training of machine learning models. It introduces a "momentum" term that adds a fraction of the previous step to the current weight update. This helps maintain a momentum of acceleration in the direction of gradient descent, aiding in overcoming flat local minima or reducing oscillation during optimization.
+> **Spiegazione & Derivazione Teorica**:
+> Il Momentum $\alpha \Delta w(t-1)$ è introdotto per accelerare la convergenza e smorzare le oscillazioni nelle direzioni a forte curvatura, non come tecnica di regolarizzazione.
 
 ---
 
 ### 📌 Domanda 36 (ID: 36)
-**Testo**: Too few hidden units can lead to underfijng
+**Testo**: Too few hidden units can lead to underfitting
 
 * **Tipo**: Vero / Falso
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In general, too few hidden units can cause underfitting, and too many hidden units can cause overfijng.
+> **Spiegazione & Derivazione Teorica**:
+> Un numero insufficiente di unità nascoste riduce eccessivamente la capacità espressiva del modello, portando all'Underfitting.
 
 ---
 
@@ -438,20 +443,20 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> If we have a good regularization, then we don’t need (or strictly need) the Early Stopping heuristic and we can stop at training convergence. Anyway, we can also use both. In that case, the Early Stopping will not enter in action if VL error does not increase.
+> **Spiegazione & Derivazione Teorica**:
+> Se si applica una forte regolarizzazione (es. Weight Decay $L_2$), la norma dei pesi rimane controllata e l'Early Stopping potrebbe non attivarsi affatto poiché la loss di validazione non aumenta.
 
 ---
 
 ### 📌 Domanda 38 (ID: 38)
-**Testo**: In the Nesterov Momentum approach the gradient is computed aTer the movement due to the momentum
+**Testo**: In the Nesterov Momentum approach the gradient is computed after the movement due to the momentum
 
 * **Tipo**: Vero / Falso
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> So, we first apply the momentum with $$w' = w + \alpha \,\Delta w_{old}$$, and then we evaluate the new old gradient at this interim point, i.e. with such w (in the previous methods we evaluate the gradient and then we applied the momentum)
+> **Spiegazione & Derivazione Teorica**:
+> Nel Nesterov Accelerated Gradient (NAG), si applica prima lo spostamento dovuto al momentum $w' = w + \alpha \Delta w_{old}$ e si calcola il gradiente nel punto futuro $w'$.
 
 ---
 
@@ -462,8 +467,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In CCA, the model starts with an empty network and gradually adds hidden layers during training. Each new hidden layer is trained to approximate the residual error of the current network, rather than directly minimizing the error on the output variable, as in the case of Mean Squared Error (MSE/LMS).
+> **Spiegazione & Derivazione Teorica**:
+> Nella Cascade Correlation, i candidati vengono addestrati per MASSIMIZZARE la covarianza $S$ con l'errore residuo della rete, non per minimizzare l'MSE.
 
 ---
 
@@ -474,8 +479,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Cross-Validation is a fundamental practice for evaluating model performance, but the rigorous selection and assessment of a model require a broader consideration of various aspects of the machine learning process.
+> **Spiegazione & Derivazione Teorica**:
+> La K-Fold CV fornisce una stima dell'errore, ma una rigida selezione e valutazione richiede l'architettura della Nested Cross-Validation per evitare il selection bias.
 
 ---
 
@@ -486,8 +491,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The validation set (VL) is used specifically to select the best model, among different models and/or hyper-parameters configurations. It’s for the model selection.
+> **Spiegazione & Derivazione Teorica**:
+> Il Validation Set è lo strumento fondamentale raccomandato per selezionare i modelli e gli iperparametri.
 
 ---
 
@@ -498,8 +503,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Relying solely on the value of the training error may lead to a problem known as “overfitting”. It is common to use techniques such as the validation set and early stopping during training.
+> **Spiegazione & Derivazione Teorica**:
+> Fermare l'addestramento scegliendo le epoche solo in base all'errore di training minimo conduce quasi certamente all'Overfitting.
 
 ---
 
@@ -510,8 +515,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Early Stopping involves halting the training of the model once its performance on a validation dataset starts deteriorating, indicating a potential point where the model is beginning to overfit to the training data. Tikhonov Regularization involves adding a regularization term to the loss function during model training. Both of these techniques aim to prevent excessive model complexity, providing a trade-off between the model's ability to fit the training data and its ability to generalize to new data.
+> **Spiegazione & Derivazione Teorica**:
+> Sia l'Early Stopping (che limita il numero di epoche) sia la Regolarizzazione di Tikhonov $L_2$ (che limita la norma $\|w\|^2$) controllano la complessità effettiva (capacità VC) del modello.
 
 ---
 
@@ -522,8 +527,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For Batch we have to consider the previous batch, while for Online we have to consider the previous example.
+> **Spiegazione & Derivazione Teorica**:
+> Il Momentum in Batch considera il gradiente dell'intero dataset/batch precedente, mentre in On-Line considera il gradiente del singolo pattern precedente.
 
 ---
 
@@ -534,8 +539,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The training set and validation set together are sometimes jointly called development/design set, because they are used to build the final model (to train different models and select the best final model).
+> **Spiegazione & Derivazione Teorica**:
+> Il Training set e il Validation set insieme formano il cosiddetto 'Design Set' / 'Development Set', usato per costruire e selezionare il modello finale.
 
 ---
 
@@ -546,8 +551,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> With the K-fold Cross-Validation, we split the data such that we use all the data for validation purpose, instead of using a specific set for the training and another one for the validation.
+> **Spiegazione & Derivazione Teorica**:
+> La K-Fold Cross-Validation è uno schema di partizionamento dei dati in $K$ blocchi per valutare le prestazioni senza sprecare dati.
 
 ---
 
@@ -558,8 +563,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Choosing the number of units (or neurons) in a neural network via grid search addresses only part of the complexity of the problem of training a neural network.
+> **Spiegazione & Derivazione Teorica**:
+> La Grid Search sul numero di unità regola solo la struttura, ma servono altre forme di regolarizzazione (es. Weight Decay, Dropout, Early Stopping) per prevenire l'overfitting.
 
 ---
 
@@ -570,8 +575,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> When we start the training, we are increasing the complexity, but it is important to find a balance between the complexity of the model and its ability to generalize to new data.
+> **Spiegazione & Derivazione Teorica**:
+> Man mano che l'addestramento prosegue nelle epoche, i pesi crescono di norma e la funzione appresa diventa più complessa, aumentando la capacità effettiva della rete.
 
 ---
 
@@ -582,8 +587,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For model selection we use only the validation set, and the test set results cannot be used for model selection. There is the gold rule to keep separation between goals and use separate sets.
+> **Spiegazione & Derivazione Teorica**:
+> Il Test Set deve rimanere sigillato durante la Model Selection per evitare la contaminazione delle informazioni.
 
 ---
 
@@ -594,8 +599,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The best indicator to choose among different models is the validation error.
+> **Spiegazione & Derivazione Teorica**:
+> L'errore di training diminuisce sempre all'aumentare della complessità e non indica la capacità di generalizzazione; l'indicatore corretto è l'errore di validazione.
 
 ---
 
@@ -606,8 +611,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The best indicator to choose among different models is the validation error.
+> **Spiegazione & Derivazione Teorica**:
+> L'errore di test serve per il Model Assessment finale, non per scegliere i modelli durante la Model Selection.
 
 ---
 
@@ -618,8 +623,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> They are hyperparameters because they are external parameters to the learning algorithm that must be set manually before starting training.
+> **Spiegazione & Derivazione Teorica**:
+> I parametri $\lambda$ (Weight Decay) e $patience$ (Early Stopping) sono iperparametri definiti esternamente dall'utente.
 
 ---
 
@@ -630,8 +635,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> R-prop, that does not use the value of the gradient (it can vanish for deep layers) but the sign of gradient (to increase or decrease the weights)
+> **Spiegazione & Derivazione Teorica**:
+> R-Prop (Resilient Backpropagation) utilizza solo il SEGNO del gradiente (positivo/negativo) per aggiornare i pesi, ignorando la sua magnitudo assoluta che potrebbe svanire.
 
 ---
 
@@ -642,8 +647,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For assessment purposes, we use the TS set to estimate the general risk R
+> **Spiegazione & Derivazione Teorica**:
+> Per valutare il rischio generale $R$ della SLT ai fini dell'assessment finale si usa il Test Set, non il Validation Set.
 
 ---
 
@@ -654,8 +659,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> We use the TS set to estimate the Remp
+> **Spiegazione & Derivazione Teorica**:
+> L'errore empirico $R_{emp}$ nel bound della SLT viene stimato sul dataset di addestramento/test, non sul Validation set.
 
 ---
 
@@ -666,8 +671,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In general, too few hidden units can cause underfitting, and too many hidden units can cause overfitting. If a proper regulations is adopted, this can change the aspect.
+> **Spiegazione & Derivazione Teorica**:
+> Un numero eccessivo di unità nascoste aumenta la dimensione VC; senza opportuna regolarizzazione causa Overfitting.
 
 ---
 
@@ -678,8 +683,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> H shatters X if and only if H can represent all the possible dichotomies on X (with 0 errors). There exists at least one hypothesis thanks to which we can discriminate perfectly all these points.
+> **Spiegazione & Derivazione Teorica**:
+> Un insieme di punti $X$ è shatterato (frammentato) da $\mathcal{H}$ se $\mathcal{H}$ può realizzare tutte le $2^{|X|}$ possibili combinazioni di etichette con 0 errori.
 
 ---
 
@@ -690,8 +695,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> We have VC(H) = p if H shatters at least one set (configuration) of p points and if H cannot shatter any set (configuration) of p + 1 points.
+> **Spiegazione & Derivazione Teorica**:
+> La VC-Dimension è la MASSIMA cardinalità $P$ per cui esiste ALMENO UN insieme di $P$ punti shatterabile (cioè che realizza TUTTE le $2^P$ dicotomie, non solo una assegnazione di etichette).
 
 ---
 
@@ -702,8 +707,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The minimization of the equation $$\psi(w) = \frac{1}{2} w^{T} w$$ (objective function for hard margin) correspond to the minimization of ||w||.
+> **Spiegazione & Derivazione Teorica**:
+> L'obiettivo del problema primale della Hard Margin SVM è minimizzare $\frac{1}{2}\|w\|^2$ (massimizzare il margine), assumendo che gli errori di train siano pari a zero.
 
 ---
 
@@ -714,8 +719,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Minimizing the norm of w is equivalent to minimizing the VC dimension and thus to minimizing the capacity term
+> **Spiegazione & Derivazione Teorica**:
+> Minimizzare la norma $\|w\|^2$ equivale a ridurre la dimensione VC e la capacità del modello, riducendo il termine di confidenza della SLT.
 
 ---
 
@@ -726,8 +731,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Maximizing the margin we minimize the VC dimension
+> **Spiegazione & Derivazione Teorica**:
+> Il teorema di Vapnik per le SVM dimostra la relazione inversa tra l'ampiezza del margine $M = 2/\|w\|$ e la VC-dimension: $VC \le \min(D, R^2/\gamma^2) + 1$.
 
 ---
 
@@ -738,8 +743,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In general, the VC dimension of a class of linear (separator/decision) hyperplanes (LTU) in a n-dimensional space is n+1. Note that could exist an upper-bound, because in some case the VC-dim can be less constraining for the model (because we want to reduce the VC dimension).
+> **Spiegazione & Derivazione Teorica**:
+> La VC-dimension della classe degli iperpiani lineari (LTU) in uno spazio a $n$ dimensioni $\mathbb{R}^n$ è esattamente $n + 1$.
 
 ---
 
@@ -750,8 +755,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> A support vector x(s) is a vector that satisfies the equation $$d_i \left( w^{T} x_i + b \right) \ge 1$$ exactly, such that we have $$d^{(s)} \left( w^{T} x^{(s)} + b \right) = 1$$ (1 is just a convention for the canonical representation of the hyperplane). Graphically, the support vectors are the closest data points to the hyperplane.
+> **Spiegazione & Derivazione Teorica**:
+> Un Vettore di Supporto non è uno scalare positivo, ma un vettore d'ingresso $x^{(s)} \in \mathbb{R}^D$ che giace esattamente sul bordo del margine $y^{(s)}(w^T x^{(s)} + b) = 1$.
 
 ---
 
@@ -762,20 +767,20 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> There aren’t hyperparameters because there are no external parameters that must be set manually before starting.
+> **Spiegazione & Derivazione Teorica**:
+> Sotto l'assunzione di separabilità lineare, la Hard Margin SVM non richiede iperparametri (a differenza della Soft Margin che richiede $C$).
 
 ---
 
 ### 📌 Domanda 65 (ID: 65)
-**Testo**: Some configuration of 3 points in the plane are not sha[ered by a linear model
+**Testo**: Some configuration of 3 points in the plane are not shattered by a linear model
 
 * **Tipo**: Vero / Falso
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> We can have non linearly separable problem, e.g when we have the points positioned one after the other.
+> **Spiegazione & Derivazione Teorica**:
+> Tre punti disposti in linea retta (collineari) nel piano $\mathbb{R}^2$ non possono essere shatterati da un iperpiano lineare se le etichette alternate sono $+1, -1, +1$.
 
 ---
 
@@ -786,8 +791,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The optimal hyperplane is the hyperplane which maximizes the margin.
+> **Spiegazione & Derivazione Teorica**:
+> L'iperpiano ottimale nelle SVM è quello che MASSIMIZZA il margine di separazione ($M = 2/\|w\|$).
 
 ---
 
@@ -798,8 +803,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Maximizing the margin we minimize the VC dimension
+> **Spiegazione & Derivazione Teorica**:
+> Massimizzare il margine nelle SVM riduce la norma pesi e controlla direttamente la dimensione VC dello spazio delle ipotesi.
 
 ---
 
@@ -810,8 +815,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For classification, bagging it’s likely to increase (and not decrease) the margin of a classifier. That’s because the average of K separation curves is likely to be “in the middle” (in medio stat virtus).
+> **Spiegazione & Derivazione Teorica**:
+> Il Bagging nella classificazione aumenta (non diminuisce) il margine medio del classificatore grazie all'effetto di mediazione dei vettori di decisione.
 
 ---
 
@@ -822,8 +827,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> We can use high variance models (with low bias) because they can perform well on average.
+> **Spiegazione & Derivazione Teorica**:
+> Il Bagging funziona particolarmente bene con modelli ad ALTA VARIANZA (es. alberi di decisione profondi o reti non regolarizzate), riducendo la varianza mediante averaging.
 
 ---
 
@@ -834,20 +839,20 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Boosting is a technique of ensembling, used to enhance the performance of weak learners incrementally.
+> **Spiegazione & Derivazione Teorica**:
+> Il Boosting è progettato specificamente per combinare progressivamente una sequenza di modelli deboli (weak learners) trasformandoli in un modello forte.
 
 ---
 
 ### 📌 Domanda 71 (ID: 71)
-**Testo**: Boosting differentiates each training progressively concentrating on well classified pa[erns
+**Testo**: Boosting differentiates each training progressively concentrating on well classified patterns
 
 * **Tipo**: Vero / Falso
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Boosting differentiates each training progressively concentrating on misclassified (and not well classified) pa]erns
+> **Spiegazione & Derivazione Teorica**:
+> Il Boosting ripesa il dataset concentrandosi progressivamente sui pattern ERRATI (misclassified) e non su quelli ben classificati.
 
 ---
 
@@ -858,8 +863,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The deep-learning methods exploit distributed representation with multiple levels of representation. We have an increase of level of abstraction through different layers (each layer learns increasingly abstract and complex representations of the input data).
+> **Spiegazione & Derivazione Teorica**:
+> Le reti neurali profonde apprendono gerarchie di rappresentazione distribuiti a livelli di astrazione via via crescenti ad ogni strato.
 
 ---
 
@@ -870,8 +875,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Deep neural networks are effective, but they are not the only way to implement representation learning. There are other approaches and models that can be used for representation learning, such as shallower neural networks, recurrent neural networks, convolutional neural networks, and other unsupervised learning methods.
+> **Spiegazione & Derivazione Teorica**:
+> Sebbene le NNs profonde siano molto efficaci, esistono altri metodi per il representation learning (es. Autoencoders intelligenti, Kernel metodi, SOM, RBF networks).
 
 ---
 
@@ -882,8 +887,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> With a two layer logic network, we can solve the parity problem with an exponential (not polynomial) number of gates with respect to the input dimension. With N inputs, we have $$\frac{2^N}{2} + 1 = 2^{N-1} + 1$$ gates.
+> **Spiegazione & Derivazione Teorica**:
+> Per risolvere il problema della parità a $N$ bit con una rete logica a soli 2 strati occorre un numero ESPONENZIALE di porte logiche ($2^{N-1}+1$).
 
 ---
 
@@ -894,8 +899,8 @@
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> When the autoencoder is trained, then we have $$W_1$$ and $$W′$$ (encoder and decoder) and we can delete the decoder and use only the encoder part.
+> **Spiegazione & Derivazione Teorica**:
+> Quando si pre-addestra un Autoencoder per inizializzare una rete profonda, si conserva la parte ENCODER $W_1$ e si scarta il Decoder $W'$.
 
 ---
 
@@ -906,8 +911,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> “Gradient vanishing” occurs when the gradients of the activation functions become very small as one approaches the initial layers of the network during backpropagation. This results in weight updates of the initial layers becoming meaningless, and the network does not learn effectively from those layers. The sigmoid function has a limited range between 0 and 1, and its derivative reaches a maximum value of approximately 0.25. When calculating gradients during backpropagation, these gradients can decrease exponentially as they move backwards through the network. As a result, gradients become very small near the initial layers, contributing to the gradient vanishing problem.
+> **Spiegazione & Derivazione Teorica**:
+> Moltiplicando le derivate della Sigmoide ($\le 0.25$) lungo molti strati durante la Backpropagation, il gradiente tende a zero (Gradient Vanishing).
 
 ---
 
@@ -918,8 +923,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The repetition of multiplication through many layers can introduce cliffs in the cost function. With clipping, considering g as the gradient and v as the norm threshold, if ||g|| > v then we can impose a normalization of the gradient with g = vg/||g|| . So, we are moving in the gradient direction, but bounding the weight update.
+> **Spiegazione & Derivazione Teorica**:
+> Il Gradient Clipping controlla la norma del gradiente $\|g\|$: se $\|g\| > v$, ridimensiona il gradiente $g \leftarrow v \frac{g}{\|g\|}$ per evitare esplosioni nell'aggiornamento pesi.
 
 ---
 
@@ -930,8 +935,8 @@
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For a solution with logN layers, we have a polynomial number of gates. We construct a complete tree with N − 1 (XOR) internal nodes (a complete binary tree with N leaves has N-1 internal nodes). Considering that the XOR has 3 AND/OR gates, so we have 3 gates for each node and 3(N − 1) total gates. So, with more layers we are reducing the number of gates.
+> **Spiegazione & Derivazione Teorica**:
+> Aumentando il numero di strati a $\log N$ in una rete logica ad albero binario, il problema della parità si risolve con un numero POLINOMIALE di porte $3(N-1)$.
 
 ---
 
@@ -952,8 +957,8 @@
   8. [❌] “No flattening” results show that a deep models cannot be more efficient, in terms of units, than a shallow one
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The general idea of no-flattening is that when a function can be compactly represented by a deep architecture, it might need a very large architecture to be represented by an insufficiently deep one (we can always represent the same task, but the difference is in the efficiency). Deep architectures can compactly represent certain functions that might require a very large architecture in a shallow setting.
+> **Spiegazione & Derivazione Teorica**:
+> I risultati di 'No Flattening' dimostrano che le architetture profonde possono rappresentare in modo compatto (con un guadagno esponenziale sul numero di unità e pesi) funzioni che in architetture shallow richiederebbero un numero esponenziale di neuroni.
 
 ---
 
@@ -972,38 +977,8 @@
   6. [❌] $E_P[(y - h(x))^2] = (f(x) - h(x))^2 + E_P[(h(x) - \bar{h}(x))^2] + \sigma^2$ with the mean computed with respect to all the possible data points x according to a distribution P.
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> We have that:
-
-$$
-E_P[(y-h(x))^2] = E_P[h(x)^2] + E_P[y^2] - 2E_P[y]E_P[h(x)]
-$$
-
-where:
-
-$$
-E_P[h(x)^2] = E_P[(h(x)-\bar{h}(x))^2] + \bar{h}(x)^2
-$$
-
-$$
-E_P[y^2] = E_P[(y-f(x))^2] + f(x)^2
-$$
-
-$$
--2E_P[y]E_P[h(x)] = -2 f(x)\bar{h}(x)
-$$
-
-Therefore:
-
-$$
-E_P[(y-h(x))^2] = E_P[(h(x)-\bar{h}(x))^2] + \bar{h}(x)^2 - 2f(x)\bar{h}(x) + f(x)^2 + E_P[(y-f(x))^2]
-$$
-
-$$
-= E_P[(h(x)-\bar{h}(x))^2] + (\bar{h}(x)-f(x))^2 + E_P[(y-f(x))^2]
-$$
-
-Moreover, the mean is computed with respect to all the possible training sets sampled according to a distribution P (and not with respect to all the possible data points x).
+> **Spiegazione & Derivazione Teorica**:
+> La formula corretta della scomposizione Bias-Varianza calcola il valore atteso rispetto a tutti i possibili TRAINING SET estratti dalla distribuzione $P$: $\mathbb{E}_P[(y-h(x))^2] = \text{Bias}^2 + \text{Var} + \sigma^2$.
 
 ---
 
@@ -1025,8 +1000,8 @@ Moreover, the mean is computed with respect to all the possible training sets sa
   9. [❌] $K(t,v) = e^{\frac{1}{2\sigma^2}\|t-v\|^2}$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The Radial Basis Function kernel is defined as $K(x,x_i) = e^{-\frac{1}{2\sigma^2}\|x - x_i\|^2}$. The kernel is symmetric, so $K(t,v) = K(v,t)$. Therefore, any formulation with a negative exponent and the squared Euclidean norm is correct.
+> **Spiegazione & Derivazione Teorica**:
+> Le formulazioni corrette del Kernel RBF Gaussiano richiedono l'esponente negativo $-\frac{1}{2\sigma^2}$ e la norma euclidea al quadrato $\|t-v\|^2$. Data la simmetria, $K(t,v) = K(v,t)$.
 
 ---
 
@@ -1042,20 +1017,13 @@ Moreover, the mean is computed with respect to all the possible training sets sa
   3. [❌] The slack variables have no effect on the width of the margin
   4. [❌] High values of C can lead to underfitting
   5. [✅] With slack variables is possible to gain a greater margin
-  6. [✅] The values of alfa allow us to know the not-null slack variables
+  6. [✅] The values of \alpha allow us to know the not-null slack variables
   7. [✅] C in a soft margin SVM can be tailored by the user with a cross validation approach
   8. [❌] Slack variables does not changes the constraints of the primal problem
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> 1. For Soft Margin, small values of C can lead to underfitting.
-2. For Soft Margin, we introduce the non-negative scalar variables $\xi_i$, such that we add a tolerance in the constraint, and we obtain $d_i(w^T x_i + b) \ge 1 - \xi_i\,(\forall i = 1,\ldots,N)$.
-3. The slack variables have effect on the width of the margin because we are now admitting points inside the margin that allows us to have a larger margin and a noise tolerance.
-4. For Soft Margin, high values of C can lead to overfitting.
-5. With the slack variables we are now admitting points inside the margin that allows us to have a larger margin and a noise tolerance.
-6. If $0 < \alpha_i < C$ then $\xi_i = 0$ (so we are on the edge of the margin), and if $\alpha_i = C$ then $\xi_i \ge 0$ (so we are inside the margin).
-7. C is a regularization hyper-parameter to control the trade-off between the empirical risk minimization and the capacity term minimization.
-8. With the slack variables $\xi_i$ we add a tolerance in the constraint, and we obtain $d_i(w^T x_i + b) \ge 1 - \xi_i\,(\forall i = 1,\ldots,N)$.
+> **Spiegazione & Derivazione Teorica**:
+> Nella Soft Margin SVM: $C$ piccolo tollera più violazioni ed evita l'overfitting; le slack variables $\xi_i$ modificano i vincoli primali in $y_i(w^T x_i+b) \ge 1-\xi_i$ ed ampliano il margine.
 
 ---
 
@@ -1076,8 +1044,8 @@ Moreover, the mean is computed with respect to all the possible training sets sa
   8. [❌] $\delta_u = (\sum_v \delta_v w_{uv}) f'_u(net_u)$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The equation for the hidden unit's error signal is $\delta_j = \left( \sum_{k=1}^{K} \delta_k w_{kj} \right) f'_j(net_j)$, where j denotes a hidden unit and k denotes an output unit.
+> **Spiegazione & Derivazione Teorica**:
+> Il fattore di errore locale per un neurone nascosto $u$ o $z$ connesso ai neuroni successivi $v$ è $\delta_u = (\sum_v \delta_v w_{vu}) f'_u(net_u)$.
 
 ---
 
@@ -1098,8 +1066,8 @@ Moreover, the mean is computed with respect to all the possible training sets sa
   8. [❌] $\delta_r = (\sum_v \delta_v w_{rv}) f'_r(net_r)$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The equation for the hidden unit's error signal is $\delta_j = \left( \sum_{k=1}^{K} \delta_k w_{kj} \right) f'_j(net_j)$, where j denotes a hidden unit and k denotes an output unit.
+> **Spiegazione & Derivazione Teorica**:
+> La formula del $\delta$ per un neurone nascosto $s$ o $r$ collegato ai neuroni di output $v$ è $\delta_s = (\sum_v \delta_v w_{vs}) f'_s(net_s)$.
 
 ---
 
@@ -1118,12 +1086,8 @@ Moreover, the mean is computed with respect to all the possible training sets sa
   6. [✅] $\frac{\partial E_p(w)}{\partial w_i} = -2 \delta_p f'(net(x_p)) x_{p,i}$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Considering $E(w) = \sum_p (d_p - o(x_p))^2 = \sum_p (d_p - f(x_p^T w))^2$ and $o(x_p) = f(x_p^T w) = f(net(x_p))$, we obtain for one pattern p:
-
-$\frac{\partial E_p(w)}{\partial w_j} = -2 x_{p,j} (d_p - f(net(x_p))) f'(net(x_p)) = -2 x_{p,j} \delta_p f'(net(x_p))$.
-
-Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delta_p f'(net(x_p))$.
+> **Spiegazione & Derivazione Teorica**:
+> La derivata parziale per un pattern $p$ è $\frac{\partial E_p}{\partial w_i} = -2 \delta_p f'(net(x_p)) x_{p,i}$, in virtù della Chain Rule.
 
 ---
 
@@ -1142,8 +1106,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   6. [✅] $net_j = \sum_i w_{ji} o_i$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> We used i for input units, j for hidden units, and k for output units. Therefore, the net of the hidden unit is $net_j(x) = \sum_i w_{ji} x_i$, i.e., the weighted sum of the outputs of the input units.
+> **Spiegazione & Derivazione Teorica**:
+> Per la notazione del corso (input $i$, hidden $j$, output $k$), l'ingresso netto al neurone nascosto $j$ è $net_j = \sum_i w_{ji} o_i$.
 
 ---
 
@@ -1163,8 +1127,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   7. [✅] For the K-NN, fixing K: with high dimensional inputs, the range of features values to be considered becomes high, so you lose the similarity among examples in the N(x)
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In high input dimensions, near neighborhoods tend to be spatially large, and estimates are no longer local. The curse of dimensionality is related to the change in data density as dimensionality increases. Higher values of K lead to more rigid models, while lower values of K lead to more flexible models. In high-dimensional spaces, distances between examples become less meaningful, causing a loss of similarity in the neighborhood N(x).
+> **Spiegazione & Derivazione Teorica**:
+> Nei k-NN ad alta dimensione, la densità dei dati diminuisce drammaticamente (curse of dimensionality), i vicinati perdono la loro natura 'locale' e il concetto di similarità sfuma.
 
 ---
 
@@ -1183,8 +1147,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   6. [✅] $- 2 \lambda w$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> With Tikhonov (L2) regularization, the loss becomes $E(w) + \lambda \|w\|^2$. The gradient of the regularization term is $2\lambda w$, therefore in gradient descent the update rule includes the term $-2\lambda w$. Hence the additional addend in the update rule is $-2\lambda w$.
+> **Spiegazione & Derivazione Teorica**:
+> Aggiungendo la regolarizzazione di Tikhonov $\lambda \|w\|^2$ alla loss, la derivata del termine di regolarizzazione porta l'addendo $-2\lambda w$ nell'aggiornamento dei pesi per discesa del gradiente.
 
 ---
 
@@ -1205,8 +1169,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   8. [✅] $h(x_p) = sign(w^T x_p)$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> For a Linear Threshold Unit (LTU), the output is given by the sign of the weighted sum. Assuming x0 = 1 (bias included in w), we have $h(x_p) = sign(w^T x_p) = sign(x_p^T w) = sign(\sum_{i=0}^n x_{p,i} w_i)$. All algebraically equivalent expressions are correct.
+> **Spiegazione & Derivazione Teorica**:
+> L'output di una LTU con bias incorporato $x_0=1$ è $h(x_p) = \text{sign}(w^T x_p) = \text{sign}(x_p^T w) = \text{sign}(\sum_{u=0}^n w_u x_{p,u})$.
 
 ---
 
@@ -1222,12 +1186,12 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   3. [❌] It implies that the VC-bound does not hold
   4. [✅] It has higher VC-confidence
   5. [✅] It has higher VC-dim
-  6. [✅] It provides higher fitting capability, reducing $R_emp$
-  7. [❌] It provides higher fitting capability, increasing $R_emp$
+  6. [✅] It provides higher fitting capability, reducing $R_{emp}$
+  7. [❌] It provides higher fitting capability, increasing $R_{emp}$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Increasing the degree of a polynomial increases the model capacity and therefore its VC-dimension. With fixed l and δ, the VC-confidence term increases with VC-dim. Moreover, a higher-capacity model provides higher fitting capability, typically reducing the empirical risk R_emp (training error).
+> **Spiegazione & Derivazione Teorica**:
+> Aumentando il grado del polinomio, si aumentano la capacità del modello, la VC-dimension e la VC-confidence, riducendo l'errore empirico $R_{emp}$.
 
 ---
 
@@ -1239,14 +1203,14 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 
 **Opzioni:**
   1. [❌] It implies higher R value
-  2. [✅] It provides lower fitting capability, increasing R_emp
+  2. [✅] It provides lower fitting capability, increasing R_{emp}
   3. [✅] It has lower VC-dim
   4. [❌] It implies lower R value
   5. [❌] It implies that the VC-bound does not hold
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Decreasing the polynomial degree reduces model capacity and therefore reduces the VC-dimension. A lower-capacity model has lower fitting capability and can lead to higher empirical risk R_emp (underfitting). However, it does not necessarily imply a direct increase or decrease of the true risk R, nor that the VC-bound does not hold.
+> **Spiegazione & Derivazione Teorica**:
+> Riducendo il grado del polinomio, la VC-dimension diminuisce ed il modello ha minore capacità di fitting, aumentando l'errore empirico $R_{emp}$.
 
 ---
 
@@ -1267,15 +1231,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   8. [✅] If we have a Boolean target function we learn a classifier with two classes
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> 1. Regression is a process of estimating a real-valued function from a finite set of noisy samples: known pairs $(x, f(x) + \text{random noise})$.
-2. In classification, patterns (feature vectors) are members of a class and the goal is to assign each observed pattern to a specific class label based on a learned function.
-3. The hypothesis space is a space of different functions.
-4. If $f(x)$ is boolean (binary classification), the output class can be T/F, 0/1, -1/+1, negative/positive.
-5. Given training examples $\langle x,d \rangle$ for an unknown function $f$, we want to find a good approximation to $f$, a hypothesis $h$ to predict on unseen data.
-6. Unsupervised learning has no teacher: the training set is unlabeled data $\langle x \rangle$.
-7. In a multi-class problem $(C_1, C_2, \dots, C_K)$ the function assigns the input to one of the multiple classes.
-8. If $f(x)$ is boolean then we have a binary classification.
+> **Spiegazione & Derivazione Teorica**:
+> Nella regressione il target è reale; nella classificazione binaria le etichette possono essere $\langle x, +1\rangle$ e $\langle x, -1\rangle$; l'obiettivo supervisionato è approssimare la funzione target $f$.
 
 ---
 
@@ -1286,8 +1243,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The gradient ∇f gives the direction of maximum increase of the function. Therefore, the negative of the gradient gives the direction of steepest descent, i.e., toward a local minimum.
+> **Spiegazione & Derivazione Teorica**:
+> Il vettore gradiente $\nabla f = (\partial f/\partial x_1, \partial f/\partial x_2)$ punta nella direzione di massima crescita; il suo opposto $-\nabla f$ punta verso i minimi locali.
 
 ---
 
@@ -1304,8 +1261,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   4. [✅] If we have a Boolean target function we learn a classifier with two classes.
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Changing the nature (type) of the target we can see the classification or regression as a function approximation task, If we have a Boolean target function we learn a classifier with two classes
+> **Spiegazione & Derivazione Teorica**:
+> Variando la natura del target (discreto per classificazione, continuo per regressione), entrambi i compiti sono formalmente inquadrati come approssimazione di funzioni.
 
 ---
 
@@ -1316,8 +1273,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> There is no formally defined inductive bias known as 'full space bias' in machine learning theory.
+> **Spiegazione & Derivazione Teorica**:
+> Non esiste alcun bias induttivo formalmente denominato 'full space bias'.
 
 ---
 
@@ -1328,8 +1285,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The version space inductive bias refers to the assumption that the target hypothesis belongs to the version space, i.e., the set of hypotheses consistent with the training data.
+> **Spiegazione & Derivazione Teorica**:
+> Il Version Space Inductive Bias assume che la funzione target appartenga al Version Space (l'insieme delle ipotesi consistenti con i dati di train).
 
 ---
 
@@ -1340,8 +1297,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In supervised learning, the loss function evaluates the discrepancy between the model output and the true target values, not the mean of the outputs.
+> **Spiegazione & Derivazione Teorica**:
+> La loss function nell'apprendimento supervisionato misura lo scarto tra la predizione del modello e il target reale, non la media delle uscite.
 
 ---
 
@@ -1352,8 +1309,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The VC dimension is the maximum cardinality of a set of points that can be shattered by H, meaning that all possible labelings of those points can be realized by hypotheses in H. It is not sufficient that at least one labeling assignment is realizable.
+> **Spiegazione & Derivazione Teorica**:
+> La VC-dimension richiede la capacità di shatterare l'insieme di punti (realizzando TUTTE le $2^P$ combinazioni), non solo almeno un'assegnazione.
 
 ---
 
@@ -1364,8 +1321,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The VC-dimension measures the capacity of a hypothesis space. By increasing VC-dim, we obtain hypothesis spaces of increasing complexity, which can be organized in a nested hierarchy.
+> **Spiegazione & Derivazione Teorica**:
+> La VC-dimension definisce la capacità dello spazio delle ipotesi, permettendo di costruire la gerarchia annidata $\mathcal{H}_1 \subset \mathcal{H}_2 \dots$ del principio SRM.
 
 ---
 
@@ -1376,8 +1333,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In hard-margin SVM the objective function minimizes 1/2 ||w||^2, i.e., it maximizes the margin under the constraint that training errors are zero. It does not minimize training errors; it assumes perfect separability.
+> **Spiegazione & Derivazione Teorica**:
+> Il problema primale della Hard Margin SVM minimizza $\frac{1}{2}\|w\|^2$ (massimizzando il margine) assumendo 0 errori di addestramento.
 
 ---
 
@@ -1399,8 +1356,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   9. [❌] $K(t,v) = e^{\frac{1}{2\sigma^2} \|v-t\|^2}$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The RBF (Gaussian) kernel is defined as $K(x,x') = e^{-\frac{1}{2\sigma^2}\|x-x'\|^2}$. It is symmetric, so K(t,v) = K(v,t). Therefore, all formulations with negative exponent and squared Euclidean norm are correct.
+> **Spiegazione & Derivazione Teorica**:
+> Le espressioni valide del Kernel RBF Gaussiano richiedono l'esponente negativo $-\frac{1}{2\sigma^2}$ e la norma euclidea al quadrato $\|t-v\|^2$.
 
 ---
 
@@ -1411,8 +1368,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The Cascade-Correlation algorithm incrementally adds hidden units during training, automatically determining the number of hidden neurons needed to improve performance.
+> **Spiegazione & Derivazione Teorica**:
+> L'algoritmo Cascade Correlation aggiunge progressivamente neuroni nascosti, determinando automaticamente la dimensione ideale dell'architettura.
 
 ---
 
@@ -1423,8 +1380,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Both early stopping and Tikhonov (L2) regularization control the effective complexity of the model. Early stopping limits model capacity by halting training before overfitting occurs, while Tikhonov regularization penalizes large weights, reducing effective model complexity.
+> **Spiegazione & Derivazione Teorica**:
+> Sia l'Early Stopping che la regolarizzazione di Tikhonov controllano la norma pesi e la capacità effettiva del modello per prevenire l'overfitting.
 
 ---
 
@@ -1435,8 +1392,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Momentum has the same conceptual role (smoothing updates and accelerating along consistent directions), but its practical effect differs between batch and on-line/SGD settings because the gradient noise and update frequency are different.
+> **Spiegazione & Derivazione Teorica**:
+> Il Momentum in Batch opera sul gradiente medio del batch precedente, mentre in On-Line opera sul gradiente del singolo esempio precedente.
 
 ---
 
@@ -1447,8 +1404,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> K-fold cross-validation splits the dataset into K subsets (folds), using K−1 folds for training and one fold for validation, rotating the validation fold across runs.
+> **Spiegazione & Derivazione Teorica**:
+> La K-Fold Cross-Validation suddivide il dataset in $K$ fold ruotando il blocco di validazione.
 
 ---
 
@@ -1459,8 +1416,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Model selection is based on validation performance (e.g., cross-validation error), not on training error (TR error), which is optimistically biased.
+> **Spiegazione & Derivazione Teorica**:
+> La Model Selection valuta gli iperparametri sull'errore di validazione, ignorando l'errore di training (TR error) che è polarizzato.
 
 ---
 
@@ -1471,8 +1428,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> According to the Universal Approximation Theorem, a feedforward neural network with a single hidden layer and a non-linear activation function (such as the logistic sigmoid) can approximate any continuous function on a compact domain, given sufficiently many hidden units.
+> **Spiegazione & Derivazione Teorica**:
+> Il Teorema di Approssimazione Universale (Hornik 1989) garantisce che una rete MLP con 1 strato nascosto e attivazione sigmoidale può approssimare qualsiasi funzione continua.
 
 ---
 
@@ -1483,8 +1440,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Using multiple output units in a neural network allows modeling multi-output regression problems or multi-class classification tasks (e.g., using one-hot encoding and softmax for classification).
+> **Spiegazione & Derivazione Teorica**:
+> Utilizzando più unità di output si possono realizzare modelli di regressione multivariata (es. MEE 4D per la CUP) o classificatori multi-classe.
 
 ---
 
@@ -1495,8 +1452,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> By the chain rule, ∂E/∂w = (∂E/∂o) · (∂o/∂w), not (∂w/∂o). The derivative must follow the correct dependency direction.
+> **Spiegazione & Derivazione Teorica**:
+> Per la Chain Rule, $\frac{\partial E}{\partial w} = \frac{\partial E}{\partial o} \cdot \frac{\partial o}{\partial w}$, non il reciproco $\frac{\partial w}{\partial o}$.
 
 ---
 
@@ -1507,8 +1464,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Backpropagation computes the exact gradient of the loss function with respect to each network weight using the chain rule, enabling gradient-based update rules.
+> **Spiegazione & Derivazione Teorica**:
+> La Backpropagation calcola il gradiente esatto della funzione di costo rispetto a ciascun peso applicando la regola della catena.
 
 ---
 
@@ -1519,8 +1476,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In backpropagation, the delta values are propagated from the output layer back to the hidden and input layers (i.e., from output to input), not the other way around.
+> **Spiegazione & Derivazione Teorica**:
+> Nella Backpropagation i segnali d'errore $\delta$ vengono retropropagati dall'output verso gli strati nascosti e l'input (da destra a sinistra).
 
 ---
 
@@ -1539,8 +1496,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   6. [✅] $\Delta w_{ts} = \sum_{p=1}^{l} \delta_{p,t} \; o_{p,s}$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In backpropagation, the weight update over the full training set is proportional to the sum over patterns of the product between the delta of the receiving unit and the output of the sending unit. Depending on the sign convention adopted for Δw, the correct formulations correspond to options 4 and 6.
+> **Spiegazione & Derivazione Teorica**:
+> L'aggiornamento pesi sull'intero dataset è proporzionale alla somma dei prodotti tra il $\delta$ del neurone ricevente e l'output $o$ del neurone mittente: $\Delta w_{ts} = \sum_{p=1}^l \delta_{p,t} o_{p,s}$.
 
 ---
 
@@ -1551,8 +1508,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The weights (w) of a neural network are learned parameters optimized during training. Hyper-parameters (e.g., learning rate, number of hidden units, regularization strength) are selected by the user.
+> **Spiegazione & Derivazione Teorica**:
+> I pesi $w$ di una rete neurale sono parametri interni ottimizzati durante l'addestramento, non iperparametri impostati dall'utente.
 
 ---
 
@@ -1563,8 +1520,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Mini-batch is a training strategy used to approximate the gradient during optimization. It affects computational efficiency and convergence properties, not the intrinsic complexity (capacity) of the model.
+> **Spiegazione & Derivazione Teorica**:
+> Il Mini-batch è una tecnica di ottimizzazione stocastica del gradiente, non un metodo per modificare la capacità intrinseca del modello.
 
 ---
 
@@ -1575,8 +1532,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> A high learning rate (η) can speed up training, but it may cause instability, divergence, or oscillations. The learning rate must be carefully tuned to balance convergence speed and stability.
+> **Spiegazione & Derivazione Teorica**:
+> Un tasso di apprendimento $\eta$ eccessivo causa oscillazioni instabili ed impedisce la convergenza al minimo della loss.
 
 ---
 
@@ -1587,8 +1544,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> According to the notation used in the course, the weight $w_{rq}$ (not $w_{qr}$) denotes the weight of unit r receiving input from unit q. The first index refers to the receiving unit.
+> **Spiegazione & Derivazione Teorica**:
+> Nella notazione del corso, $w_{rq}$ indica il peso del neurone ricevente $r$ proveniente dall'input $q$ (il primo indice è il ricevente).
 
 ---
 
@@ -1605,8 +1562,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   4. [❌] $h(x_p) = sign(w_p^T x_p)$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> An LTU computes the sign of the weighted sum of inputs. With $x_0 = 1$ and including the bias in w, the correct formulations are $h(x_p) = sign(x_p^T w)$ and equivalently $h(x_p) = sign(∑_{u=0}^{n} x_{p,u} w_u)$.
+> **Spiegazione & Derivazione Teorica**:
+> L'output di un LTU per il pattern $p$ è $h(x_p) = \text{sign}(x_p^T w) = \text{sign}(\sum_{u=0}^n w_u x_{p,u})$.
 
 ---
 
@@ -1617,8 +1574,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> A linear classifier in the original input space cannot solve a non-linearly separable problem. However, by using a suitable feature mapping (e.g., polynomial expansion), the problem can become linearly separable in the transformed space.
+> **Spiegazione & Derivazione Teorica**:
+> Un classificatore lineare combinato con Linear Basis Expansion (LBE) può separare problemi non linearmente separabili nello spazio di partenza.
 
 ---
 
@@ -1635,8 +1592,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   4. [✅] Lambda = 0 corresponds to a minimum regularization effect
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Tikhonov regularization adds a term proportional to $||w||^2$ to control model complexity. The optimal lambda balances fitting and regularization. When $ \lambda = 0$ there is no regularization effect.
+> **Spiegazione & Derivazione Teorica**:
+> La regolarizzazione di Tikhonov $E(w) + \lambda \|w\|^2$ bilancia il fitting col controllo della norma; $\lambda=0$ elimina la regolarizzazione.
 
 ---
 
@@ -1653,8 +1610,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   4. [❌] If the dimension of input increases, we can compensate the curse of dimensionality reducing the value of K so to avoid negative effects on the generalization capability
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In high-dimensional spaces, distances lose meaning and neighborhoods are no longer truly local. Adjusting K can partially affect generalization behavior, but dimensionality still impacts similarity structure.
+> **Spiegazione & Derivazione Teorica**:
+> Nei k-NN in spazi ad alta dimensione, la densità dei dati crolla (curse of dimensionality) e la nozione di vicinato locale perde di significato.
 
 ---
 
@@ -1665,8 +1622,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The L2 norm is defined as $||x||_2 = sqrt(\sum_i x_i^2)$. The expression $\sum_i x_i^2$ corresponds to the squared L2 norm, i.e., $||x||_2^2$.
+> **Spiegazione & Derivazione Teorica**:
+> La norma $L_2$ è $\|x\|_2 = \sqrt{\sum x_i^2}$. La quantità $\sum x_i^2$ rappresenta la norma al quadrato $\|x\|_2^2$.
 
 ---
 
@@ -1677,8 +1634,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> The gradient of a scalar function $f(x_1, ..., x_n)$ is defined as the vector of its partial derivatives: $\Nabla f = (df/dx_1, ..., df/dx_n)$.
+> **Spiegazione & Derivazione Teorica**:
+> Il vettore gradiente $\nabla f = (\frac{\partial f}{\partial x_1}, \dots, \frac{\partial f}{\partial x_n})$ raccoglie tutte le derivate parziali prime della funzione.
 
 ---
 
@@ -1689,8 +1646,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In regression tasks, the target variable is continuous, meaning each example is labeled with a real-valued number.
+> **Spiegazione & Derivazione Teorica**:
+> Nei compiti di regressione ogni pattern è associato ad un etichetta target continua su valore reale $y \in \mathbb{R}$.
 
 ---
 
@@ -1701,8 +1658,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Inductive bias is necessary for generalization. Without inductive bias, a learning system cannot prefer one hypothesis over another consistent with the training data, making learning and generalization impossible.
+> **Spiegazione & Derivazione Teorica**:
+> Senza bias induttivo, un algoritmo di apprendimento non ha alcun criterio razionale per classificare istanze mai viste prima.
 
 ---
 
@@ -1713,8 +1670,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In supervised learning, the loss measures the discrepancy between the model output and the target (true label), not between the model output and the inputs.
+> **Spiegazione & Derivazione Teorica**:
+> La loss function in apprendimento supervisionato valuta lo scarto tra la risposta predetta $h(x)$ e il target reale $y$.
 
 ---
 
@@ -1725,8 +1682,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **FALSE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Underfitting occurs when the model is too simple to capture the underlying structure of the data (low model capacity). Too few data typically increases the risk of overfitting, not underfitting.
+> **Spiegazione & Derivazione Teorica**:
+> L'underfitting è causato da un modello troppo semplice (bassa capacità), non dal numero di dati.
 
 ---
 
@@ -1745,8 +1702,8 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
   6. [❌] $\frac{\partial E_p(w)}{\partial w_i} = +2\, \delta_p \, f'\!\big(net(x_p)\big)\, x_{p,i}$
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> Correct answers is 3
+> **Spiegazione & Derivazione Teorica**:
+> Per un pattern $p$, la derivata parziale rispetto al peso d'ingresso $i$ è $\frac{\partial E_p}{\partial w_i} = -2 \delta_p f'(net(x_p)) x_{p,i}$.
 
 ---
 
@@ -1757,7 +1714,7 @@ Therefore the correct expressions are the ones consistent with $-2 x_{p,j} \delt
 * **Risposta Corretta**: **TRUE**
 
 > [!NOTE]
-> **Spiegazione / Derivazione**:
-> In the Perceptron Learning Algorithm, the weight update $w_new = w + η x d$ is applied only when the current example is misclassified. If the example is correctly classified, no update is performed.
+> **Spiegazione & Derivazione Teorica**:
+> Nell'algoritmo del Perceptrone, l'aggiornamento pesi $w_{new} = w + \eta x d$ viene eseguito ESCLUSIVAMENTE quando il pattern $x$ viene classificato in modo errato.
 
 ---

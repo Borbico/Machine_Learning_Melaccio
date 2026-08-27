@@ -1,6 +1,6 @@
 # Mappa Concettuale e Compendio delle Formule: Machine Learning
 **Corso del Prof. Alessio Micheli — Università di Pisa**
-*(Guida Integrale Arricchita: Teoria, Formule, Spiegazioni Dettagliate, Codice di Progetto e Dimostrazioni d'Esame)*
+*(Guida Integrale Arricchita: Teoria, Formule, Spiegazioni Dettagliate, Codice di Progetto, Dimostrazioni d'Esame e Formulario Completo di Damiano)*
 
 ---
 
@@ -51,9 +51,13 @@ flowchart TD
 ### 1. Il Framework dei 4 Elementi di Ogni Algoritmo di ML
 Ogni modello di Machine Learning trattato nel corso può essere formalmente analizzato e scomposto attraverso **4 componenti fondamentali**:
 
-1. **I Dati ($D$)**:
-   * Insieme delle coppie osservate $D = \{(x_1, y_1), \dots, (x_N, y_N)\}$, dove $x_i \in \mathbb{R}^D$ rappresenta il vettore delle feature d'ingresso e $y_i \in \mathcal{Y}$ rappresenta il target o l'etichetta.
-   * Il dataset viene suddiviso in tre insiemi disgiunti: **Training Set** (per addestrare i pesi), **Validation Set** (per la scelta degli iperparametri e del modello) e **Test Set** (per la stima finale non polarizzata delle prestazioni).
+1. **I Dati ($D$) ed i Rischi (Generale vs Empirico)**:
+   * Insieme delle coppie osservate $D = \{(x_1, y_1), \dots, (x_N, y_N)\}$, dove $x_i \in \mathbb{R}^D$ rappresenta il vettore delle feature d'ingresso e $y_i \in \mathcal{Y}$ rappresenta il target.
+   * Il dataset viene suddiviso in tre insiemi disgiunti: **Training Set** (addestramento pesi), **Validation Set** (Model Selection) e **Test Set** (Model Assessment).
+   * **Rischio Generale / Errore Atteso ($R(h)$)**: L'errore medio teorico del modello sull'intera distribuzione congiunta $P(x, y)$ di tutti i possibili dati futuri (non calcolabile direttamente):
+     $$R(h) = \int_{\mathcal{X} \times \mathcal{Y}} L(h(x), y) \, dP(x, y)$$
+   * **Rischio Empirico ($R_{emp}(h)$)**: L'errore medio calcolato concretamente sul dataset osservato $D$ di $N$ campioni:
+     $$R_{emp}(h) = \frac{1}{N} \sum_{i=1}^N L(h(x_i), y_i)$$
 
 2. **Lo Spazio delle Ipotesi ($\mathcal{H}$)**:
    * L'insieme di tutte le funzioni $h: \mathcal{X} \to \mathcal{Y}$ che il modello scelto è teoricamente in grado di rappresentare al variare dei suoi parametri $w$.
@@ -107,6 +111,15 @@ Ogni modello di Machine Learning trattato nel corso può essere formalmente anal
   $$\Delta w = \eta (y_i - net_i) x_i$$
 * **Significato Teorico**: Esegue una vera discesa del gradiente lungo la superficie dell'errore quadratico medio (MSE). Trattandosi di una superficie parabolica quadrata, l'LMS ammette **un unico minimo globale** ed evita i blocchi causati dalle derivate nulle delle funzioni a gradino.
 
+#### C) Soluzione in Forma Chiusa per la Regressione Lineare (Equazioni Normali)
+Per un problema di regressione lineare con loss MSE, il vettore ottimo dei pesi $w^*$ può essere ricavato analiticamente in forma chiusa (senza iterazioni di gradiente) risolvendo le **Equazioni Normali**:
+$$w^* = (X^T X)^{-1} X^T y = X^+ y$$
+dove $X^+ = (X^T X)^{-1} X^T$ rappresenta la **Matrice Pseudoinversa di Moore-Penrose**.
+
+#### D) Teorema di Cover sulla Separabilità (Cover 1965)
+* **Enunciato**: Un problema di classificazione vettoriale non linearmente separabile in uno spazio di input a bassa dimensione $\mathbb{R}^D$ ha una probabilità significativamente più elevata di diventare **linearmente separabile** se proiettato tramite una trasformazione non lineare in uno spazio delle feature a dimensione elevata $\mathbb{R}^K$ ($K \gg D$).
+* **Importanza**: È la giustificazione teorica alla base sia delle *Linear Basis Expansions (LBE)* sia del *Kernel Trick nelle SVM* e dei layer nascosti nelle *Reti Neurali*.
+
 ---
 
 ### 3. Funzioni di Attivazione e loro Proprietà
@@ -127,6 +140,10 @@ Le funzioni di attivazione introducono la **non-linearità** essenziale nelle re
    * *Significato della derivata (Domanda Frequente d'Esame)*: Agisce come un **interruttore / maschera binaria (0/1)** basato sul valore di $net$.
    * *Perché risolve il Vanishing Gradient?* Per tutti gli input positivi ($x > 0$), la derivata è **esattamente 1**. Il gradiente viene trasmesso all'indietro moltiplicato per 1, senza alcuna attenuazione o degradamento attraverso molti strati.
    * *Svantaggio ("Dying ReLU")*: Se un neurone riceve un aggiornamento pesi che lo porta ad avere sempre $net < 0$, la sua derivata sarà costantemente 0 ed il neurone non si aggiornerà mai più. Soluzione: **LeakyReLU** $f(x) = \max(\alpha x, x)$ con $\alpha \approx 0.01$.
+
+4. **ELU (Exponential Linear Unit)**:
+   $$f(x) = \begin{cases} x & \text{se } x > 0 \\ \alpha (e^x - 1) & \text{se } x \le 0 \end{cases}, \quad \text{Derivata: } f'(x) = \begin{cases} 1 & \text{se } x > 0 \\ f(x) + \alpha & \text{se } x \le 0 \end{cases}$$
+   * *Proprietà*: Mantiene i vantaggi della ReLU per $x > 0$, ma garantisce una transizione fluida e continua per valori negativi $x \le 0$, spingendo la media delle attivazioni verso lo zero ed eliminando totalmente il problema delle unità 'morte'.
 
 #### ❓ Perché NON possiamo usare solo attivazioni lineari?
 Se usassimo funzioni di attivazione lineari $f(z) = c \cdot z$ in tutti gli strati di una rete neurale a $L$ layer, l'uscita complessiva sarebbe:
@@ -182,6 +199,11 @@ La Backpropagation calcola in modo efficiente il gradiente dell'errore rispetto 
 
 #### ⚡ Perché la Backpropagation è Efficiente?
 Calcolare le derivate parziali in modo ingenuo per ciascun peso richiederebbe un tempo quadratico $O(|W|^2)$. La Backpropagation riutilizza i valori dei $\delta_k$ del layer successivo per calcolare i $\delta_j$ del layer precedente, fattorizzando i calcoli intermedi e riducendo la complessità a **$O(|W|)$ (lineare nel numero di pesi)**.
+
+#### 📉 Analisi Matematica del Vanishing Gradient tramite Chain Rule
+Considerando la derivata rispetto al peso $w_1$ del primo strato in una rete profonda a $L$ layer:
+$$\frac{\partial E}{\partial w_1} = \frac{\partial E}{\partial o_L} \left( \prod_{l=2}^L W_l f'_l(net_l) \right) f'_1(net_1) x$$
+Poiché per attivazioni sigmoidali la derivata $f'_l(net_l) \le 0.25$, la produttoria di $L-1$ fattori inferiori a 1 tende esponenzialmente a zero per $L \ge 4$, azzerando gli aggiornamenti dei pesi iniziali.
 
 ---
 
@@ -301,6 +323,24 @@ $$\bar{E}_{CV} = \frac{1}{K} \sum_{k=1}^K E_k, \quad \sigma_{CV} = \sqrt{\frac{1
 
 ---
 
+### 5. Formulazione Formale di k-NN ed Ensemble Learning
+
+#### A) k-Nearest Neighbors (k-NN)
+Definito $N_K(x)$ l'insieme dei $K$ campioni del training set più vicini all'input $x$ secondo una metrica di distanza (es. Euclidea):
+* **Regressione k-NN (Media dei Vicini)**:
+  $$\hat{y}(x) = \frac{1}{K} \sum_{i \in N_K(x)} y_i$$
+* **Classificazione k-NN (Voto a Maggioranza)**:
+  $$\hat{y}(x) = \arg\max_{c \in \mathcal{C}} \sum_{i \in N_K(x)} \mathbb{I}(y_i = c)$$
+
+#### B) Ensemble Learning — Schema Voto del Comitato
+Dato un comitato di $M$ modelli indipendenti $h_1, h_2, \dots, h_M$:
+* **Regressione (Media del Comitato)**:
+  $$h_{ens}(x) = \frac{1}{M} \sum_{m=1}^M h_m(x)$$
+* **Classificazione Binaria / Multiclasse (Voto di Maggioranza del Comitato)**:
+  $$h_{ens}(x) = \arg\max_{c} \sum_{m=1}^M \mathbb{I}(h_m(x) = c)$$
+
+---
+
 # 📌 SEZIONE 5: Architetture Avanzate
 
 ### 1. Cascade Correlation (Algoritmo Costruttivo)
@@ -340,12 +380,47 @@ Reti neurali per l'apprendimento non supervisionato composte da un **Encoder** $
 
 ---
 
-### 5. Graph Neural Networks (Message Passing)
-Progettate per operare su dati strutturati a grafo $G = (V, E)$ non euclidei. Il framework di Message Passing aggiorna lo stato dei nodi $h_v^{(k)}$ all'epoca $k$:
-1. **`AGGREGATE`**: Raccoglie i messaggi dallo stato dei nodi vicini $N(v)$ tramite una funzione simmetrica invariante per permutazione (es. somma o media):
-   $$m_v^{(k)} = \text{AGGREGATE}^{(k)} \left( \left\{ h_u^{(k-1)} : u \in N(v) \right\} \right)$$
-2. **`UPDATE`**: Aggiorna la rappresentazione del nodo combinando il messaggio con il suo stato precedente:
-   $$h_v^{(k)} = \text{UPDATE}^{(k)} \left( h_v^{(k-1)}, m_v^{(k)} \right)$$
+### 5. Graph Neural Networks (Message Passing, NN4G & Readout)
+Progettate per operare su dati strutturati a grafo $G = (V, E)$ non euclidei.
+* **Message Passing Generico**:
+  $$m_v^{(k)} = \text{AGGREGATE}^{(k)} \left( \left\{ h_u^{(k-1)} : u \in N(v) \right\} \right), \quad h_v^{(k)} = \text{UPDATE}^{(k)} \left( h_v^{(k-1)}, m_v^{(k)} \right)$$
+* **Formulazione Ricorsiva NN4G (Neural Network for Graphs)**:
+  $$h_v^{(k)} = f\left( W_1 x_v + \sum_{l=1}^{k-1} W_{2,l} \sum_{u \in N(v)} h_u^{(l)} \right)$$
+* **Readout Globale sul Grafo (Prediction)**:
+  $$y_G = \text{Readout}\left( \sum_{v \in V} h_v \right) = W_{out} \left( \sum_{v \in V} h_v \right)$$
+
+---
+
+### 6. Quantizzazione Vettoriale, K-Means & Celle di Voronoi (Apprendimento Non Supervisionato)
+* **Cella di Voronoi ($V_i$)**: La regione dello spazio costituita da tutti i punti $x$ per cui il centroide $\mu_i$ è il più vicino:
+  $$V_i = \{x \in \mathcal{X} : \|x - \mu_i\| \le \|x - \mu_j\| \,\, \forall j \neq i\}$$
+* **Errore Globale di Quantizzazione / Distorsione**:
+  * *Discreto*: $E = \sum_{i=1}^k \sum_{x \in V_i} \|x - \mu_i\|^2$
+  * *Continuo*: $E = \sum_{i=1}^k \int_{V_i} \|x - \mu_i\|^2 p(x) \, dx$
+* **Regola di Aggiornamento On-line (Discesa del Gradiente per K-means)**:
+  $$\mu_i \leftarrow \mu_i + \eta (x - \mu_i)$$
+
+---
+
+### 7. Convolutional Neural Networks (CNN) & Operatori
+* **Convoluzione Continua 1D**: $(f * g)(t) = \int_{-\infty}^{\infty} f(\tau) g(t - \tau) \, d\tau$
+* **Convoluzione Discreta 2D**: $(I * K)[i, j] = \sum_m \sum_n I[i-m, j-n] K[m, n]$
+* **Cross-Correlazione 2D (usata nei framework di Deep Learning come PyTorch)**:
+  $$(I \star K)[i, j] = \sum_m \sum_n I[i+m, j+n] K[m, n]$$
+  *Differenza*: Non ribalta spazialmente il kernel $K$, consentendo una parallelizzazione GPU estremamente efficiente tramite l'operatore `im2col` (Image-to-Column).
+
+---
+
+### 8. Recurrent Neural Networks (RNN)
+Modelli per sequenze temporali dotati di uno stato nascosto di memoria $h_t$:
+* **Transizione di Stato**: $h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)$
+* **Output del Layer**: $y_t = \text{softmax}(W_{hy} h_t + b_y)$
+
+---
+
+### 9. Word Embeddings & Rappresentazioni Distribuite
+Nel Deep Learning NLP, le rappresentazioni distribuite dense catturano relazioni geometrico-semantiche nello spazio vettoriale:
+$$\vec{v}_{king} - \vec{v}_{man} + \vec{v}_{woman} \approx \vec{v}_{queen}$$
 
 ---
 

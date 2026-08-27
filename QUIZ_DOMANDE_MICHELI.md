@@ -36,7 +36,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> La norma Euclidea (o norma $L_2$) di un vettore $x$ è definita come la radice quadrata della somma dei quadrati delle componenti: $\|x\|_2 = \sqrt{\sum_i x_i^2}$. La formula indicata senza radice rappresenta la norma al quadrato $\|x\|_2^2$, quindi la risposta è FALSO.
+> La norma Euclidea (o norma $L_2$) di un vettore $x$ è definita come la radice quadrata della somma dei quadrati delle componenti: $\|x\|_2 = \sqrt{\sum_i x_i^2}$. La formula indicata senza radice rappresenta la norma al quadrato $\|x\|_2^2$, quindi l'uguaglianza diretta è FALSO.
 
 ---
 
@@ -72,7 +72,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> Un learner privo di bias induttivo (Unbiased Learner) può classificare univocamente solo i punti già visti nel Training Set (comportandosi come una tabella di consultazione / Lookup Table). Non ha alcuna base razionale per generalizzare su nuovi punti non visti, assegnando loro probabilità del 50% di appartenere a ciascuna classe.
+> Un learner privo di bias induttivo (Unbiased Learner) può classificare univocamente solo i punti già visti nel Training Set (comportandosi come una tabella di consultazione / Lookup Table). Non ha alcuna base razionale per generalizzare su nuovi punti non visti.
 
 ---
 
@@ -264,7 +264,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> Il Teorema di Convergenza del Perceptrone (Novikoff 1962) garantisce la convergenza in un numero finito di passi $k \le \frac{R^2}{\gamma^2}$ a patto che il dataset sia linearmente separabile con margine $\gamma > 0$.
+> Il Teorema di Convergenza del Perceptrone (Novikoff 1962) garantisce la convergenza in un numero finito di passi $k \le \frac{R^2}{\gamma^2}$ sotto la fondamentale assunzione che il dataset sia linearmente separabile con margine $\gamma > 0$.
 
 ---
 
@@ -276,7 +276,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> L'algoritmo del Perceptrone funziona sia con pattern positivi (+1) che negativi (-1).
+> L'algoritmo del Perceptrone funziona con esempi sia positivi (+1) che negativi (-1).
 
 ---
 
@@ -708,7 +708,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> L'obiettivo del problema primale della Hard Margin SVM è minimizzare $\frac{1}{2}\|w\|^2$ (massimizzare il margine), assumendo che gli errori di train siano pari a zero.
+> L'obiettivo del problema primale della Hard Margin SVM è minimizzare $\frac{1}{2}\|w\|^2$ (massimizzare il margine), assumendo 0 errori di addestramento (vincoli rigidi $y_i(w^T x_i+b) \ge 1$).
 
 ---
 
@@ -720,7 +720,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> Minimizzare la norma $\|w\|^2$ equivale a ridurre la dimensione VC e la capacità del modello, riducendo il termine di confidenza della SLT.
+> Minimizzare la norma $\|w\|^2$ equivale a MASSIMIZZARE il margine $M = 2/\|w\|$, il che RIDUCE la dimensione VC e la capacità del modello, riducendo (migliorando) il termine di confidenza VC della SLT.
 
 ---
 
@@ -744,7 +744,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> La VC-dimension della classe degli iperpiani lineari (LTU) in uno spazio a $n$ dimensioni $\mathbb{R}^n$ è esattamente $n + 1$.
+> La VC-dimension della classe degli iperpiani lineari (LTU) in uno spazio a $n$ dimensioni $\mathbb{R}^n$ è esattamente $n + 1$ (dimostrato via Teorema di Radon).
 
 ---
 
@@ -792,7 +792,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> L'iperpiano ottimale nelle SVM è quello che MASSIMIZZA il margine di separazione ($M = 2/\|w\|$).
+> L'iperpiano ottimale nelle SVM è quello che MASSIMIZZA il margine di separazione ($M = 2/\|w\|$), non quello con margine minimo.
 
 ---
 
@@ -900,7 +900,7 @@
 
 > [!NOTE]
 > **Spiegazione & Derivazione Teorica**:
-> Quando si pre-addestra un Autoencoder per inizializzare una rete profonda, si conserva la parte ENCODER $W_1$ e si scarta il Decoder $W'$.
+> Quando si pre-addestra un Autoencoder per inizializzare una rete profonda, si conserva la parte ENCODER $W_1$ e si scarta la parte Decoder $W'$.
 
 ---
 

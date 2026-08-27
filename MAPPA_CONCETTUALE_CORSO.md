@@ -1,46 +1,45 @@
 # Mappa Concettuale e Compendio delle Formule: Machine Learning
 **Corso del Prof. Alessio Micheli — Università di Pisa**
-*(Guida Integrale Arricchita: Ordine Cronologico delle Lezioni del Corso, Teoria, Formule, Codice di Progetto e Dimostrazioni)*
+*(Guida Integrale Mappata 1:1 sulle Slide Ufficiali del Corso [ML-25], Teoria, Formule, Codice di Progetto e Dimostrazioni)*
 
 ---
 
-## 🗺️ Mappa Concettuale Globale (Ordine Cronologico del Corso)
+## 🗺️ Mappa Concettuale Globale (Strutturata sulle Slide Ufficiali di Micheli)
 
 ```mermaid
 flowchart TD
-    ML["MACHINE LEARNING"] --> P1["1. INTRODUZIONE & MODELLI LINEARI\n(Framework, Perceptron, LMS, LBE, Cover)"]
-    ML --> P2["2. RETI NEURALI MULTI-LAYER & BACKPROP\n(Activations, Universal Approx, Backprop, Optimizers)"]
-    ML --> P3["3. STATISTICAL LEARNING THEORY & VALIDAZIONE\n(Bias-Var, VC-Dim, SRM, CV, Data Leakage, Nested CV)"]
-    ML --> P4["4. SVM, SVR & INSTANCE-BASED (k-NN)\n(Max Margin, Soft Margin, Kernel Trick, SVR, k-NN)"]
-    ML --> P5["5. ARCHITTETURE AVANZATE, UN-SUPERVISED & DEEP LEARNING\n(Ensemble, Cascade, Autoencoder, K-Means, SOM, RNN, CNN, GNN)"]
+    ML["MACHINE LEARNING [ML-25]"] --> P1["1. INTRODUZIONE, MODELLI LINEARI & k-NN\n(Slides: INTRO, linear, knn)"]
+    ML --> P2["2. RETI NEURALI MULTI-LAYER & BACKPROP\n(Slides: NN-part1, Backpropagation notes, NN-part2)"]
+    ML --> P3["3. VALIDAZIONE & MODEL SELECTION\n(Slides: Valid1, Valid2, Valid3)"]
+    ML --> P4["4. STATISTICAL LEARNING THEORY, SVM & BIAS-VARIANZA\n(Slides: SLT1, SVM, SVM-other info, Bias-Variance)"]
+    ML --> P5["5. ARCHITTETURE AVANZATE, UN-SUPERVISED & DEEP LEARNING\n(Slides: CNN, Deep, Rand, Unsupervised-SOM, RNN, SDL-Intro)"]
     ML --> P6["6. GUIDA INTEGRALE AL CODICE DEL PROGETTO\n(File .py e Notebook MONK / CUP)"]
     ML --> P7["7. DOMANDE TRABOCCHETTO DELL'ORALE\n(Domande 'Spicy' di Micheli)"]
     ML --> P8["8. COMPENDIO ESAME SCRITTO & ORALE\n(8 Dimostrazioni Matematiche Complete)"]
 
-    P1 --> F1["Framework 4 Elementi (D, H, L, Opt)"]
-    P1 --> F2["Rischio Atteso R(h) vs Rischio Empirico Remp(h)"]
-    P1 --> F3["Modelli Lineari (Perceptron & Novikoff, LMS / Delta Rule)"]
-    P1 --> F4["Equazioni Normali & Cover's Theorem"]
+    P1 --> F1["1.1 Framework 4 Elementi & Rischi R(h) / Remp(h)"]
+    P1 --> F2["1.2 Perceptron, Novikoff, LMS, Equazioni Normali, Cover"]
+    P1 --> F3["1.3 k-Nearest Neighbors (k-NN) & Curse of Dimensionality"]
 
-    P2 --> N1["Funzioni di Attivazione (Sigmoid, Tanh, ReLU, ELU)"]
-    P2 --> N2["Teorema Approssimazione Universale (Hornik/Cybenko)"]
-    P2 --> N3["Backpropagation (Delta Output & Hidden, Complessità O(|W|))"]
-    P2 --> N4["Vanishing Gradient Chain Rule & Early Stopping"]
+    P2 --> N1["2.1 Activations (Sigmoid, Tanh, ReLU, ELU, Non-linearità)"]
+    P2 --> N2["2.2 Universal Approximation & Architettura MLP"]
+    P2 --> N3["2.3 Algoritmo di Backpropagation & Complessità O(|W|)"]
+    P2 --> N4["2.4 Iperparametri (eta, alpha, lambda) & Optimizers"]
 
-    P3 --> V1["Decomposizione Bias-Varianza-Rumore"]
-    P3 --> V2["VC-Dimension & Radon Theorem (VC = D+1)"]
-    P3 --> V3["Structural Risk Minimization (SRM) & Vapnik Bound"]
-    P3 --> V4["Schemi CV, Prevenzione Data Leakage & Nested CV"]
+    P3 --> V1["3.1 Schemi CV (Hold-Out, K-Fold)"]
+    P3 --> V2["3.2 Prevenzione Data Leakage (Scaler in-fold)"]
+    P3 --> V3["3.3 Model Selection vs Assessment & Nested CV"]
 
-    P4 --> S1["SVM Max Margin (M = 2/||w||) & Soft Margin (C, xi)"]
-    P4 --> S2["Formulazione Duale, KKT & Kernel RBF Gaussiano"]
-    P4 --> S3["Support Vector Regression (SVR, epsilon-tube)"]
-    P4 --> S4["Instance-Based (k-NN & Curse of Dimensionality)"]
+    P4 --> S1["4.1 Statistical Learning Theory (VC-Dim, Radon, SRM)"]
+    P4 --> S2["4.2 Support Vector Machines (Max/Soft Margin, KKT, Kernel RBF)"]
+    P4 --> S3["4.3 Support Vector Regression (SVR, epsilon-tube)"]
+    P4 --> S4["4.4 Decomposizione Bias-Varianza-Rumore"]
 
-    P5 --> A1["Ensemble Learning (Bagging, Boosting, Voting)"]
-    P5 --> A2["Algoritmi Costruttivi (Cascade Correlation & Covarianza S)"]
-    P5 --> A3["Autoencoders & Quantizzazione Vettoriale (K-Means, SOM)"]
-    P5 --> A4["Deep Learning (CNN, RNN, GNN, Echo State Networks)"]
+    P5 --> A1["5.1 Convolutional Neural Networks (CNN & im2col)"]
+    P5 --> A2["5.2 Deep Learning (Vanishing Gradient & No-Flattening)"]
+    P5 --> A3["5.3 Algoritmi Costruttivi (Cascade Cor) & Random NN (ESN)"]
+    P5 --> A4["5.4 Unsupervised (K-Means, Voronoi, SOM) & Ensemble"]
+    P5 --> A5["5.5 Recurrent NN (RNN) & Graph NN (GNN / Message Passing)"]
 
     P6 --> C1["File Python (.py) & Notebook MONK/CUP"]
     P7 --> T1["8 Domande Trabocchetto da Lode con Risposta Modello"]
@@ -49,68 +48,56 @@ flowchart TD
 
 ---
 
-# 📌 SEZIONE 1: Introduzione, Framework & Modelli Lineari Fondamentali
+# 📌 SEZIONE 1: Introduzione, Modelli Lineari & k-NN (Slides `INTRO`, `linear`, `knn`)
 
-### 1.1 Il Framework dei 4 Elementi di Ogni Algoritmo di ML
-Ogni modello di Machine Learning trattato nel corso viene analizzato attraverso **4 componenti fondamentali**:
+### 1.1 Il Framework di Machine Learning & Rischi (Slide `INTRO-v0.2`)
+Ogni algoritmo di Machine Learning viene analizzato attraverso **4 elementi fondamentali**:
 
 1. **I Dati ($D$) ed i Rischi (Generale vs Empirico)**:
-   * Insieme delle coppie osservate $D = \{(x_1, y_1), \dots, (x_N, y_N)\}$, dove $x_i \in \mathbb{R}^D$ rappresenta il vettore delle feature d'ingresso e $y_i \in \mathcal{Y}$ rappresenta il target.
-   * Il dataset viene suddiviso in tre insiemi disgiunti: **Training Set** (addestramento pesi), **Validation Set** (Model Selection) e **Test Set** (Model Assessment).
+   * Insieme delle osservazioni $D = \{(x_1, y_1), \dots, (x_N, y_N)\}$, con $x_i \in \mathbb{R}^D$ e $y_i \in \mathcal{Y}$.
+   * Suddivisione disgiunta: **Training Set** (addestramento pesi), **Validation Set** (Model Selection) e **Test Set** (Model Assessment).
    * **Rischio Generale / Errore Atteso ($R(h)$)**: L'errore medio teorico del modello sull'intera distribuzione congiunta $P(x, y)$ di tutti i possibili dati futuri (non direttamente calcolabile):
      $$R(h) = \int_{\mathcal{X} \times \mathcal{Y}} L(h(x), y) \, dP(x, y)$$
-   * **Rischio Empirico ($R_{emp}(h)$)**: L'errore medio calcolato concretamente sul dataset osservato $D$ di $N$ campioni:
+   * **Rischio Empirico ($R_{emp}(h)$)**: L'errore medio calcolato concretamente sul dataset osservato di $N$ campioni:
      $$R_{emp}(h) = \frac{1}{N} \sum_{i=1}^N L(h(x_i), y_i)$$
 
 2. **Lo Spazio delle Ipotesi ($\mathcal{H}$) & Inductive Bias**:
-   * L'insieme di tutte le funzioni $h: \mathcal{X} \to \mathcal{Y}$ che il modello scelto è teoricamente in grado di rappresentare al variare dei suoi parametri $w$.
-   * **Inductive Bias (Bias Induttivo)**: L'insieme delle assunzioni a priori che il modello impone per poter generalizzare su dati non visti. Si divide in:
-     * **Language / Restriction Bias**: La limitazione formale dello spazio delle ipotesi $\mathcal{H}$ (es. assumere che il confine sia un iperpiano).
-     * **Search / Preference Bias**: La preferenza accordata dall'ottimizzatore a certe ipotesi all'interno di $\mathcal{H}$ (es. Occam's Razor, favorire pesi piccoli).
-   * **Learner Privo di Bias (Unbiased Learner)**: Un sistema privo di bias induttivo può classificare univocamente solo i punti già visti nel training set (comportandosi come una tabella di consultazione / **Lookup Table**), ed è totalmente incapace di generalizzare su nuovi dati.
+   * L'insieme di tutte le funzioni $h: \mathcal{X} \to \mathcal{Y}$ rappresentabili dal modello scelto.
+   * **Inductive Bias (Bias Induttivo)**: Assunzioni a priori per generalizzare su dati non visti. Si divide in:
+     * **Language / Restriction Bias**: Limitazione dello spazio delle ipotesi $\mathcal{H}$ (es. assumere un iperpiano separatore).
+     * **Search / Preference Bias**: Preferenza accordata dall'ottimizzatore a certe ipotesi in $\mathcal{H}$ (es. favorire pesi piccoli).
+   * **Learner Privo di Bias (Unbiased Learner)**: Può classificare solo i punti già visti nel training set (comportandosi come una **Lookup Table**), ed è totalmente incapace di generalizzare.
 
 3. **La Loss Function ($\mathcal{L}$)**:
-   * La misura matematica della discrepanza tra l'output predetto dal modello $h(x)$ e l'etichetta reale $y$.
-   * **MSE Loss (Mean Squared Error)**: Usata nella regressione scalare.
-     $$L_{MSE}(w) = \frac{1}{N} \sum_{i=1}^N (y_i - h(x_i))^2$$
-   * **MEE Loss (Mean Euclidean Error — Target Multivariato ML CUP)**: Usata nella regressione vettoriale $K$-dimensionale ($K=4$ per la CUP).
-     $$L_{MEE}(w) = \frac{1}{N} \sum_{i=1}^N \|\mathbf{y}_i - \hat{\mathbf{y}}_i\|_2 = \frac{1}{N} \sum_{i=1}^N \sqrt{\sum_{m=1}^4 (y_{i,m} - \hat{y}_{i,m})^2}$$
-   * **BCE Loss (Binary Cross-Entropy)**: Usata nella classificazione binaria ($y_i \in \{0, 1\}$).
-     $$L_{BCE}(w) = -\frac{1}{N} \sum_{i=1}^N \big[ y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i) \big]$$
+   * Misura la discrepanza tra l'output predetto $h(x)$ e l'etichetta reale $y$.
+   * **MSE Loss (Mean Squared Error)**: $L_{MSE}(w) = \frac{1}{N} \sum_{i=1}^N (y_i - h(x_i))^2$
+   * **MEE Loss (Mean Euclidean Error — Target Multivariato ML CUP)**: $L_{MEE}(w) = \frac{1}{N} \sum_{i=1}^N \|\mathbf{y}_i - \hat{\mathbf{y}}_i\|_2 = \frac{1}{N} \sum_{i=1}^N \sqrt{\sum_{m=1}^4 (y_{i,m} - \hat{y}_{i,m})^2}$
+   * **BCE Loss (Binary Cross-Entropy)**: $L_{BCE}(w) = -\frac{1}{N} \sum_{i=1}^N \big[ y_i \log(\hat{y}_i) + (1-y_i) \log(1-\hat{y}_i) \big]$
 
 4. **L'Algoritmo di Ottimizzazione**:
-   * La procedura numerica per aggiornare i pesi $w$ minimizzando la loss.
-   * **Gradient Descent (Discesa del Gradiente)**:
-     $$w^{(t+1)} = w^{(t)} - \eta \nabla L(w^{(t)})$$
-     dove $\eta > 0$ è il **learning rate** (tasso di apprendimento).
+   * Procedura numerica per minimizzare la loss: **Gradient Descent** $w^{(t+1)} = w^{(t)} - \eta \nabla L(w^{(t)})$.
 
 ---
 
-### 1.2 Modelli Lineari: Perceptron e LMS (Delta Rule)
+### 1.2 Modelli Lineari: Perceptron, LMS & Equazioni Normali (Slide `linear-v0.1`)
 
 #### A) Il Perceptron (Rosenblatt 1958)
-* **Modello**: Unità a Soglia Lineare (LTU). L'uscita è determinata dalla funzione a gradino $\text{sign}(z)$:
+* **Modello**: Unità a Soglia Lineare (LTU) con attivazione a gradino $\text{sign}(z)$:
   $$f(x) = \text{sign}(w^T x + b) = \begin{cases} +1 & \text{se } w^T x + b \ge 0 \\ -1 & \text{se } w^T x + b < 0 \end{cases}$$
 * **Iperpiano di Decisione**: La superficie $w^T x + b = 0$ divide lo spazio in due semispazi. Il vettore $w$ è ortogonale all'iperpiano e punta verso il semispazio positivo (+1).
-* **Regola di Aggiornamento On-Line**: Ad ogni esempio $x_i$ su cui il modello commette un errore ($o_i \neq y_i$):
-  $$w \leftarrow w + \eta (y_i - o_i) x_i$$
-* **Teorema di Convergenza (Novikoff 1962)**: Se un dataset è linearmente separabile con un margine $\gamma > 0$, l'algoritmo convergerà commettendo al massimo un numero finito di errori $k \le \frac{R^2}{\gamma^2}$, dove $R = \max_i \|x_i\|$.
-* **Limiti del Perceptron**: Può apprendere solo funzioni linearmente separabili; non può risolvere il problema dell'**XOR** (Minsky & Papert 1969).
+* **Regola di Aggiornamento On-Line**: Ad ogni errore ($o_i \neq y_i$): $w \leftarrow w + \eta (y_i - o_i) x_i$.
+* **Teorema di Convergenza (Novikoff 1962)**: Se un dataset è linearmente separabile con margine $\gamma > 0$, l'algoritmo convergerà in al massimo $k \le \frac{R^2}{\gamma^2}$ passi ($R = \max_i \|x_i\|$).
+* **Limiti del Perceptron**: Non può risolvere problemi non separabili come l'**XOR** (Minsky & Papert 1969).
 
-#### 💡 Esempio d'Esame: Creare la porta NOT con 1 Perceptrone
-* Input $x \in \{0, 1\}$, Target $y = 1 - x$. In etichette $\{-1, +1\}$: per $x=0 \to y=+1$; per $x=1 \to y=-1$.
-* Scegliamo pesi $w = -2$, bias $b = +1$.
-* Verificando l'output $f(x) = \text{sign}(-2x + 1)$:
-  * Per $x = 0 \implies \text{sign}(+1) = +1$ (Corretto).
-  * Per $x = 1 \implies \text{sign}(-1) = -1$ (Corretto).
+#### 💡 Esempio d'Esame: Porta NOT con 1 Perceptrone
+* Input $x \in \{0, 1\}$, Target $y = 1 - x$ (in etichette $\{-1, +1\}$: $x=0 \to y=+1$; $x=1 \to y=-1$).
+* Pesi $w = -2$, bias $b = +1 \implies f(x) = \text{sign}(-2x + 1)$ (Corretto per sia $x=0$ che $x=1$).
 
 ---
 
 #### B) LMS (Least Mean Squares) / Regola del Delta (Widrow-Hoff)
-* **Differenza dal Perceptron**: L'errore viene calcolato **prima** di applicare la soglia a gradino, basandosi sulla risposta continua $net_i = w^T x_i + b$.
-* **Regola del Delta**:
-  $$\Delta w = \eta (y_i - net_i) x_i$$
-* **Significato**: Esegue una discesa del gradiente lungo la superficie parabolica dell'MSE, ammettendo **un unico minimo globale** ed evitando i blocchi causati da derivate nulle.
+* Calcola l'errore sulla risposta continua $net_i = w^T x_i + b$ prima della soglia: $\Delta w = \eta (y_i - net_i) x_i$.
+* Esegue la discesa del gradiente sulla superficie parabolica dell'MSE, ammettendo **un unico minimo globale**.
 
 ---
 
@@ -122,209 +109,155 @@ dove $X^+ = (X^T X)^{-1} X^T$ è la **Matrice Pseudoinversa di Moore-Penrose**.
 ---
 
 #### D) Linear Basis Expansion (LBE) & Teorema di Cover (1965)
-* **Linear Basis Expansion (LBE)**: Proietta gli input originali $x \in \mathbb{R}^D$ in uno spazio di feature $K$-dimensionale $\phi(x) \in \mathbb{R}^K$ ($K > D$), consentendo a modelli lineari nei pesi di tracciare confini di decisione non lineari nello spazio d'ingresso:
+* **Linear Basis Expansion (LBE)**: Proietta gli input $x \in \mathbb{R}^D$ in uno spazio di feature $\phi(x) \in \mathbb{R}^K$ ($K > D$):
   $$h(x) = w^T \phi(x) + b = \sum_{k=1}^K w_k \phi_k(x) + b$$
-* **Teorema di Cover (1965)**: Un problema di classificazione non separabile in uno spazio a bassa dimensione ha una probabilità significativamente più elevata di diventare **linearmente separabile** se proiettato in modo non lineare in uno spazio a dimensione elevata ($K \gg D$).
+* **Teorema di Cover (1965)**: Un problema di classificazione non separabile in uno spazio a bassa dimensione ha un'elevata probabilità di diventare **linearmente separabile** se proiettato in modo non lineare in uno spazio a dimensione elevata ($K \gg D$).
 
 ---
 
-# 📌 SEZIONE 2: Reti Neurali Multi-Layer (MLP) & Backpropagation
-
-### 2.1 Funzioni di Attivazione e loro Proprietà
-Le funzioni di attivazione introducono la **non-linearità** essenziale nelle reti neurali:
-
-1. **Sigmoide (Logistica)**:
-   $$\sigma(z) = \frac{1}{1 + e^{-z}}, \quad \text{Derivata: } \sigma'(z) = \sigma(z)(1 - \sigma(z))$$
-   * *Proprietà*: Mappa l'output nell'intervallo aperto $(0, 1)$.
-   * *Svantaggi*: Satura per $|z| > 4$, causando il **Vanishing Gradient**.
-
-2. **Tanh (Tangente Iperbolica)**:
-   $$\tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}, \quad \text{Derivata: } \tanh'(z) = 1 - \tanh^2(z)$$
-   * *Proprietà*: Mappa l'output nell'intervallo $(-1, 1)$. È **zero-centered**, velocizzando la convergenza rispetto alla Sigmoide.
-
-3. **ReLU (Rectified Linear Unit)**:
-   $$f(x) = \max(0, x), \quad \text{Derivata: } f'(x) = \begin{cases} 1 & \text{se } x > 0 \\ 0 & \text{se } x \le 0 \end{cases}$$
-   * *Significato della derivata (Domanda Frequente d'Esame)*: Agisce come un **interruttore / maschera binaria (0/1)**. Per $x > 0$ la derivata è esattamente 1, trasmettendo il gradiente senza attenuazione.
-   * *Svantaggio ("Dying ReLU")*: Se $net < 0$, la derivata è costantemente 0. Soluzione: **LeakyReLU** $f(x) = \max(\alpha x, x)$ con $\alpha \approx 0.01$.
-
-4. **ELU (Exponential Linear Unit)**:
-   $$f(x) = \begin{cases} x & \text{se } x > 0 \\ \alpha (e^x - 1) & \text{se } x \le 0 \end{cases}, \quad \text{Derivata: } f'(x) = \begin{cases} 1 & \text{se } x > 0 \\ f(x) + \alpha & \text{se } x \le 0 \end{cases}$$
-   * *Proprietà*: Garantisce una transizione fluida per $x \le 0$, spingendo la media delle attivazioni verso lo zero ed eliminando le unità morte.
-
-#### ❓ Perché NON possiamo usare solo attivazioni lineari?
-Se usassimo attivazioni lineari $f(z) = c \cdot z$ in tutti gli strati, l'uscita complessiva sarebbe la composizione di trasformazioni lineari:
-$$o = W_L (W_{L-1} (\dots (W_1 x))) = (W_L \cdot W_{L-1} \dots W_1) x = W_{tot} x$$
-La rete crollerebbe algebricamente in un **singolo modello lineare**, perdendo ogni capacità espressiva non lineare.
-
----
-
-### 2.2 Architettura MLP & Teorema di Approssimazione Universale
-* **Teorema di Approssimazione Universale (Hornik/Cybenko 1989)**: Una rete feed-forward con un singolo strato nascosto ed attivazioni continue non lineari (es. Sigmoide o Tanh) può approssimare qualsiasi funzione continua su un insieme compatto con un grado di precisione arbitrario $\epsilon > 0$.
-
----
-
-### 2.3 Iperparametri di Addestramento & Inizializzazione Pesi
-Nell'aggiornamento pesi della rete neurale:
-$$\Delta w_{tu}(t) = -\eta \frac{\partial E}{\partial w_{tu}(t)} + \alpha \Delta w_{tu}(t-1) - \eta \lambda w_{tu}(t)$$
-
-1. **Learning Rate ($\eta$)**: Determina l'ampiezza del passo. Se troppo alto causa oscillazioni o divergenza; se troppo piccolo causa convergenza lentissima.
-2. **Momentum ($\alpha \in [0, 1)$)**: Aggiunge una quota dell'aggiornamento precedente $\Delta w(t-1)$, simulando l'inerzia fisica e smorzando le oscillazioni nei canyon della superficie d'errore. (Nesterov NAG valuta il gradiente nel punto futuro $w + \alpha \Delta w_{old}$).
-3. **Weight Decay / Regolarizzazione $L_2$ ($\lambda$)**: Penalizza la norma al quadrato dei pesi $\frac{\lambda}{2} \|w\|^2$, mantenendo pesi piccoli e superfici di risposta levigate (*smooth*).
-4. **Inizializzazione Pesi**: Inizializzare a zero distrugge la simmetria (i neuroni rimangono identici); inizializzare con valori troppo elevati manda le attivazioni in saturazione.
-
----
-
-### 2.4 L'Algoritmo di Backpropagation (Retropropagazione dell'Errore)
-
-#### Flusso dell'Algoritmo:
-1. **Forward Pass**:
-   $$net_j = \sum_u w_{ju} o_u, \quad o_j = f_j(net_j)$$
-2. **Backward Pass (Chain Rule per i fattori $\delta$)**:
-   * **Neurone di Output $k$**: $\delta_k = (d_k - o_k) f'_k(net_k)$
-   * **Neurone Nascosto $j$**: $\delta_j = \left( \sum_{k \in \text{Output}} \delta_k w_{kj} \right) f'_j(net_j)$
-3. **Aggiornamento Pesi**: $\Delta w_{tu} = \eta \delta_t o_u$
-
-#### ⚡ Efficienza & Analisi del Vanishing Gradient
-* **Efficienza $O(|W|)$**: La Backprop riutilizza i $\delta_k$ del layer successivo, fattorizzando i calcoli intermedi ed evitando la complessità quadratica $O(|W|^2)$.
-* **Chain Rule del Vanishing Gradient**:
-  $$\frac{\partial E}{\partial w_1} = \frac{\partial E}{\partial o_L} \left( \prod_{l=2}^L W_l f'_l(net_l) \right) f'_1(net_1) x$$
-  Poiché per le sigmoidi $f'_l(net_l) \le 0.25$, il prodotto cumulativo tende a zero nelle reti profonde ($L \ge 4$).
-
----
-
-### 2.5 Varianti di Ottimizzazione
-* **R-Prop (Resilient Backprop)**: Usa solo il SEGNO del gradiente (positivo/negativo) ignorando la sua ampiezza.
-* **SGD / Mini-Batch**: Aggiorna i pesi su piccoli sotto-insiemi di dati per stime stocastiche del gradiente.
-* **Adam & AdamW**: Combinano stima dei momenti primo e secondo del gradiente con correzione del decay dei pesi.
-
----
-
-# 📌 SEZIONE 3: Statistical Learning Theory (SLT) & Validazione
-
-### 3.1 Decomposizione Bias-Varianza-Rumore
-L'Errore Quadratico Medio atteso si scompone analiticamente in 3 componenti:
-$$\mathbb{E}[(y - h_D(x))^2] = \underbrace{(f(x) - \bar{h}(x))^2}_{\text{Bias}(x)^2} + \underbrace{\mathbb{E}_D [ (h_D(x) - \bar{h}(x))^2 ]}_{\text{Varianza}(x)} + \underbrace{\sigma^2}_{\text{Rumore Irriducibile}}$$
-
-1. **Bias$^2$ (Errore di Approssimazione)**: Scarto tra la funzione reale e la media delle predizioni del modello (**Underfitting** se alto).
-2. **Varianza (Errore di Stima)**: Oscillazione delle predizioni al variare del dataset di addestramento (**Overfitting** se alta).
-3. **Rumore Irriducibile ($\sigma^2$)**: Incertezza stocastica intrinseca dei dati.
-
----
-
-### 3.2 VC-Dimension (Vapnik-Chervonenkis) & Teorema di Radon
-* **Shattering (Frammentazione)**: Un insieme di $N$ punti è shatterato da $\mathcal{H}$ se $\mathcal{H}$ può realizzare tutte le $2^N$ possibili dicotomie binaria (+1 / -1).
-* **VC-Dimension ($h_{VC}$)**: La MASSIMA cardinalità $N$ per cui esiste ALMENO UN insieme di $N$ punti shatterabile.
-* **VC-Dimension degli Iperpiani Lineari ($VC = D + 1$)**: Dimostrato tramite il **Teorema di Radon** ($\text{Conv}(A) \cap \text{Conv}(B) \neq \emptyset$), che prova l'impossibilità di shatterare $D+2$ punti in $\mathbb{R}^D$.
-* **Altri Modelli**: SVM ($VC \le \min(D, R^2/\gamma^2)+1$), Reti Neurali ($O(|W|\log|W|)$), 1-NN ($VC = \infty$).
-
----
-
-### 3.3 Structural Risk Minimization (SRM) & Bound di Vapnik
-Il Rischio Reale $R(h)$ è limitato dal Bound di Vapnik:
-$$R(h) \le R_{emp}(h) + \sqrt{\frac{h_{VC} \left( \ln(2N/h_{VC}) + 1 \right) - \ln(\eta/4)}{N}}$$
-SRM organizza lo spazio delle ipotesi in gerarchia annidate $\mathcal{H}_1 \subset \mathcal{H}_2 \dots \subset \mathcal{H}_k$ selezionando l'ipotesi che minimizza il bound complessivo. L'**Early Stopping** agisce come regolarizzazione SRM limitando la norma pesi e la dimensione VC effettiva.
-
----
-
-### 3.4 Schemi di Validazione e Prevenzione del Data Leakage
-
-#### A) K-Fold Cross-Validation
-Suddivide il dataset in $K$ fold ruotando il blocco di validazione. Restituisce la media e la deviazione standard:
-$$\bar{E}_{CV} = \frac{1}{K} \sum_{k=1}^K E_k, \quad \sigma_{CV} = \sqrt{\frac{1}{K-1} \sum_{k=1}^K (E_k - \bar{E}_{CV})^2}$$
-
-#### B) Prevenzione del Data Leakage (Contaminazione dei Dati)
-* **Regola Tassativa**: Qualunque trasformazione sui dati (es. `RobustScaler`, `StandardScaler`) **deve eseguire il `fit_transform` ESCLUSIVAMENTE sul training fold di ciascun ciclo di K-Fold**.
-
-#### C) Nested Cross-Validation (Doppio Ciclo)
-* **Inner Loop (K-Fold Interno)**: Dedicato alla **Model Selection** (ricerca iperparametri $h^*$).
-* **Outer Loop (K-Fold Esterno)**: Dedicato al **Model Assessment** (valutazione non polarizzata / *unbiased* su fold mai visti durante il tuning).
-
----
-
-# 📌 SEZIONE 4: Support Vector Machines (SVM, SVR) & Instance-Based (k-NN)
-
-### 4.1 Principio del Massimo Margine Geometrico
-Nelle SVM si cerca l'iperpiano che massimizza il margine geometrico $M$:
-$$M = \frac{2}{\|w\|}$$
-Massimizzare $M$ equivale a minimizzare la norma al quadrato $\frac{1}{2} \|w\|^2$, riducendo direttamente la VC-dimension del modello.
-
----
-
-### 4.2 Soft Margin SVM ($C$ e Slack Variables $\xi_i$)
-Per gestire dati non perfettamente separabili si introducono le **variabili slack $\xi_i \ge 0$**:
-$$\min_{w, b, \xi} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^N \xi_i \quad \text{sotto vincoli } y_i(w^T x_i + b) \ge 1 - \xi_i, \,\, \xi_i \ge 0$$
-* **Significato di $\xi_i$**: $\xi_i = 0$ (punto corretto fuori dal margine), $0 < \xi_i \le 1$ (punto dentro il margine ma ben classificato), $\xi_i > 1$ (errore di classificazione).
-* **Parametro $C$**: $C \to \infty$ forza l'Hard Margin (rischio overfitting); $C$ piccolo tollera più violazioni ed amplifica il margine (regolarizzazione elevata).
-
----
-
-### 4.3 Formulazione Duale, Condizioni KKT & Kernel Trick
-Tramite i moltiplicatori di Lagrange $\alpha_i \ge 0$, si ottiene il Duale:
-$$\max_{\alpha} \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j K(x_i, x_j) \quad \text{sotto } 0 \le \alpha_i \le C, \,\, \sum_{i=1}^N \alpha_i y_i = 0$$
-
-* **Sparsità KKT**: Solo per i Vettori di Supporto si ha $\alpha_i > 0$. La predizione finale dipende solo dai Support Vector: $f(x) = \text{sign}\left( \sum_{i \in SV} \alpha_i y_i K(x_i, x) + b \right)$.
-* **Kernel Trick & RBF Gaussiano**: Proietta i dati in uno spazio a dimensione infinita senza calcolare le coordinate $\Phi(x)$, ma calcolando solo il prodotto scalare $K(x, z) = \exp(-\gamma \|x-z\|^2)$. Un $\gamma$ elevato crea bolle attorno ai singoli punti (overfitting); un $\gamma$ basso produce confini rigidi (underfitting).
-
----
-
-### 4.4 Support Vector Regression (SVR ed la $\epsilon$-Tube)
-Usa la **$\epsilon$-Insensitive Loss** $L_\epsilon(y, f(x)) = \max(0, |y - f(x)| - \epsilon)$. Costruisce un tubo di tolleranza di raggio $\pm \epsilon$. Gli errori interni al tubo sono considerati nulli. Introduce due famiglie di slack variables $(\xi_i, \xi_i^*)$ per violazioni superiori ed inferiori al tubo.
-
----
-
-### 4.5 Instance-Based Learning: k-Nearest Neighbors (k-NN)
-* **Formulazione Formale**:
-  * *Regressione (Media dei Vicini)*: $\hat{y}(x) = \frac{1}{K} \sum_{i \in N_K(x)} y_i$
-  * *Classificazione (Voto a Maggioranza)*: $\hat{y}(x) = \arg\max_{c} \sum_{i \in N_K(x)} \mathbb{I}(y_i = c)$
+### 1.3 k-Nearest Neighbors (k-NN) & Curse of Dimensionality (Slide `knn-v0.1`)
+* **Instance-Based / Lazy Learning**: Non addestra parametri liberi durante la fase di train, ma memorizza l'intero dataset.
+* **Formulazione Formale**: Sia $N_K(x)$ l'insieme dei $K$ vicini più prossimi secondo una metrica (es. Euclidea):
+  * **Regressione k-NN (Media dei Vicini)**:
+    $$\hat{y}(x) = \frac{1}{K} \sum_{i \in N_K(x)} y_i$$
+  * **Classificazione k-NN (Voto a Maggioranza)**:
+    $$\hat{y}(x) = \arg\max_{c \in \mathcal{C}} \sum_{i \in N_K(x)} \mathbb{I}(y_i = c)$$
 * **Maledizione della Dimensionalità (*Curse of Dimensionality*)**: Ad alta dimensione la densità dei dati crolla, i vicinati perdono la loro natura "locale" e la nozione di similarità sfuma.
 
 ---
 
-# 📌 SEZIONE 5: Architetture Avanzate, Un-Supervised & Deep Learning
+# 📌 SEZIONE 2: Reti Neurali Multi-Layer & Backprop (Slides `NN-part1`, `NN-part2`)
 
-### 5.1 Ensemble Learning (Bagging, Boosting, Voting)
-Combinazione di $M$ modelli per ridurre l'errore:
-* **Comitato (Voting/Averaging)**: Regressione $h_{ens}(x) = \frac{1}{M} \sum h_m(x)$; Classificazione $h_{ens}(x) = \arg\max_c \sum \mathbb{I}(h_m(x)=c)$.
-* **Bagging (Bootstrap Aggregation)**: Addestra modelli indipendenti su campioni bootstrap. Efficace per modelli ad **alta varianza** (riduce la varianza per averaging).
-* **Boosting (AdaBoost)**: Addestra sequenzialmente weak learners ripesando il dataset in base agli errori sui pattern precedenti (riduce il bias).
+### 2.1 Funzioni di Attivazione e loro Proprietà
+Le attivazioni introducono la **non-linearità** essenziale nelle reti neurali:
 
----
+1. **Sigmoide (Logistica)**: $\sigma(z) = \frac{1}{1 + e^{-z}}$, derivata $\sigma'(z) = \sigma(z)(1 - \sigma(z))$. Satura per $|z| > 4$ (Vanishing Gradient).
+2. **Tanh (Tangente Iperbolica)**: $\tanh(z) = \frac{e^z - e^{-z}}{e^z + e^{-z}}$, derivata $\tanh'(z) = 1 - \tanh^2(z)$. È **zero-centered**, velocizzando la convergenza.
+3. **ReLU (Rectified Linear Unit)**: $f(x) = \max(0, x)$, derivata $f'(x) = \mathbb{I}(x > 0)$. Agisce come un **interruttore / maschera binaria (0/1)**. Risolve il Vanishing Gradient per $x > 0$. Soluzione al Dying ReLU: **LeakyReLU** $f(x) = \max(\alpha x, x)$.
+4. **ELU (Exponential Linear Unit)**: $f(x) = x$ per $x > 0$ e $\alpha (e^x - 1)$ per $x \le 0$. Mantiene la media delle attivazioni vicina allo zero.
 
-### 5.2 Algoritmi Costruttivi: Cascade Correlation
-Sviluppato da Fahlman & Lebiere (1990):
-1. Parte da una rete senza neuroni nascosti.
-2. Aggiunge neuroni candidati ed li addestra per **massimizzare la covarianza $S$** con l'errore residuo:
-   $$S = \sum_{k \in \text{Output}} \left| \sum_{p} (o_p - \bar{o})(E_{p,k} - \bar{E}_k) \right|$$
-3. Esegue l'ascesa del gradiente col segno **PLUS** ($+\eta \frac{\partial S}{\partial w}$).
-4. Inserisce il candidato migliore nella rete e **congela i suoi pesi d'ingresso per sempre (*frozen weights*)** per evitare il *moving target problem*.
+#### ❓ Perché NON possiamo usare solo attivazioni lineari?
+Con attivazioni lineari $f(z) = c \cdot z$, l'uscita complessiva crollerebbe in un **singolo modello lineare**: $o = W_L \dots W_1 x = W_{tot} x$.
 
 ---
 
-### 5.3 Autoencoders (Undercomplete vs Overcomplete)
-Reti non supervisionate per la ricostruzione $\|x - \hat{x}\|^2$:
-* **Undercomplete ($dim(z) < dim(x)$)**: Bottleneck ristretto per compressione non lineare latente.
-* **Overcomplete ($dim(z) > dim(x)$)**: Bottleneck ampio con vincoli di Sparsity o Denoising. Pre-training: si conserva l'Encoder e si scarta il Decoder.
+### 2.2 Architettura MLP & Teorema di Approssimazione Universale
+* **Teorema di Approssimazione Universale (Hornik/Cybenko 1989)**: Una rete feed-forward con 1 strato nascosto ed attivazioni continue non lineari può approssimare qualsiasi funzione continua su un insieme compatto con un grado di precisione arbitrario $\epsilon > 0$.
 
 ---
 
-### 5.4 Apprendimento Non Supervisionato: K-Means, Voronoi & SOM
-* **Cella di Voronoi**: $V_i = \{x : \|x - \mu_i\| \le \|x - \mu_j\| \,\, \forall j \neq i\}$.
-* **Errore di Distorsione K-Means**: $E = \sum_i \sum_{x \in V_i} \|x - \mu_i\|^2$. Aggiornamento on-line: $\mu_i \leftarrow \mu_i + \eta(x - \mu_i)$.
-* **Self-Organizing Maps (SOM di Kohonen 1982)**: Griglia 2D topologica. Trova la Best Matching Unit (BMU) ed aggiorna i pesi con funzione di vicinato gaussiana $h_{ic}(t) = \exp\left(-\frac{\|r_i - r_c\|^2}{2\sigma(t)^2}\right)$.
+### 2.3 L'Algoritmo di Backpropagation (Slide `Backpropagation notes`)
+1. **Forward Pass**: $net_j = \sum_u w_{ju} o_u$, $o_j = f_j(net_j)$.
+2. **Backward Pass (Chain Rule)**:
+   * **Neurone di Output $k$**: $\delta_k = (d_k - o_k) f'_k(net_k)$
+   * **Neurone Nascosto $j$**: $\delta_j = \left( \sum_{k \in \text{Output}} \delta_k w_{kj} \right) f'_j(net_j)$
+3. **Aggiornamento Pesi**: $\Delta w_{tu} = \eta \delta_t o_u$. Efficienza **$O(|W|)$** (lineare nel numero dei pesi).
 
 ---
 
-### 5.5 Random Neural Networks & Reservoir Computing (Echo State Networks)
-Pesi degli strati nascosti ($W_{res}$) inizializzati casualmente e congelati permanently. Si addestra solo il layer di output tramite regressione chiusa in forma analitica.
+### 2.4 Iperparametri di Addestramento & Inizializzazione (Slide `NN-part2-v0.1`)
+$$\Delta w_{tu}(t) = -\eta \frac{\partial E}{\partial w_{tu}(t)} + \alpha \Delta w_{tu}(t-1) - \eta \lambda w_{tu}(t)$$
+1. **Learning Rate ($\eta$)**: Tasso di apprendimento.
+2. **Momentum ($\alpha \in [0, 1)$)**: Inerzia fisica contro le oscillazioni (Nesterov NAG valuta il gradiente nel punto futuro $w + \alpha \Delta w_{old}$).
+3. **Weight Decay / Regolarizzazione $L_2$ ($\lambda$)**: Penalizza la norma al quadrato dei pesi $\frac{\lambda}{2} \|w\|^2$.
+4. **Inizializzazione Pesi**: Inizializzare a zero distrugge la simmetria dei gradienti.
+5. **Ottimizzatori Avanzati**: R-Prop (solo segno del gradiente), Mini-Batch, SGD, Adam, AdamW.
 
 ---
 
-### 5.6 Deep Learning: RNN, CNN, GNN & No-Flattening
-* **Recurrent Neural Networks (RNN)**: Transizione di stato $h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)$. Gradient Clipping ($g \leftarrow v \frac{g}{\|g\|}$) per prevenire l'esplosione dei gradienti.
-* **Convolutional Neural Networks (CNN)**: Convoluzione 2D $(I * K)[i,j]$ vs Cross-Correlazione 2D in PyTorch $(I \star K)[i,j]$, ottimizzata via `im2col` su GPU.
-* **Graph Neural Networks (GNN)**: Message Passing (`AGGREGATE`, `UPDATE`), formula ricorsiva NN4G ed il Readout Globale $y_G = W_{out} \left( \sum_{v \in V} h_v \right)$.
-* **No-Flattening & Risultati di Profondità**: La parità a $N$-bit richiede $O(2^N)$ porte in 2 strati vs $O(N)$ in $\log N$ strati.
-* **Double Descent & Lottery Ticket Hypothesis**: Fenomeno di seconda discesa dell'errore nel regime fortemente sovra-parametrizzato ed identificazione di sottoreti vincenti isolate.
+# 📌 SEZIONE 3: Validazione & Model Selection (Slides `Valid1`, `Valid2`, `Valid3`)
+
+### 3.1 Schemi di Validazione Sperimentale (Slide `Valid1-v.0.1`)
+* **Hold-Out**: Divisione semplice Train/Validation/Test.
+* **K-Fold Cross-Validation (Slide `Valid2`)**: Suddivide il dataset in $K$ fold ruotando il blocco di validazione. Restituisce media e deviazione standard:
+  $$\bar{E}_{CV} = \frac{1}{K} \sum_{k=1}^K E_k, \quad \sigma_{CV} = \sqrt{\frac{1}{K-1} \sum_{k=1}^K (E_k - \bar{E}_{CV})^2}$$
+
+---
+
+### 3.2 Prevenzione del Data Leakage (Slide `Valid2-v0.1`)
+* **Regola Tassativa**: Qualunque trasformazione sui dati (es. `RobustScaler`, `StandardScaler`) **deve eseguire il `fit_transform` ESCLUSIVAMENTE sul training fold di ciascun ciclo di K-Fold**.
+
+---
+
+### 3.3 Model Selection vs Model Assessment & Nested CV (Slide `Valid3-v.0.1`)
+* **Model Selection**: Ricerca della migliore configurazione di iperparametri $h^*$ effettuata sul Validation Set.
+* **Model Assessment**: Valutazione finale dell'errore di generalizzazione su un Test Set indipendente.
+* **Nested Cross-Validation (Doppio Ciclo)**:
+  * **Inner Loop (K-Fold Interno)**: Dedicato alla **Model Selection** (GridSearch / Optuna su $K-1$ fold).
+  * **Outer Loop (K-Fold Esterno)**: Dedicato al **Model Assessment** (valutazione non polarizzata / *unbiased* su fold mai visti in GridSearch).
+
+---
+
+# 📌 SEZIONE 4: Statistical Learning Theory, SVM & Bias-Varianza (Slides `SLT1`, `SVM`, `Bias-Variance`)
+
+### 4.1 Statistical Learning Theory (SLT) & VC-Dimension (Slide `SLT1-v.0.1`)
+* **Shattering (Frammentazione)**: Un insieme di $N$ punti è shatterato da $\mathcal{H}$ se $\mathcal{H}$ può realizzare tutte le $2^N$ dicotomie binaria (+1 / -1).
+* **VC-Dimension ($h_{VC}$)**: La MASSIMA cardinalità $N$ per cui esiste ALMENO UN insieme di $N$ punti shatterabile.
+* **VC-Dimension degli Iperpiani Lineari ($VC = D + 1$)**: Dimostrato tramite il **Teorema di Radon** ($\text{Conv}(A) \cap \text{Conv}(B) \neq \emptyset$), che prova l'impossibilità di shatterare $D+2$ punti in $\mathbb{R}^D$.
+* **Structural Risk Minimization (SRM) & Bound di Vapnik**:
+  $$R(h) \le R_{emp}(h) + \sqrt{\frac{h_{VC} \left( \ln(2N/h_{VC}) + 1 \right) - \ln(\eta/4)}{N}}$$
+  SRM seleziona l'ipotesi che minimizza il bound complessivo lungo gerarchie annidate $\mathcal{H}_1 \subset \mathcal{H}_2 \dots$. L'**Early Stopping** agisce come regolarizzazione SRM limitando la norma pesi e la dimensione VC effettiva.
+
+---
+
+### 4.2 Support Vector Machines (SVM & SVR) (Slide `SVM-v0.1`)
+* **Massimo Margine Geometrico**: $M = \frac{2}{\|w\|}$. Massimizzare $M$ equivale a minimizzare $\frac{1}{2} \|w\|^2$.
+* **Soft Margin SVM**: Introduce le slack variables $\xi_i \ge 0$: $\min \frac{1}{2} \|w\|^2 + C \sum \xi_i$ sotto vincoli $y_i(w^T x_i + b) \ge 1 - \xi_i$. ($C \to \infty$ Hard Margin; $C$ piccolo tollera più violazioni ed amplia il margine).
+* **Formulazione Duale & KKT**: $\max_{\alpha} \sum \alpha_i - \frac{1}{2} \sum \alpha_i \alpha_j y_i y_j K(x_i, x_j)$. Sparsità KKT: solo per i Vettori di Supporto si ha $\alpha_i > 0$.
+* **Kernel Trick & RBF Gaussiano**: Proietta i dati in uno spazio a dimensione infinita tramite $K(x, z) = \exp(-\gamma \|x-z\|^2)$.
+* **Support Vector Regression (SVR)**: Loss $\epsilon$-insensitive $L_\epsilon(y, f(x)) = \max(0, |y - f(x)| - \epsilon)$ con tubo di tolleranza $\pm \epsilon$ e slack doppie $(\xi_i, \xi_i^*)$.
+
+---
+
+### 4.3 Decomposizione Bias-Varianza-Rumore (Slide `Bias-Variance-v0.1`)
+L'Errore Quadratico Medio atteso si scompone analiticamente in 3 componenti:
+$$\mathbb{E}[(y - h_D(x))^2] = \underbrace{(f(x) - \bar{h}(x))^2}_{\text{Bias}(x)^2} + \underbrace{\mathbb{E}_D [ (h_D(x) - \bar{h}(x))^2 ]}_{\text{Varianza}(x)} + \underbrace{\sigma^2}_{\text{Rumore Irriducibile}}$$
+* **Bias$^2$**: Errore di approssimazione del modello (**Underfitting** se alto).
+* **Varianza**: Sensibilità del modello alle fluttuazioni dello specifico training set (**Overfitting** se alta).
+* **Rumore Irriducibile ($\sigma^2$)**: Incertezza stocastica dei dati.
+
+---
+
+# 📌 SEZIONE 5: Architetture Avanzate, Un-Supervised & Deep Learning (Slides `CNN`, `Deep`, `Rand`, `Unsupervised-SOM`, `RNN`, `SDL-Intro`)
+
+### 5.1 Convolutional Neural Networks (CNN) (Slide `NN-part3-CNN-v0.1`)
+* **Operatori Convoluzionali**: Convoluzione 2D $(I * K)[i,j]$ vs Cross-Correlazione 2D in PyTorch:
+  $$(I \star K)[i, j] = \sum_m \sum_n I[i+m, j+n] K[m, n]$$
+  Parallelizzata su GPU tramite la trasformazione matriciale `im2col` (Image-to-Column).
+
+---
+
+### 5.2 Deep Learning & Risultati di Profondità (Slide `NN-part3-Deep-v0.1`)
+* **Vanishing Gradient Chain Rule**: $\frac{\partial E}{\partial w_1} = \frac{\partial E}{\partial o_L} \left( \prod_{l=2}^L W_l f'_l(net_l) \right) f'_1(net_1) x$.
+* **No-Flattening**: La funzione di parità a $N$-bit richiede $O(2^N)$ porte in 2 strati vs $O(N)$ in $\log N$ strati.
+* **Double Descent & Lottery Ticket Hypothesis**: Fenomeno di seconda discesa dell'errore nel regime fortemente sovra-parametrizzato e sottoreti vincenti isolate.
+
+---
+
+### 5.3 Algoritmi Costruttivi & Random NN (Slide `NN-part3-Rand-v0.1`)
+* **Cascade Correlation (Fahlman & Lebiere 1990)**: Aggiunge neuroni candidati ed li addestra per **massimizzare la covarianza $S$** con l'errore residuo ($+\eta \frac{\partial S}{\partial w}$). Congela i pesi d'ingresso per sempre (*frozen weights*) per evitare il *moving target problem*.
+* **Random NN & Reservoir Computing (Echo State Networks ESN)**: Pesi del bacino casuali e congelati permanently; readout lineare addestrato in forma analitica chiusa.
+
+---
+
+### 5.4 Apprendimento Non Supervisionato: K-Means & SOM (Slide `Unsupervised-SOM-v.0.1`)
+* **Quantizzazione Vettoriale & Voronoi**: Celle di Voronoi $V_i = \{x : \|x - \mu_i\| \le \|x - \mu_j\|\}$. Distorsione globale $E = \sum_i \sum_{x \in V_i} \|x - \mu_i\|^2$. Aggiornamento on-line $\mu_i \leftarrow \mu_i + \eta(x - \mu_i)$.
+* **Self-Organizing Maps (SOM di Kohonen 1982)**: Griglia 2D topologica. Best Matching Unit (BMU) ed aggiornamento vicinato gaussiano $h_{ic}(t) = \exp\left(-\frac{\|r_i - r_c\|^2}{2\sigma(t)^2}\right)$.
+* **Ensemble Learning (Voting, Bagging, Boosting)**: Comitato di modelli (media/maggioranza), Bagging per alta varianza (averaging), Boosting (AdaBoost, ripesaggio errori) per alto bias.
+
+---
+
+### 5.5 Recurrent Neural Networks (RNN) (Slide `RNN-v0.1`)
+* **Transizione di Stato**: $h_t = \tanh(W_{hh} h_{t-1} + W_{xh} x_t + b_h)$.
+* **Gradient Clipping**: $g \leftarrow v \frac{g}{\|g\|_2}$ per evitare l'esplosione dei gradienti.
+
+---
+
+### 5.6 Domini Strutturati & Graph Neural Networks (Slide `SDL-Intro-v0.1`)
+* **Message Passing per GNN**: $m_v^{(k)} = \text{AGGREGATE}\left(\{h_u^{(k-1)} : u \in N(v)\}\right)$, $h_v^{(k)} = \text{UPDATE}\left(h_v^{(k-1)}, m_v^{(k)}\right)$.
+* **NN4G (Neural Network for Graphs)**: $h_v^{(k)} = f\left( W_1 x_v + \sum W_{2,l} \sum_{u \in N(v)} h_u^{(l)} \right)$.
+* **Readout Globale**: $y_G = W_{out} \left( \sum_{v \in V} h_v \right)$.
+* **Word Embeddings**: Relazioni geometrico-semantiche distribuiti ($\vec{v}_{king} - \vec{v}_{man} + \vec{v}_{woman} \approx \vec{v}_{queen}$).
 
 ---
 # 📌 SEZIONE 6: Guida Integrale al Codice del Progetto (File per File)

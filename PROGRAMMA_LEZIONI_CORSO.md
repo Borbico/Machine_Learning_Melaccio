@@ -4,6 +4,31 @@
 
 ---
 
+
+---
+
+## 💡 Introduzione al Corso e Filo Conduttore (La Visione d'Insieme)
+
+Il corso di Machine Learning del Prof. Alessio Micheli è strutturato attorno a **una domanda fondamentale**:
+> *"Come possiamo insegnare a un computer ad apprendere una funzione incognita dai dati, garantendo che sappia generalizzare bene su dati futuri mai visti senza limitarsi a imparare a memoria il training set?"*
+
+Da questa domanda nascono i **5 grandi blocchi del corso**:
+
+1. **Il Primo Passo — Dalle Basi ai Modelli Lineari e k-NN**:  
+   Si parte dal *Framework dei 4 elementi* (Dati $D$, Spazio delle Ipotesi $\mathcal{H}$, Loss Function $\mathcal{L}$ e Ottimizzatore). Si comprende perché non si può fare ML senza *Bias Induttivo*. Si studiano i primi modelli storici: il *Perceptrone* (unità a soglia, Novikoff convergence bound e limite dell'XOR), la *Delta Rule (LMS)* per la discesa continua del gradiente, le *Equazioni Normali* per la regressione lineare chiusa ($w^* = X^+ y$), la *Linear Basis Expansion (LBE)* e il *Teorema di Cover*, fino al *k-NN* (instance-based) e la *Maledizione della Dimensionalità*.
+
+2. **Il Cuore delle Reti Neurali — MLP & Backpropagation**:  
+   Si esplora il mondo delle Multi-Layer Perceptrons: perché le attivazioni non lineari (Sigmoide, Tanh, ReLU, ELU) sono *obbligatorie* (altrimenti la rete collassa in un unico modello lineare), il *Teorema di Approssimazione Universale* (Hornik/Cybenko), e la *Backpropagation* (calcolo efficiente dei $\delta$ via Chain Rule con complessità $O(|W|)$), affrontando i problemi pratici di *Vanishing Gradient* ed i parametri di controllo (*Learning Rate $\eta$*, *Momentum $\alpha$*, *Weight Decay $\lambda$*).
+
+3. **La Metodologia Sperimentale — Validazione senza Imbrogliare**:  
+   Si definisce la rigorosa metodologia di valutazione per evitare il *Data Leakage* (lo scaler va addestrato esclusivamente sui fold di train). Si analizzano gli schemi di validazione (*Hold-Out*, *K-Fold Cross-Validation*) e si formalizza la distinzione tra *Model Selection* (scelta degli iperparametri sul Validation Set) e *Model Assessment* (stima unbiased del rischio sul Test Set) tramite la *Nested Cross-Validation* (doppio ciclo interno/esterno).
+
+4. **La Matematica Forte — SLT (Vapnik), Bias-Varianza e SVM**:  
+   La teoria formale dell'apprendimento: la decomposizione algebrica *Bias-Varianza-Rumore* (Underfitting vs Overfitting), la *Statistical Learning Theory (SLT)* di Vapnik per misurare la capacità del modello tramite la *VC-Dimension* ($VC = D+1$ per iperpiani via Teorema di Radon), ed il Bound di Vapnik per l'ottimizzazione del principio *SRM (Structural Risk Minimization)*. Infine le *Support Vector Machines (SVM & SVR)*: massimizzazione del margine ($M = 2/\|w\|$), Slack Variables ($C$), formulazione Duale con condizioni KKT, *Kernel Trick* (RBF Gaussiano) ed SVR con tubo $\epsilon$-insensitive.
+
+5. **La Frontiera — Architetture Avanzate, Deep Learning e Domini Strutturati**:  
+   La panoramica sui modelli evoluti: *CNN* (convoluzioni 2D, cross-correlazione e `im2col`), *Deep Learning & No-Flattening* (vantaggio esponenziale della profondità a $\log N$ strati), *Algoritmi Costruttivi e Random NN* (*Cascade Correlation* con covarianza $S$ e pesi congelati, *Echo State Networks ESN*), *Unsupervised Learning & SOM* (K-Means, Celle di Voronoi, Self-Organizing Maps di Kohonen, Autoencoders, Ensemble Bagging/Boosting), e la modellazione temporale e su grafi (*RNN* con BPTT e Gradient Clipping; *GNN* con Message Passing, NN4G e Readout Globale).
+
 ## 🗺️ Struttura dei Moduli Didattici
 
 1. **MODULO 1: Introduzione, Modelli Lineari & k-Nearest Neighbors**  

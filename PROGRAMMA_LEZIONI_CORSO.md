@@ -166,11 +166,11 @@ Da questa domanda nascono i **5 grandi blocchi del corso**:
 
 ### 4.2 Support Vector Machines (SVM & SVR) (`ML-25-SVM-v0.1` & `SVM-other info`)
 - [ ] **Massimo Margine Geometrico**: $M = \frac{2}{\|w\|}$, con distanza ortogonale $d_i = \frac{|w^T x_i + b|}{\|w\|}$. Equivalenza con la minimizzazione di $\frac{1}{2} \|w\|^2$.
-- [ ] **Hard Margin SVM (Primale)**: $\min \frac{1}{2} \|w\|^2 \quad \text{sotto vincoli } y_i(w^T x_i + b) \ge 1$.
-- [ ] **Soft Margin SVM (Primale)**: $\min \frac{1}{2} \|w\|^2 + C \sum_{i=1}^N \xi_i \quad \text{sotto vincoli } y_i(w^T x_i + b) \ge 1 - \xi_i, \,\, \xi_i \ge 0$. ($C \to \infty$ Hard Margin vs $C$ piccolo Soft Margin).
+- [ ] **Hard Margin SVM Primale**: $\min_{w,b} \frac{1}{2} \|w\|^2 \quad \text{sotto vincoli } y_i(w^T x_i + b) \ge 1$.
+- [ ] **Soft Margin SVM Primale**: $\min_{w,b,\xi} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^N \xi_i \quad \text{sotto vincoli } y_i(w^T x_i + b) \ge 1 - \xi_i, \,\, \xi_i \ge 0$. ($C \to \infty$ Hard Margin vs $C$ piccolo Soft Margin).
 - [ ] **Formulazione Duale & Condizioni KKT**:
   $$\max_{\alpha} \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j K(x_i, x_j) \quad \text{sotto } 0 \le \alpha_i \le C, \,\, \sum_{i=1}^N \alpha_i y_i = 0$$
-- [ ] **Sparsità KKT & Vettori di Supporto**: $\alpha_i [y_i(w^T x_i + b) - 1 + \xi_i] = 0 \implies \alpha_i > 0$ solo per i Support Vector.
+- [ ] **Sparsità KKT & Vettori di Supporto**: $\alpha_i \big[ y_i(w^T x_i + b) - 1 + \xi_i \big] = 0 \implies \alpha_i > 0$ solo per i Support Vector.
 - [ ] **Funzione di Decisione Finale SVM**: $f(x) = \text{sign}\left( \sum_{i \in SV} \alpha_i y_i K(x_i, x) + b \right)$.
 - [ ] **Kernel Trick & RBF Gaussiano**: $K(x, z) = \exp(-\gamma \|x-z\|^2)$ dove $\gamma = \frac{1}{2\sigma^2}$.
 - [ ] **Support Vector Regression (SVR)**:

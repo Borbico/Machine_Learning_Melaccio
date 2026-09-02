@@ -158,7 +158,9 @@ Con attivazioni lineari $f(z) = c \cdot z$, l'uscita complessiva crollerebbe in 
 ### 2.4 Iperparametri di Addestramento & Inizializzazione (Slide `NN-part2-v0.1`)
 $$\Delta w_{tu}(t) = -\eta \frac{\partial E}{\partial w_{tu}(t)} + \alpha \Delta w_{tu}(t-1) - \eta \lambda w_{tu}(t)$$
 1. **Learning Rate ($\eta$)**: Tasso di apprendimento.
-2. **Momentum ($\alpha \in [0, 1)$)**: Inerzia fisica contro le oscillazioni (Nesterov NAG valuta il gradiente nel punto futuro $w + \alpha \Delta w_{old}$).
+2. **Momentum ($\alpha \in [0, 1)$)**: Inerzia fisica contro le oscillazioni * **Nesterov Accelerated Gradient (NAG — Look-Ahead Momentum)**:
+  - A differenza del momentum classico che calcola il gradiente nella posizione corrente $w(t)$, NAG applica prima lo spostamento teorico dell'inerzia $w' = w(t) + \alpha \Delta w(t-1)$ ("guarda in avanti") e calcola il gradiente nel punto futuro $w'$:
+    $$\Delta w(t) = \alpha \Delta w(t-1) - \eta \nabla E\big(w(t) + \alpha \Delta w(t-1)\big)$$
 3. **Weight Decay / Regolarizzazione $L_2$ ($\lambda$)**: Penalizza la norma al quadrato dei pesi $\frac{\lambda}{2} \|w\|^2$.
 4. **Inizializzazione Pesi**: Inizializzare a zero distrugge la simmetria dei gradienti.
 5. **Ottimizzatori Avanzati**: R-Prop (solo segno del gradiente), Mini-Batch, SGD, Adam, AdamW.

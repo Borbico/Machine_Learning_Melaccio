@@ -1,42 +1,58 @@
 # ✍️ Soluzioni Ufficiali ed Esaustive della Prova Scritta d'Esame
 **Corso del Prof. Alessio Micheli — Università di Pisa**  
-*(Compendio delle 4 Domande della Prova Scritta con Risposte Modello, Dimostrazioni Passo-Passo e Spiegazioni per l'Orale)*
+*(Compendio Integrale delle 4 Domande della Prova Scritta con Risposte Modello, Dimostrazioni Algebriche Passo-Passo, Diagrammi ASCII e Spiegazioni per l'Orale)*
 
 ---
 
 ## 📌 DOMANDA 1: Funzione di Attivazione ReLU e Caratteristiche Principali
 
-### 1.1 Definizione Matematica e Derivata
+### 1.1 Definizione Matematica, Subgradiente e Derivata Prima
 La **ReLU (Rectified Linear Unit)** è definita matematicamente come:
 $$f(x) = \max(0, x) = \begin{cases} x & \text{se } x > 0 \\ 0 & \text{se } x \le 0 \end{cases}$$
 
 La sua derivata prima rispetto all'input è una funzione a gradino (interruttore binario):
 $$f'(x) = \begin{cases} 1 & \text{se } x > 0 \\ 0 & \text{se } x < 0 \end{cases}$$
-*(In $x=0$ la derivata non è definita in senso classico; in ambito computazionale/software si imposta convenzionalmente a 0 o 1 tramite subgradiente).*
+
+*(Nota per l'Orale: In $x=0$ la derivata non è definita in senso classico per la discontinuità dell'angolo. In analisi matematica si definisce il **subgradiente** $\partial f(0) = [0, 1]$. In ambito software/PyTorch si imposta convenzionalmente $f'(0) = 0$ oppure $f'(0) = 1$).*
+
+#### Grafico ASCII dell'Attivazione f(x) e della Derivata f'(x)
+```
+     Funzione ReLU f(x)                  Derivata f'(x)
+         y |                                 y |
+           |   / (pendenza 1)                  |------- (valore 1)
+           |  /                                |
+   --------+--/----> x                 --------+--------> x
+   (0 per x<0)                         (0 per x<0)
+```
 
 ---
 
 ### 1.2 Caratteristiche Principali e Vantaggi
-1. **Risoluzione del Vanishing Gradient per $x > 0$**:
-   * Nelle attivazioni sigmoidali e Tanh, la derivata satura per valori grandi di input ($f'(z) \le 0.25$ per la sigmoide), azzerando la produttoria dei gradienti lungo la catena della Backpropagation nelle reti profonde ($L \ge 4$).
-   * Per la ReLU, per tutti gli input positivi ($x > 0$), la derivata è **esattamente uguale a 1**, permettendo al gradiente di retropropagarsi in reti molto profonde senza alcuna attenuazione.
-2. **Efficienza Computazionale**:
-   * Non richiede il calcolo di funzioni euleriane/esponenziali complesse (come $e^{-z}$ in Sigmoide e Tanh), ma solo un'operazione di sogliatura elementare $\max(0, x)$ eseguibile a livello hardware in nanosecondi.
-3. **Sparsità delle Attivazioni**:
-   * Poiché per qualsiasi input negativo $x < 0$ l'output è esattamente $0$, per ogni dato di input solo un sottoinsieme di neuroni della rete sarà attivo ($f(x) > 0$).
-   * Questo produce rappresentazioni sparse che riducono il grado di accoppiamento dei pesi e migliorano la separabilità delle caratteristiche.
+
+#### 1. Risoluzione del Vanishing Gradient per $x > 0$
+Nelle attivazioni sigmoidali $\sigma(z) = \frac{1}{1+e^{-z}}$ o Tanh, la derivata satura per valori elevati di input ($f'(z) \le 0.25$ per la sigmoide).  
+Durante la Backpropagation su una rete a $L$ strati, il gradiente rispetto ai pesi del primo strato è dato dalla regola della catena:
+$$\frac{\partial E}{\partial w_1} = \frac{\partial E}{\partial o_L} \left( \prod_{l=2}^L W_l f'_l(net_l) \right) f'_1(net_1) x$$
+Poiché per le sigmoidali $f'_l \le 0.25$, la produttoria $\prod_{l=2}^L f'_l(net_l) \le (0.25)^{L-1}$ tende esponenzialmente a zero per $L \ge 4$, azzerando l'aggiornamento pesi (**Vanishing Gradient**).  
+Per la ReLU, per tutti i neuroni attivi ($x > 0$), la derivata è **esattamente uguale a 1** ($f'(net) = 1$). Di conseguenza, la produttoria $\prod f'_l = 1$, consentendo al segnale d'errore di retropropagarsi in reti molto profonde senza alcuna attenuazione.
+
+#### 2. Efficienza Computazionale
+Non richiede il calcolo di funzioni euleriane o esponenziali complesse (come $e^{-z}$ in Sigmoide e Tanh), ma solo un'operazione di sogliatura elementare $\max(0, x)$ eseguibile a livello hardware in nanosecondi.
+
+#### 3. Sparsità delle Attivazioni
+Poiché per qualsiasi input negativo $x < 0$ l'output è esattamente $0$, per ogni pattern d'ingresso solo un sottoinsieme di neuroni della rete risulterà attivo ($f(x) > 0$). Questo produce rappresentazioni sparse che riducono il grado di accoppiamento dei pesi e migliorano la separabilità delle caratteristiche.
 
 ---
 
 ### 1.3 Svantaggi e Problema della "Dying ReLU"
-* **Dying ReLU (Neuroni Morti)**:
-  * Se un neurone riceve un gradiente elevato che spinge il suo vettore dei pesi a generare un input netto costantemente negativo ($net < 0$) per tutti i pattern del dataset, l'output sarà $0$ e la derivata sarà $0$.
-  * Di conseguenza, il segnale di errore $\delta$ diventerà nullo e il neurone "morirà", rimanendo congelato senza potersi aggiornare mai più.
-* **Non Zero-Centered**:
-  * Gli output sono sempre non-negativi ($\ge 0$), inducendo una dinamica di aggiornamento dei pesi a zig-zag durante la discesa del gradiente.
+* **Dying ReLU (Neuroni Morti)**:  
+  Se un neurone riceve un gradiente elevato che spinge il suo vettore dei pesi a generare un input netto costantemente negativo ($net < 0$) per tutti i pattern del dataset, l'output sarà $0$ e la derivata sarà $0$. Di conseguenza, il segnale di errore $\delta = 0$ si azzera e il neurone "muore", rimanendo congelato senza potersi aggiornare mai più.
+* **Non Zero-Centered**:  
+  Gli output sono sempre non-negativi ($\ge 0$), inducendo una dinamica di aggiornamento dei pesi a zig-zag durante la discesa del gradiente.
 * **Soluzioni Evolutive**:
   * **LeakyReLU**: $f(x) = \max(\alpha x, x)$ con $\alpha \approx 0.01$ per garantire una pendenza minima anche per $x < 0$.
-  * **ELU (Exponential Linear Unit)**: $f(x) = \alpha(e^x - 1)$ per $x \le 0$, per garantire una transizione fluida e una media delle attivazioni vicina allo zero.
+  * **ELU (Exponential Linear Unit)**: $f(x) = \begin{cases} x & x > 0 \\ \alpha(e^x - 1) & x \le 0 \end{cases}$ per garantire una transizione fluida ed una media delle attivazioni vicina allo zero.
+  * **GELU (Gaussian Error Linear Unit)**: $f(x) = x \cdot \Phi(x)$, adottata nei Transformer moderni.
 
 ---
 
@@ -64,17 +80,44 @@ Nel Machine Learning, la **Complessità** misura la **capacità espressiva / ric
 
 ---
 
-### 2.3 Il Trade-off Fondamentale (Underfitting vs Overfitting)
-* **Complessità troppo bassa**: Il modello ha scarsa capacità espressiva $\implies$ **Underfitting** (Bias alto, errore elevato sia in Training che in Test).
-* **Complessità troppo alta**: Il modello ha un'eccessiva capacità espressiva ed modella il rumore stocastico dei dati $\implies$ **Overfitting** (Varianza alta, errore nullo in Training ma elevato in Test).
+### 2.3 Grafico ASCII del Trade-off di Complessità (Underfitting vs Overfitting vs SRM)
+
+```
+  Errore ^
+         | \                                / Curva del Rischio Reale R(h)
+         |  \                              /  (ha un minimo al punto di SRM)
+         |   \                            /
+         |    \                          /   Confidenza VC \Omega(N, h_VC)
+         |     \                        /    (cresce all'aumentare della VC-dim)
+         |      \                      / 
+         |       \____________________/
+         |        \                  /
+         |         \________________/  Rischio Empirico R_emp(h)
+         |                             (decresce all'aumentare della VC-dim)
+         +----------------------------------------------------> Complessità / VC-Dimension
+           [UNDERFITTING]      [OTTIMO SRM]       [OVERFITTING]
+           (Bias Alto)                            (Varianza Alta)
+```
 
 ---
 
 ## 📌 DOMANDA 3: Equazione/i della Varianza nella Decomposizione Bias-Varianza
 
-### 3.1 Contesto e Decomposizione dell'Errore Atteso
-Nella regressione con loss MSE, considerando il generico punto $x$, il valore atteso del target $y = f(x) + \epsilon$ con rumore stocastico $\epsilon \sim \mathcal{N}(0, \sigma^2)$ si scompone algebricamente rispetto a tutti i possibili training set $D$:
-$$\mathbb{E}_{D,\epsilon}[(y - h_D(x))^2] = \text{Bias}(x)^2 + \text{Varianza}(x) + \sigma^2$$
+### 3.1 Dimostrazione Algebrica Completa della Decomposizione MSE
+Sia $y = f(x) + \epsilon$ il target reale con rumore stocastico a media nulla $\mathbb{E}[\epsilon] = 0$ e varianza $\mathbb{E}[\epsilon^2] = \sigma^2$, e sia $h_D(x)$ la predizione del modello addestrato sul dataset $D$.  
+Definiamo l'ipotesi media $\bar{h}(x) = \mathbb{E}_D [h_D(x)]$.
+
+Scriviamo l'errore quadratico medio atteso rispetto a tutti i possibili dataset $D$ ed al rumore $\epsilon$:
+$$\mathbb{E}_{D,\epsilon}\left[ (y - h_D(x))^2 \right] = \mathbb{E}_{D,\epsilon}\left[ \big( (f(x) - \bar{h}(x)) + (\bar{h}(x) - h_D(x)) + \epsilon \big)^2 \right]$$
+
+Espandendo il quadrato del trinomio $(A + B + C)^2 = A^2 + B^2 + C^2 + 2AB + 2AC + 2BC$:
+1. $A^2 = (f(x) - \bar{h}(x))^2 = \text{Bias}(x)^2$
+2. $\mathbb{E}_D [B^2] = \mathbb{E}_D [(\bar{h}(x) - h_D(x))^2] = \text{Varianza}(x)$
+3. $\mathbb{E}_\epsilon [C^2] = \mathbb{E}[\epsilon^2] = \sigma^2$ (Rumore Irriducibile)
+4. I doppi prodotti si azzerano poiché $\mathbb{E}[\epsilon] = 0$ e $\mathbb{E}_D [\bar{h}(x) - h_D(x)] = \bar{h}(x) - \bar{h}(x) = 0$.
+
+Otteniamo la decomposizione fondamentale:
+$$\mathbf{\mathbb{E}_{D,\epsilon}[(y - h_D(x))^2] = \text{Bias}(x)^2 + \text{Varianza}(x) + \sigma^2}$$
 
 ---
 
@@ -90,11 +133,11 @@ $$\text{Varianza Globale} = \int_{\mathcal{X}} \mathbb{E}_D \left[ \big( h_D(x) 
 
 ---
 
-### 3.3 Significato Fisico e Relazioni nel Corso
+### 3.3 Significato Fisico e Riduzione della Varianza via Bagging
 * **Sensibilità al Dataset**: Misura quanto la predizione $h_D(x)$ **oscilla / varia** al variare dello specifico training set $D$ estratto dalla distribuzione $P(x,y)$.
-* **Indicatore di Overfitting**: Un'alta varianza indica che il modello si è adattato eccessivamente ai dettagli stocastici di uno specifico insieme di dati.
-* **Riduzione della Varianza via Ensemble**: Algoritmi di Bagging (Bootstrap Aggregation) riducono la varianza dividendo il valore atteso per il numero $M$ di comitati indipendenti:
-  $$\text{Var}(h_{ens}) \approx \frac{\text{Var}(h)}{M}$$
+* **Riduzione via Ensemble Bagging**: Facendo la media delle predizioni di $M$ modelli de-correlati con varianza $\sigma^2$ e correlazione d'errore $\rho$:
+  $$\text{Varianza}(h_{ens}) = \rho \sigma^2 + \frac{1-\rho}{M} \sigma^2$$
+  Se i modelli sono indipendenti ($\rho \to 0$), la varianza dell'ensemble si riduce di un fattore $M$.
 
 ---
 
@@ -137,3 +180,11 @@ Poiché esiste almeno una dicotomia irrealizzabile per qualsiasi disposizione di
 
 ### 4.4 Conclusione Formale
 $$\mathbf{h_{VC} = 2}$$
+
+---
+
+### 💡 Consigli per l'Esposizione all'Orale
+Se il Prof. Micheli ti riprende la Domanda 4 all'orale:
+> *"Professore, la VC-dimension dell'intervallo chiuso su $\mathbb{R}^1$ è esattamente 2.*  
+> *Per $N=2$ punti distinti $x_1 < x_2$, possiamo shatterare l'insieme realizzando tutte le 4 dicotomie regolando opportunamente gli estremi $a$ e $b$.*  
+> *Per $N=3$ punti ordinati $x_1 < x_2 < x_3$, se assegniamo etichetta $+1$ ai due punti esterni $x_1$ e $x_3$, l'intervallo chiuso $[a,b]$ deve necessariamente includere anche il punto centrale $x_2$, rendendo impossibile ottenere la dicotomia con $x_2 \to -1$. Pertanto $h_{VC} = 2$."*

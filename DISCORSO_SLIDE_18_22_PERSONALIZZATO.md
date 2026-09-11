@@ -1,142 +1,146 @@
-# 🎤 Discorso Personalizzato per l'Orale: Slide 18 - 22
+# 🎤 Discorso Naturale e Guida Semplificata: Slide 18 - 22
 **Presentatore: Daniele Melaccio — Gruppo CDM25**  
-*(Copione Dettagliato Parola per Parola + Guida Completa alle Domande Teoriche di Micheli sulle Slide 18-22)*
+*(Spiegazione Semplice dei Concetti + Discorso Naturale e Aderente alle Lezioni di Micheli)*
 
 ---
 
-## 📌 Panoramica del Tuo Blocco (Grand Finale della Presentazione)
+## 💡 PARTE 1: Capire i Concetti delle Tue 5 Slide in Parole Semplici
 
-La tua parte è il **climax finale del progetto**: dopo che i tuoi compagni hanno introdotto la metodologia, i MONK e i singoli modelli CUP, tu presenti:
-1. **Slide 18**: La **Tabella dei Risultati Finali** (confronto KNN, SVR RBF, Rete Neurale ed Ensemble).
-2. **Slide 19**: La **Scelta del Modello Finale e Pesi Congelati** (perché l'Ensemble vince, esclusione del LinearSVR e pesi OOF).
-3. **Slide 20**: Le **Curve di Apprendimento dell'Ensemble** al variare della dimensione del training set ($N$).
-4. **Slide 21**: La **Discussione dei Risultati, Inizializzazione dei Pesi e Limitazioni**.
-5. **Slide 22 (Appendice)**: La **Dimostrazione Teorica dell'Inizializzazione dei Pesi a Zero** (Symmetry Breaking).
+Prima di imparare cosa dire, ecco la spiegazione elementare di cosa c'è in queste 5 slide:
+
+### 📄 Slide 18: La Tabella dei Risultati Finali della CUP
+* **Cosa c'è nella slide**: Una tabella che confronta i 3 modelli singoli (KNN, SVR RBF, Rete Neurale) e l'**Ensemble** (la loro combinazione).
+* **I 3 tipi di errore che vedi**:
+  1. *Training MEE*: L'errore sui dati su cui il modello si è addestrato. È sempre ottimistico.
+  2. *OOF Validation MEE*: L'errore calcolato sui 400 dati di sviluppo in Cross-Validation (quando il modello non aveva visto quel blocco di dati).
+  3. *Internal Test MEE*: L'errore sui 100 dati tenuti da parte fin dall'inizio e **mai visti prima**.
+* **Il risultato chiave**: Il KNN da solo è il modello singolo migliore (MEE 16.32). Ma l'**Ensemble vince su tutti**, abbassando l'errore a **16.10 in CV** ed a **16.55 sul Test Set interno**.
 
 ---
 
-## 🗣️ Copione Parola per Parola per l'Esposizione delle Slide
+### 📄 Slide 19: Come abbiamo scelto l'Ensemble e i Pesi
+* **Cosa c'è nella slide**: La spiegazione delle nostre scelte metodologiche.
+* **Le 3 cose da ricordare**:
+  1. Abbiamo **escluso il LinearSVR** (che faceva MEE 25.51, troppo alto per essere utile) e lo abbiamo usato solo come baseline.
+  2. I pesi dell'Ensemble sono: **73.8% KNN**, **16.1% SVR RBF** e **10.1% Rete Neurale**.
+  3. **La regola di Micheli**: I pesi li abbiamo calcolati e **congelati PRIMA** di andare a valutare il Test Set finale, per evitare il *Data Leakage*.
+
+---
+
+### 📄 Slide 20: La Learning Curve dell'Ensemble
+* **Cosa c'è nella slide**: Un grafico che mostra l'errore dell'Ensemble al variare del **numero di dati di training forniti ($N$)**.
+* **Cosa significa**: C'è un piccolo gap tra la curva di training e quella di validazione (un po' di *overfitting residuo*). Ma la linea della validazione continua a scendere all'aumentare dei dati: significa che se avessimo avuto più dei 500 campioni disponibili, il modello avrebbe generalizzato ancora meglio!
+
+---
+
+### 📄 Slide 21: Discussione, Inizializzazione Pesi e Limitazioni
+* **Cosa c'è nella slide**: I punti di forza e le limitazioni del progetto.
+* **Punti chiave**:
+  * **Inizializzazione pesi**: Se metti i pesi della rete neurale tutti a zero, la rete fallisce. Abbiamo usato l'inizializzazione **Kaiming Uniform**.
+  * **Guadagno dell'Ensemble**: Migliora il KNN di circa l'1.5%, un guadagno modesto ma **costante e riproducibile**.
+  * **Limitazione principale**: 500 campioni sono pochini per addestrare reti neurali molto profonde.
+
+---
+
+### 📄 Slide 22 (Appendice): Inizializzazione dei Pesi a Zero
+* **Cosa c'è nella slide**: La dimostrazione grafica di cosa succede se si inizializzano i pesi a zero.
+* **Concetto del corso**: Se i pesi sono zero, tutti i neuroni dello stesso strato calcolano lo stesso output ed il gradiente si aggiorna allo stesso modo. Non si "rompe la simmetria" (**Symmetry Breaking**) e i neuroni diventano copie identiche tra loro.
+
+---
+
+## 🗣️ PARTE 2: Il Tuo Discorso Naturale per l'Orale (Aderente alle Lezioni di Micheli)
+
+Ecco un discorso fluido, semplice e perfettamente allineato al linguaggio del corso:
+
+---
 
 ### 📊 SLIDE 18: CUP Ensemble: Final MEE Summary
-*(Mostra la tabella dei risultati a schermo)*
+*(Proietta la Slide 18)*
 
-> *"Grazie. Passiamo ora alla valutazione comparativa finale dei nostri modelli sulla ML CUP 2025.*  
-> *Come mostrato nella **Slide 18**, la tabella riassume le prestazioni dei tre modelli individuali e dell'Ensemble finale rispetto a tre metriche:*  
-> *1. Il **Training MEE** (misurato in-sample).*  
-> *2. Il **Validation MEE Out-Of-Fold (OOF)** (calcolato sui 400 campioni di development).*  
-> *3. L'**Internal Test MEE** (calcolato sui 100 campioni di test trattenuti e mai visti in fase di addestramento o selezione).*  
+> *"Grazie. Passiamo ora alla valutazione comparativa finale dei nostri modelli sulla ML CUP.*  
 >  
-> *Osservando i singoli modelli, confermiamo che il **KNN** è il miglior modello stand-alone con un OOF MEE di **16.32** ed un Internal Test di **16.82**.*  
-> *L'**SVR RBF** mostra un forte gap tra training (~2.34) e validazione (~17.78), evidenziando un overfitting residuo dovuto alla località del kernel gaussiano.*  
-> *La **Rete Neurale PyTorch** ottiene una MEE OOF di **20.28** e **21.75** sull'Internal Test, risentendo del numero limitato di campioni.*  
+> *Come mostrato nella tabella della **Slide 18**, confrontiamo le prestazioni dei tre modelli singoli e dell'Ensemble finale.*  
+> *Osservando i risultati sui 400 dati di sviluppo in Cross-Validation, il **KNN** si conferma il miglior modello individuale con un MEE di **16.32**.*  
+> *L'**SVR con Kernel RBF** ottiene un MEE di **17.78**, mentre la **Rete Neurale** si attesta a **20.28**.*  
 >  
-> *Il risultato fondamentale è che l'**Ensemble** ottiene il punteggio MEE più basso in assoluto sia in Out-Of-Fold (**16.10**) sia sull'Internal Test (**16.55**), confermando che il guadagno di prestazione si trasferisce in modo coerente anche sul dataset di test indipendente."*
+> *Il risultato fondamentale è che l'**Ensemble finale** ottiene il punteggio di errore più basso in assoluto: scende a **16.10 Out-Of-Fold** e conferma questo miglioramento a **16.55 sul Test Set interno** di 100 campioni trattenuti."*
 
 ---
 
 ### 🏆 SLIDE 19: Final Model Choice: Frozen Weighted Ensemble
 *(Passa alla Slide 19)*
 
-> *"Nella **Slide 19** motiviamo la scelta del nostro predictor finale per la CUP:*  
-> *Abbiamo scelto un **Ensemble pesato congelato** composto da KNN, SVR RBF e Rete Neurale.*  
+> *"Nella **Slide 19** spieghiamo le scelte metodologiche del nostro predictor finale:*  
 >  
-> *1. **Riconoscimento delle componenti**: Il KNN è il modello guida principale per la sua capacità di interpolazione locale. SVR RBF e Rete Neurale forniscono invece un contributo di informazione residua complementare.*  
-> *2. **Esclusione del LinearSVR**: Il modello lineare è stato escluso dall'Ensemble ed impiegato solo come baseline, poiché le sue prestazioni (MEE ~25.51) erano troppo basse e non apportavano alcun beneficio.*  
-> *3. **Pesi congelati dalle predizioni OOF**: Minimizzando la MEE Out-Of-Fold sui 400 campioni di dev con vincolo di non-negatività e somma 100%, abbiamo ricavato i pesi:*  
->    * **KNN: 73.84%**  
->    * **SVR RBF: 16.06%**  
->    * **Rete Neurale: 10.10%**  
-> *4. **Controllo del Data Leakage**: Pesi ed iperparametri sono stati completamente **congelati prima** di effettuare l'unica valutazione sull'Internal Test e prima di generare le predizioni sul Blind Test.*  
-> *5. **Addestramento Finale**: I tre modelli sono stati infine ri-addestrati sull'intero dataset di 500 campioni etichettati e combinati con i pesi congelati per produrre il file di consegna `CDM25_ML-CUP25-TS.csv`."*
+> *1. **Composizione dell'Ensemble**: Abbiamo combinato il KNN, che rappresenta il nostro modello guida per l'interpolazione locale, con l'SVR RBF e la Rete Neurale che aggiungono informazioni complementari.*  
+> *2. **Esclusione del LinearSVR**: Abbiamo escluso il modello lineare perché le sue prestazioni erano troppo basse (MEE ~25.51) e non portava alcun beneficio.*  
+> *3. **Pesi congelati dalle predizioni OOF**: Minimizzando l'errore MEE sulle predizioni Out-Of-Fold dei 400 dati di sviluppo, abbiamo ricavato i pesi: **73.8% al KNN**, **16.1% all'SVR** e **10.1% alla Rete Neurale**.*  
+> *4. **Controllo del Data Leakage**: La regola fondamentale che abbiamo seguito è che sia i modelli che i pesi dell'Ensemble sono stati **congelati prima** di effettuare l'unica valutazione sul Test Set interno e generare le predizioni per il Blind Test."*
 
 ---
 
 ### 📈 SLIDE 20: Ensemble Learning Curve
 *(Passa alla Slide 20)*
 
-> *"Nella **Slide 20** analizziamo il comportamento dell'Ensemble mediante una **Learning Curve in funzione della dimensione del dataset di addestramento (Training Set Size)**.*  
+> *"Nella **Slide 20** analizziamo il comportamento dell'Ensemble mediante una **Learning Curve in funzione della dimensione del dataset di addestramento**.*  
 >  
-> *Poiché l'Ensemble non ha un processo di addestramento ad epoche, abbiamo valutato l'errore MEE di training e di validazione al crescere del numero di dati forniti ai modelli.*  
-> *Notiamo un **gap persistente** tra la curva di training e quella di validazione, il che conferma la presenza di un lieve overfitting residuo.*  
-> *Tuttavia, all'aumentare dei dati di addestramento, la **Validation MEE decresce in modo costante e la sua variabilità (ampiezza dei fold) si stringe**, suggerendo che la disponibilità di un dataset più ampio ridurrebbe ulteriormente il gap di generalizzazione."*
+> *Non trattandosi di un addestramento ad epoche, valutiamo come varia l'errore al crescere del numero di campioni forniti al modello.*  
+> *Notiamo un gap tra la curva di training e quella di validazione, che indica un lieve overfitting residuo.*  
+> *Tuttavia, la curva di validazione decresce in modo costante all'aumentare dei dati, suggerendo che con un dataset più grande di 500 campioni l'errore di generalizzazione si ridurrebbe ulteriormente."*
 
 ---
 
 ### 💡 SLIDE 21: Discussion: Findings and Limitations
 *(Passa alla Slide 21)*
 
-> *"Passando alla **Slide 21**, discutiamo i principali risultati e le limitazioni del progetto:*  
+> *"Passando alla **Slide 21**, riassumiamo i risultati principali e le limitazioni:*  
 >  
-> *1. **Inizializzazione dei Pesi**: Abbiamo condotto esperimenti comparativi tramite la funzione `init_weights`. L'inizializzazione forzata a zero ha causato un comportamento di addestramento degenere ed instabile per la mancata rottura della simmetria. Per la rete neurale finale abbiamo quindi adottato l'inizializzazione **Kaiming Uniform (He Uniform)** con bias azzerati.*  
-> *2. **Guadagno dell'Ensemble**: Il miglioramento dell'Ensemble rispetto al solo KNN è contenuto (circa **1.5% in OOF** e **1.0% sull'Internal Test**), ma è estremamente **costante e riproducibile**.*  
-> *3. **Complementarità**: SVR e Rete Neurale aiutano l'Ensemble perché i loro residui d'errore sono poco correlati con quelli del KNN.*  
-> *4. **Limitazioni principali**: Il limite principale risiede nelle dimensioni ridotte del dataset di sviluppo (500 esempi) che pongono un vincolo alla capacità di addestramento delle reti neurali profonde."*
+> *1. **Inizializzazione dei pesi**: Abbiamo sperimentato che inizializzare i pesi della rete neurale a zero porta a risultati degeneri. Per la rete finale abbiamo quindi adottato l'inizializzazione **Kaiming Uniform**.*  
+> *2. **Guadagno dell'Ensemble**: Il miglioramento rispetto al solo KNN è di circa l'1.5% in Out-Of-Fold e dell'1.0% sul Test interno, dimostrandosi un guadagno costante e riproducibile.*  
+> *3. **Limitazione principale**: Il vincolo principale del progetto risiede nelle dimensioni ridotte del dataset di sviluppo (500 esempi), che limitano l'addestramento di reti neurali più complesse."*
 
 ---
 
-### 🔬 SLIDE 22 (Appendice): Uniform Weight Initialization & Symmetry Breaking
-*(Passa alla Slide 22 se viene richiesta una precisazione sull'inizializzazione)*
+### 🔬 SLIDE 22 (Appendice): Uniform Weight Initialization
+*(Passa alla Slide 22 se il professore chiede chiarimenti sull'inizializzazione)*
 
-> *"Infine, nella **Slide 22 dell'Appendice**, mostriamo il dettaglio dell'esperimento sull'**inizializzazione dei pesi a zero**.*  
-> *Inizializzare tutti i pesi ad un valore costante o nullo impedisce la **rottura della simmetria (Symmetry Breaking)**: tutti i neuroni dello stesso strato calcolano la stessa attivazione e ricevono lo stesso gradiente, comportandosi come un singolo neurone equivalente e bloccando l'apprendimento delle feature.*  
-> *Il grafico evidenzia come la norma del gradiente si appiattisca e la loss rimanga bloccata su MONK-1."*
-
----
-
-## ❓ Le 5 Domande Teoriche da Lode di Micheli collegate alle tue Slide (con Risposte Modello)
+> *"Infine, nella **Slide 22 dell'Appendice**, mostriamo il dettaglio dell'esperimento con i pesi azzerati.*  
+> *Inizializzare i pesi a zero impedisce la **rottura della simmetria (Symmetry Breaking)**: tutti i neuroni dello stesso strato calcolano la stessa attivazione e si aggiornano allo stesso modo, rendendo il layer nascosto del tutto equivalente ad un singolo neurone."*
 
 ---
 
-### ❓ DOMANDA 1 (Dalla Slide 21/22):
-*"Mi parli dell'inizializzazione dei pesi nelle Reti Neurali. Perché se imposto tutti i pesi a zero la rete non impara? Qual è il termine teorico che cerco e come funziona l'inizializzazione di Kaiming/He?"*
+## ❓ PARTE 3: Le 4 Domande d'Orale Spiegate in Modo Elementare
 
-#### 💡 Risposta Modello:
-> *"Il termine teorico è la **Mancata Rottura della Simmetria (Failure of Symmetry Breaking)**.*  
-> *Se tutti i pesi $w_{ji}$ di un layer nascosto sono inizializzati a zero:*  
-> *1. Ogni neurone $j$ calcolerà lo stesso input netto $net_j = \sum 0 \cdot x_i + 0 = 0$ e la stessa attivazione $o_j = f(0)$.*  
-> *2. Durante la Backpropagation, tutti i neuroni del layer riceveranno lo stesso segnale di errore $\delta_j$.*  
-> *3. Di conseguenza, le derivate $\frac{\partial E}{\partial w_{ji}}$ saranno tutte identiche e tutti i pesi si aggiorneranno del medesimo valore $\Delta w$.*  
-> *I neuroni rimarranno simmetrici per sempre, rendendo il layer nascosto del tutto equivalente ad un **singolo neurone** e distruggendo la capacità della rete.*  
->  
-> *Per le reti con attivazione **ReLU/GELU** usiamo l'inizializzazione **Kaiming / He Uniform**, che estrae i pesi da una distribuzione uniforme $\mathcal{U}\left(-\sqrt{\frac{6}{n_{in}}}, \sqrt{\frac{6}{n_{in}}}\right)$. Questa varianza controllata mantiene costante la varianza dei segnali di attivazione e dei gradienti attraverso i layer profondi, evitando l'esplosione o la scomparsa del gradiente."*
+Ecco le 4 domande principali che Micheli potrebbe farti su queste slide, spiegate nel modo più semplice possibile:
 
 ---
 
-### ❓ DOMANDA 2 (Dalla Slide 18/19):
-*"Perché combinare un modello buono (KNN con MEE 16.32) ed un modello mediocre (Rete Neurale con MEE 20.28) migliora il risultato finale a 16.10? Qual è il principio teorico degli Ensemble?"*
-
-#### 💡 Risposta Modello:
-> *"Il principio teorico alla base degli Ensemble è l'**Indipendenza e De-correlazione degli Errori**.*  
-> *Quando combiniamo due stimatori $h_1(x)$ e $h_2(x)$, la varianza dell'errore dell'Ensemble dipende non solo dalle varianze dei singoli modelli, ma anche dalla loro **covarianza degli errori** $\text{Cov}(e_1, e_2)$.*  
-> *Se i modelli appartengono a famiglie funzionali diverse (KNN è un interpolatore locale basato su distanza; la Rete Neurale è un approssimatore non lineare globale), i loro errori tendono ad avere segno opposto su diversi campioni.*  
-> *Nel nostro progetto, l'analisi di correlazione ha mostrato che gli errori della rete neurale erano quelli meno correlati con il KNN (correlazione 0.702). L'algoritmo di minimizzazione ha assegnato il 10.1% di peso alla rete neurale proprio per annullare i residui locali del KNN, abbattendo la MEE globale a 16.10."*
+### ❓ DOMANDA 1: *"Perché se metto i pesi di una rete neurale a zero la rete non impara? Cos'è la Symmetry Breaking?"*
+* **Come spiegarlo in parole semplici**:  
+  > *"Se metti tutti i pesi a zero, tutti i neuroni dello stesso strato ricevono lo stesso input (zero), calcolano la stessa uscita e ricevono lo stesso errore durante la Backpropagation.*  
+  > *Di conseguenza, tutti i pesi si aggiornano della stessa identica quantità. I neuroni rimangono copie identiche tra loro e non si 'rompe la simmetria' (**Failure of Symmetry Breaking**). L'intero strato nascosto si comporta come se ci fosse un solo neurone.*  
+  > *Usando invece l'inizializzazione **Kaiming Uniform**, i pesi partono da valori casuali ben bilanciati, permettendo a ciascun neurone di imparare caratteristiche diverse."*
 
 ---
 
-### ❓ DOMANDA 3 (Dalla Slide 18/19):
-*"Perché avete usato predizioni Out-Of-Fold (OOF) per calcolare i pesi dell'Ensemble anziché usare le predizioni di training?"*
-
-#### 💡 Risposta Modello:
-> *"Per evitare il **Selection Bias** ed il **Data Leakage nei pesi dell'Ensemble**.*  
-> *Se avessimo calcolato i pesi minimizzando l'errore sui dati di training, l'ottimizzatore avrebbe assegnato un peso eccessivo all'SVR RBF, poiché l'SVR ha un training error bassissimo (~2.34) dovuto all'overfitting.*  
-> *Utilizzando le predizioni Out-Of-Fold (OOF) sui 400 campioni di development, ogni predizione usata dall'ottimizzatore proviene da un fold in cui quel modello NON ha visto quel campione in fase di train. Questo garantisce che i pesi rispecchino la reale capacità di generalizzazione e non l'overfitting di addestramento."*
+### ❓ DOMANDA 2: *"Perché unire un modello forte (KNN) e modelli meno forti (SVR e Rete Neurale) migliora il risultato finale?"*
+* **Come spiegarlo in parole semplici**:  
+  > *"Perché i modelli appartengono a famiglie diverse e fanno **errori diversi su punti diversi**.*  
+  > *Il KNN è un interpolatore locale basato sulla distanza, mentre la Rete Neurale approssima una funzione globale.*  
+  > *Poiché i loro errori non sono correlati, quando facciamo la media pesata, l'errore di un modello viene compensato dal valore corretto dell'altro, riducendo l'errore complessivo dell'Ensemble a 16.10."*
 
 ---
 
-### ❓ DOMANDA 4 (Dalla Slide 20):
-*"Che differenza c'è tra la Learning Curve della Slide 20 e la classica Learning Curve di addestramento di una Rete Neurale?"*
-
-#### 💡 Risposta Modello:
-> *"La classica Learning Curve di una Rete Neurale traccia la Loss in funzione delle **Epoche di addestramento** (con lo scopo di monitorare l'overfitting temporale ed individuare il punto di interruzione dell'Early Stopping).*  
-> *La Learning Curve della **Slide 20** traccia la Loss MEE in funzione della **Dimensione del Dataset di Addestramento ($N$)**.*  
-> *Serve per analizzare l'effetto dell'aumento dei campioni disponibili: il fatto che la curva di validazione decresca in modo costante ed assottigli la propria ampiezza all'aumentare di $N$ dimostra che l'overfitting residuo del nostro Ensemble diminuirebbe disponendo di un dataset di sviluppo più grande di 500 campioni."*
+### ❓ DOMANDA 3: *"Cosa sono le predizioni Out-Of-Fold (OOF) e perché le avete usate per calcolare i pesi?"*
+* **Come spiegarlo in parole semplici**:  
+  > *"Le predizioni Out-Of-Fold sono le predizioni generate da ciascun modello sui dati di validazione di ciascun fold (cioè dati che quel modello NON ha visto durante il suo addestramento).*  
+  > *Abbiamo usato le predizioni OOF per trovare i pesi dell'Ensemble per evitare il **Data Leakage**.*  
+  > *Se avessimo usato i dati di training, l'algoritmo avrebbe dato un peso enorme all'SVR solo perché l'SVR memorizza i dati di train, prendendo una solenne cantonata sull'overfitting."*
 
 ---
 
-### ❓ DOMANDA 5 (Dalla Slide 18):
-*"Perché sostenete che l'Internal Test Set di 100 campioni sia la vostra stima primaria di generalizzazione non polarizzata?"*
-
-#### 💡 Risposta Modello:
-> *"Perché i 100 campioni dell'Internal Test sono stati **trattenuti fin dall'inizio e completamente congelati**.*  
-> *Non sono mai stati utilizzati per la ricerca degli iperparametri (GridSearch/Optuna) né per il calcolo dei pesi dell'Ensemble.*  
-> *Mentre il valore MEE OOF di 16.10 poteva contenere un piccolissimo bias derivante dall'ottimizzazione dei pesi dell'Ensemble, valutare l'Ensemble una sola volta sui 100 campioni vergini ha confermato una MEE di 16.55, fornendo una stima un-biased della capacità di generalizzazione sul Blind Test reale."*
+### ❓ DOMANDA 4: *"Perché sostenete che l'Internal Test Set di 100 campioni sia una stima non polarizzata (unbiased)?"*
+* **Come spiegarlo in parole简单的**:  
+  > *"Perché quei 100 campioni li abbiamo messi da parte all'inizio e **congelati completamente**.*  
+  > *Non li abbiamo mai usati per scegliere gli iperparametri né per calcolare i pesi dell'Ensemble.*  
+  > *Valutare l'Ensemble una sola volta su quei 100 dati mai visti ci ha dato la conferma reale che il modello generalizza bene (MEE 16.55) prima di generare il file per il Blind Test."*

@@ -664,4 +664,83 @@ Otteniamo la contraddizione $w^T x^* + b > 0$ e $w^T x^* + b < 0$. Nessun iperpi
 
 Di conseguenza, $D+2$ punti non possono MAI essere shatterati $\implies VC(\mathcal{H}) < D+2$.
 
-**Conclusione**: $VC(\mathcal{H}) = D + 1$.
+**Conclusione**: $VC(\mathcal{H}) = D + 1$.### 📌 MODULO 4: SLT, SVM & Bias-Varianza (Slides `SLT1`, `SVM`, `Bias-Variance`)
+
+1. **Decomposizione Bias-Varianza-Rumore**:
+   * $\mathbb{E}_{D,\epsilon}[(y - h_D(x))^2] = \text{Bias}(x)^2 + \text{Varianza}(x) + \sigma^2$.
+   * $\text{Bias}(x)^2 = (f(x) - \bar{h}(x))^2$, $\text{Varianza}(x) = \mathbb{E}_D [(h_D(x) - \bar{h}(x))^2]$.
+
+2. **Statistical Learning Theory (SLT) & Teorema di Radon**:
+   * **VC-Dimension ($h_{VC}$)**: Massima cardinalità $N$ per cui esiste almeno un insieme di $N$ punti shatterabile.
+   * **Teorema di Radon**: $VC(\text{iperpiani in } \mathbb{R}^D) = D + 1$.
+   * **Bound di Vapnik**: $R(h) \le R_{emp}(h) + \sqrt{\frac{h_{VC}(\ln(2N/h_{VC})+1) - \ln(\eta/4)}{N}}$.
+   * **Structural Risk Minimization (SRM)**: Selezione del modello bilanciando $R_{emp}$ e confidenza VC $\Omega$.
+
+3. **Support Vector Machines (SVM) & Support Vector Regression (SVR) Approfondite**:
+
+   #### A) Massimo Margine Geometrico & Formulazione Primale
+   * **Scopo**: Trovare l'iperpiano $w^T x + b = 0$ che massimizza il margine geometrico $M = \frac{2}{\|w\|}$, riducendo la VC-dimension ($VC \le \min(D, R^2/\gamma^2) + 1$).
+   * **Formulazione Primale (Soft Margin)**:
+     $$\min_{w, b, \xi} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^N \xi_i \quad \text{sotto vincoli } y_i(w^T x_i + b) \ge 1 - \xi_i, \,\, \xi_i \ge 0$$
+   * **Significato delle Slack Variables $\xi_i$**:
+     * $\xi_i = 0$: punto corretto fuori o sul bordo del margine ($y_i(w^T x_i + b) \ge 1$).
+     * $0 < \xi_i \le 1$: punto classificato **correttamente**, ma situato **dentro la fascia del margine** ($0 \le y_i(w^T x_i + b) < 1$).
+     * $\xi_i > 1$: punto dalla parte sbagliata dell'iperpiano, vero e proprio **errore di classificazione**.
+   * **Ruolo del parametro $C$**: Trade-off tra ampiezza del margine e penalità degli errori. $C \to \infty$ forza la Hard Margin (tolleranza zero); $C$ piccolo accetta violazioni $\xi_i > 0$ per ampliare il margine $M = 2/\|w\|$ e prevenire l'overfitting.
+
+   #### B) Formulazione Duale & Condizioni KKT
+   * **Problema Duale**:
+     $$\max_{\alpha} \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j K(x_i, x_j) \quad \text{sotto vincoli } 0 \le \alpha_i \le C, \,\, \sum_{i=1}^N \alpha_i y_i = 0$$
+   * **Sparsità KKT (Complementary Slackness)**: $\alpha_i [y_i(w^T x_i + b) - 1 + \xi_i] = 0$. Solo per i pochi **Vettori di Supporto** si ha $\alpha_i > 0$.
+   * **Funzione di Decisione Duale**:
+     $$h(x) = \text{sign}\left( \sum_{i \in SV} \alpha_i y_i K(x_i, x) + b \right)$$
+
+   #### C) Kernel RBF Gaussiano (Radial Basis Function)
+   * **Formula del Kernel**:
+     $$K(x, z) = \exp\left( -\gamma \|x - z\|^2 \right) = \exp\left( -\frac{\|x - z\|^2}{2\sigma^2} \right) \quad \text{con } \gamma = \frac{1}{2\sigma^2}$$
+   * **Proiezione in Spazio ad Infinita Dimensione**: Espandendo in serie di Taylor $e^{x}$, il Kernel RBF proietta i dati in uno spazio Hilbertian a **dimensione infinita**, rendendo qualsiasi dataset finito linearmente separabile.
+   * **Ruolo di $\gamma$ (o $\sigma$)**:
+     * **$\gamma \to \infty$ ($\sigma \to 0$)**: Campane gaussiane strettissime attorno a ciascun punto di train. L'SVM/SVR assegna peso solo all'immediato vicino, comportandosi come un **1-Nearest Neighbor (1-NN)** (errore di training zero, altissima varianza, forte overfitting).
+     * **$\gamma \to 0$ ($\sigma \to \infty$)**: Campane gaussiane piatte e svasate. Il Kernel perde località e media globalmente tutti i dati (alto bias).
+   * **Distanza Indotta dal Kernel**: $d(x, z)^2 = K(x, x) + K(z, z) - 2K(x, z) = 2 - 2\exp(-\gamma \|x-z\|^2)$.
+
+   #### D) Support Vector Regression (SVR per la CUP)
+   * **Tubo di Tolleranza $\epsilon$-Insensitive**:
+     $$L_\epsilon(y, f(x)) = \max\big(0, |y - f(x)| - \epsilon\big)$$
+     Gli errori interni alla fascia $\pm \epsilon$ attorno alla funzione di regressione hanno costo zero. Per le deviazioni esterne si utilizzano slack doppie ($\xi_i$ per eccesso, $\xi_i^*$ per difetto).
+   * **Formulazione Primale di SVR**:
+     $$\min_{w, b, \xi, \xi^*} \frac{1}{2} \|w\|^2 + C \sum_{i=1}^N (\xi_i + \xi_i^*) \quad \text{s.t. } \begin{cases} y_i - (w^T \phi(x_i) + b) \le \epsilon + \xi_i \\ (w^T \phi(x_i) + b) - y_i \le \epsilon + \xi_i^* \end{cases}$$
+   * **Predizione Finale Duale di SVR**:
+     $$h(x) = \sum_{i \in SV} (\alpha_i - \alpha_i^*) K(x_i, x) + b$$
+
+### 📌 MODULO 5: Architetture Avanzate, Deep Learning, Ensemble & Unsupervised (Slides `CNN`, `Deep`, `Rand`, `Unsupervised-SOM`, `RNN`, `SDL-Intro`)
+
+1. **Tecniche di Ensemble Learning (Bagging, Boosting, Voting & Stacking)**:
+
+   #### A) Principi Teorici degli Ensemble
+   * **Scopo**: Combinare le predizioni di un comitato di modelli $h_1, \dots, h_M$ per ottenere una prestazione superiore rispetto al miglior modello singolo.
+   * **Riduzione della Varianza via De-correlazione degli Errori**:
+     Se la media delle predizioni è $h_{ens}(x) = \frac{1}{M} \sum_{m=1}^M h_m(x)$ e ciascun modello ha varianza $\sigma^2$ con correlazione media degli errori $\rho$, la varianza dell'Ensemble è:
+     $$\text{Varianza}(h_{ens}) = \rho \sigma^2 + \frac{1 - \rho}{M} \sigma^2$$
+     Se i modelli sono **de-correlati ($\rho \to 0$)**, l'errore di varianza si riduce di un fattore $M$.
+
+   #### B) Bagging (Bootstrap Aggregating)
+   * **Funzionamento**: Genera $M$ campioni di addestramento diversi tramite **Bootstrap** (campionamento casuale con reinserimento). Addestra $M$ modelli **complessi ed indipendenti in PARALLELO** (es. Alberi non potati $\to$ Random Forest).
+   * **Effetto**: **Riduce fortemente la VARIANZA** senza alterare il Bias.
+   * **Output**: Media aritmetica (regressione) o votazione a maggioranza (classificazione).
+
+   #### C) Boosting (es. AdaBoost, Gradient Boosting)
+   * **Funzionamento**: Addestra i modelli **in SEQUENZA**. Ad ogni passo aumenta il peso dei pattern classificati male dal modello precedente, costringendo il nuovo *Weak Learner* (modello semplice ad alto bias, es. albero con 1 solo taglio / *stump*) a correggere gli errori residui.
+   * **Effetto**: **Riduce fortemente il BIAS**, convertendo modelli deboli in un approssimatore potente.
+   * **Output**: Somma pesata $f(x) = \sum_{m=1}^M \alpha_m h_m(x)$.
+   * **Collegamenti nel Corso**:
+     1. *Cascade Correlation*: Entrambi sono algoritmi costruttivi che aggiungono elementi in sequenza per correggere i residui.
+     2. *Massimizzazione del Margine*: AdaBoost massimizza il margine di classificazione sulle combinazioni lineari dei weak learners.
+
+   #### D) Voting & Stacking Pesato (L'Ensemble del Nostro Progetto ML CUP)
+   * **Funzionamento**: Combina modelli **eterogenei** (KNN + SVR RBF + Rete Neurale PyTorch).
+   * **Calcolo dei Pesi senza Data Leakage**: Utilizza le predizioni **Out-Of-Fold (OOF)** sui dati di development per minimizzare la Loss MEE risolvendo:
+     $$\min_{w} \text{MEE}\left( y_{dev}, \sum_{m=1}^M w_m P_{m, OOF} \right) \quad \text{sotto vincoli } w_m \ge 0, \,\, \sum_{m=1}^M w_m = 1$$
+   * **Risultato Progetto**: Pesi **74.3% KNN, 17.0% SVR RBF, 8.8% Rete Neurale**, abbattendo la MEE Out-Of-Fold a **16.10** ed a **16.55 sul Test Interno**.
+
+

@@ -48,16 +48,16 @@
 ---
 
 ### 🌶️ PUNTO SPINOSO 3 (Slide 8): Momentum Classico vs Nesterov Acceleration (NAG)
-* **Cosa c me c'è scritto nelle Slide**:  
+* **Cosa c'è scritto nelle Slide**:  
   *"Optuna-derived NNs use SGD with common momentum and Nesterov acceleration..."*
 * **Il "Gancio" di Micheli**:  
   *"Avete usato l'accelerazione di Nesterov. Mi dice qual è la differenza concettuale e matematica tra il Momentum classico di Polyak e il Nesterov Accelerated Gradient (NAG)?"*
 * **Risposta Modello da Lode**:  
   > *"La differenza risiede nel punto in cui viene calcolato il gradiente della funzione di errore:*  
   > *1. **Momentum Classico di Polyak**: Calcola il gradiente nella posizione corrente dei pesi $w(t)$ e poi aggiunge una frazione dello spostamento precedente (inerzia):*  
-  >    $$\Delta w(t) = \alpha \Delta w(t-1) - \eta \nabla E(w(t))$$  
+  > $$\Delta w(t) = \alpha \Delta w(t-1) - \eta \nabla E(w(t))$$  
   > *2. **Nesterov Accelerated Gradient (NAG — Look-Ahead Momentum)**: Applica prima lo spostamento teorico dell'inerzia $w' = w(t) + \alpha \Delta w(t-1)$ ('guarda in avanti') e calcola il gradiente **nel punto futuro $w'$**:*  
-  >    $$\Delta w(t) = \alpha \Delta w(t-1) - \eta \nabla E\big(w(t) + \alpha \Delta w(t-1)\big)$$  
+  > $$\Delta w(t) = \alpha \Delta w(t-1) - \eta \nabla E\big(w(t) + \alpha \Delta w(t-1)\big)$$  
   > *Il vantaggio di NAG è che se l'inerzia sta spingendo i pesi in una direzione che sta per salire lungo la valle dell'errore, il gradiente calcolato 'in avanti' agisce da freno preventivo, riducendo notevolmente le oscillazioni attorno al minimo."*
 
 ---

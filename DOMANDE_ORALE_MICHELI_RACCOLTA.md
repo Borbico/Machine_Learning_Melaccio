@@ -1,6 +1,6 @@
 # 🎓 Raccolta Ufficiale Domande d'Orale del Prof. Micheli
 **Corso di Machine Learning — Università di Pisa**  
-*(Compendio Integrale Risolto delle Domande Reali Fatte agli Esami Orali con Formule, Dimostrazioni, Diagrammi e Spiegazioni da Lode)*
+*(Compendio Integrale Risolto delle 32 Domande Reali Fatte agli Esami Orali con Formule, Dimostrazioni, Diagrammi, Termini Chiave ed Esempi da Lode)*
 
 ---
 
@@ -17,23 +17,21 @@
 # 📌 MODULO 1: Reti Neurali Multi-Layer (MLP), Attivazioni & Backprop
 
 ### Q1: *"Perché si usa la Sigmoide? Perché NON usiamo la Step Function (a gradino) per la Backpropagation? Qual è il termine matematico che il professore cerca?"*
-* **Risposta Modello**:
-  * **Il Termine Matematico**: La Step Function $\text{sign}(z)$ **NON È DERIVABILE** (presenta una discontinuità a salto in $z=0$ e ha derivata identicamente nulla quasi ovunque $\frac{d}{dz}\text{sign}(z) = 0$ per $z \neq 0$).
-  * **Perché impedisce la Backpropagation**: La Backpropagation si basa sulla regola della catena ($\text{Chain Rule}$) per calcolare il gradiente della Loss rispetto ai pesi: $\frac{\partial E}{\partial w} = \frac{\partial E}{\partial net} \cdot \frac{\partial net}{\partial w}$. Se la derivata dell'attivazione $f'(net)$ è $0$ quasi ovunque, i segnali d'errore locali $\delta$ si annullano e l'aggiornamento pesi $\Delta w = \eta \delta o$ si blocca completamente.
-  * **Perché la Sigmoide**: La Sigmoide $\sigma(z) = \frac{1}{1 + e^{-z}}$ è una funzione **continua e infinitamente derivabile ($C^\infty$)** con derivata elegante:
-    $$\sigma'(z) = \sigma(z)(1 - \sigma(z))$$
-    Fornisce un segnale di gradiente continuo proporzionale alla risposta dell'unità.
+* **🗣️ Termini Chiave da Dire**: *"La Step Function **NON È DERIVABILE** (discontinuità a salto in zero e derivata identicamente nulla quasi ovunque). La Sigmoide è **continua e infinitamente derivabile ($C^\infty$)**."*
+* **Risposta Dettagliata**:
+  * **Il Termine Matematico**: La Step Function $\text{sign}(z)$ presenta una discontinuità a salto in $z=0$ e ha derivata $\frac{d}{dz}\text{sign}(z) = 0$ per ogni $z \neq 0$.
+  * **Impatto sulla Backpropagation**: La regola della catena ($\text{Chain Rule}$) calcola il gradiente dei pesi come $\frac{\partial E}{\partial w_{ju}} = \frac{\partial E}{\partial net_j} \cdot \frac{\partial net_j}{\partial w_{ju}} = -\delta_j o_u$. Il segnale di errore locale $\delta_j$ include la derivata dell'attivazione $f'_j(net_j)$. Se $f'(net) = 0$ quasi ovunque, $\delta_j = 0$ e l'aggiornamento pesi $\Delta w = \eta \delta o$ si blocca completamente (**Gradient Vanishing imminente**).
+  * **Vantaggio della Sigmoide**: La Sigmoide $\sigma(z) = \frac{1}{1 + e^{-z}}$ è $C^\infty$ con derivata elegante $\sigma'(z) = \sigma(z)(1 - \sigma(z))$, fornendo un segnale di gradiente continuo.
 * **Svantaggi della Sigmoide**:
-  1. *Vanishing Gradient*: Per $|z| > 4$, $\sigma'(z) \to 0$ (saturazione), azzerando la produttoria dei gradienti nelle reti profonde.
-  2. *Non Zero-Centered*: $\sigma(z) \in (0, 1)$, il che causa oscillazioni a zig-zag nell'aggiornamento dei pesi.
+  1. *Vanishing Gradient*: Per $|z| > 4$, $\sigma'(z) \to 0$ (saturazione).
+  2. *Non Zero-Centered*: $\sigma(z) \in (0, 1)$, causando oscillazioni a zig-zag nell'aggiornamento pesi.
 
 ---
 
 ### Q2: *"Cos'è la ReLU? Scrivi la formula, la derivata, il grafico ed i vantaggi/svantaggi. Perché risolve il Vanishing Gradient?"*
-* **Formula dell'Attivazione**:
-  $$f(x) = \max(0, x) = \begin{cases} x & \text{se } x > 0 \\ 0 & \text{se } x \le 0 \end{cases}$$
-* **Derivata Prima**:
-  $$f'(x) = \begin{cases} 1 & \text{se } x > 0 \\ 0 & \text{se } x < 0 \end{cases}$$
+* **🗣️ Termini Chiave da Dire**: *"Derivata **costantemente 1** per $x>0$, **Sparsità delle attivazioni**, efficienza computazionale $\max(0,x)$, problema del **Dying ReLU**."*
+* **Formula & Derivata**:
+  $$f(x) = \max(0, x) = \begin{cases} x & \text{se } x > 0 \\ 0 & \text{se } x \le 0 \end{cases}, \quad f'(x) = \begin{cases} 1 & \text{se } x > 0 \\ 0 & \text{se } x < 0 \end{cases}$$
 * **Grafico ASCII dell'Attivazione e della Derivata**:
 ```
      Funzione ReLU f(x)                  Derivata f'(x)
@@ -44,37 +42,40 @@
    (0 per x<0)                         (0 per x<0)
 ```
 * **Perché risolve il Vanishing Gradient per $x > 0$**:
-  Nella produttoria della Chain Rule $\frac{\partial E}{\partial w_1} = \frac{\partial E}{\partial o_L} \left( \prod_{l=2}^L W_l f'_l(net_l) \right) x$, per le sigmoidali $f'_l \le 0.25$, rendendo il prodotto tendente a zero. Per la ReLU, per tutti i neuroni attivi ($x > 0$), $f'(net) = 1$ in modo **costante**, trasmettendo il gradiente senza alcuna attenuazione.
-* **Problema della "Dying ReLU" & Alternative**:
-  Se un gradiente forte spinge $net < 0$, $f'(x)=0$ e il neurone "muore". Soluzioni: **LeakyReLU** $f(x) = \max(\alpha x, x)$ ($\alpha \approx 0.01$), **ELU**, **GELU**.
+  Nella Chain Rule della Backprop $\frac{\partial E}{\partial w_1} = \frac{\partial E}{\partial o_L} \left( \prod_{l=2}^L W_l f'_l(net_l) \right) x$, per le sigmoidali $f'_l \le 0.25$ facendo tendere la produttoria a zero. Per la ReLU, per tutti i neuroni attivi ($x > 0$), $f'(net) = 1$ in modo **costante**, trasmettendo il gradiente senza alcuna attenuazione.
+* **Problema "Dying ReLU" & Alternative**:
+  Se un gradiente forte spinge $net < 0$, $f'(x)=0$ e il neurone "muore". Soluzioni: **LeakyReLU** $f(x) = \max(\alpha x, x)$ ($\alpha \approx 0.01$), **ELU**, **GELU** (usata nella nostra rete per la CUP).
 
 ---
 
 ### Q3: *"Perché NON possiamo usare solo funzioni di attivazione LINEARI in una Rete Neurale?"*
-* **Risposta Modello**:
-  Se usassimo attivazioni lineari $f(z) = c \cdot z$ in tutti gli strati, l'uscita dell'ultimo layer $L$ sarebbe la composizione di trasformazioni lineari:
-  $$o = W_L (W_{L-1} (\dots (W_1 x + b_1) \dots + b_{L-1})) + b_L = W_{tot} x + b_{tot}$$
-  La rete neurale profundissima crollerebbe algebricamente in un **singolo modello lineare**, perdendo ogni capacità espressiva non lineare e la capacità di separare problemi complessi (come l'XOR).
+* **🗣️ Termini Chiave da Dire**: *"Composizione di trasformazioni lineari = **singolo modello lineare equivalente** ($W_{tot} x + b_{tot}$)."*
+* **Dimostrazione Formale**:
+  Se $f(z) = c \cdot z$, l'uscita dell'ultimo layer $L$ è:
+  $$o = W_L (W_{L-1} (\dots (W_1 x + b_1) \dots + b_{L-1})) + b_L = \mathbf{W_{tot} x + b_{tot}}$$
+  La rete perde la capacità espressiva non lineare e non può risolvere problemi separabili non linearmente (come l'XOR o i MONK).
 
 ---
 
 ### Q4: *"Qual è la differenza di espressività tra Reti Neurali Profonde (Deep NN) e Reti Superficiali (Shallow NN)?"*
-* **Risposta Modello**:
-  * **Reti Superficiali (Shallow NN — 1 Hidden Layer)**: Per il Teorema di Approssimazione Universale, un singolo strato nascosto può approssimare qualsiasi funzione continua. Tuttavia, per rappresentare funzioni complesse altamente oscillanti (come la parità a $D$-bit), una rete superficiale richiede un numero **esponenziale di neuroni nascosti $O(2^D)$**, rendendo l'addestramento impraticabile.
-  * **Reti Profonde (Deep NN — $L$ Layer)**: Possono rappresentare la stessa funzione complessa con un numero **polinomiale di neuroni $O(D)$**, componendo astrazioni gerarchiche strato dopo strato. Ogni strato profondo ripartisce lo spazio delle feature in modo composizionale, aumentando in modo esponenziale il numero di regioni lineari trattabili a parità di parametri.
+* **🗣️ Termini Chiave da Dire**: *"Shallow NN richiede un numero **esponenziale di neuroni $O(2^D)$**; Deep NN richiede un numero **polinomiale $O(D)$** grazie alla composizione gerarchica."*
+* **Risposta Dettagliata**:
+  * **Reti Superficiali (Shallow NN — 1 Hidden Layer)**: Per il Teorema di Approssimazione Universale (Hornik 1989), 1 strato nascosto può approssimare qualsiasi funzione continua. Tuttavia, per rappresentare funzioni complesse altamente oscillanti (es. parità a $D$-bit o superfici ad alta frequenza), una rete superficiale richiede un numero **esponenziale di neuroni $O(2^D)$**.
+  * **Reti Profonde (Deep NN — $L$ Layer)**: Possono rappresentare la stessa funzione con un numero **polinomiale di neuroni $O(D)$**, ripartendo lo spazio delle feature in modo composizionale strato dopo strato.
 
 ---
 
 ### Q5: *"Qual è la formula dell'output di una Rete Neurale con 1 Strato Nascosto (1 Hidden Layer NN)?"*
 * **Formula Esplicita**:
-  $$o_k = f_{out} \left( \sum_{j=1}^M w_{kj} \cdot f_{hid} \left( \sum_{i=1}^D w_{ji} x_i + b_j \right) + b_k \right)$$
-  dove $D$ è il numero di input, $M$ è il numero di neuroni nascosti, $f_{hid}$ è l'attivazione nascosta (es. ReLU/Sigmoide), e $f_{out}$ è l'attivazione di output (es. Identità per regressione, Sigmoide per classificazione binaria).
+  $$\mathbf{o_k = f_{out} \left( \sum_{j=1}^M w_{kj} \cdot f_{hid} \left( \sum_{i=1}^D w_{ji} x_i + b_j \right) + b_k \right)}$$
+  dove $D$ è il numero di input, $M$ è il numero di neuroni nascosti, $f_{hid}$ è l'attivazione nascosta (es. ReLU/GELU), e $f_{out}$ è l'attivazione di output (es. Identità per la nostra rete CUP).
 
 ---
 
 ### Q6: *"Enuncia precisamente il Teorema di Approssimazione Universale di MLP (Universal Approximation Theorem)."*
-* **Enunciato (Cybenko 1989, Hornik 1989)**:
-  Sia $\sigma(\cdot)$ una funzione di attivazione continua, non costante e limitata (es. Sigmoide). Per qualsiasi funzione continua $f(x)$ definita su un insieme compatto $K \subset \mathbb{R}^D$ e per ogni $\epsilon > 0$, esiste un numero finito di neuroni $M$ ed un insieme di pesi $\{v_j, w_j, b_j\}$ tali che la rete neurale a singolo strato nascosto:
+* **🗣️ Termini Chiave da Dire**: *"Cybenko 1989, Hornik 1989, funzione di attivazione continua non costante e limitata, compatto $K \subset \mathbb{R}^D$, approssimazione uniforme $\epsilon > 0$."*
+* **Enunciato Formale**:
+  Sia $\sigma(\cdot)$ una funzione di attivazione continua, non costante e limitata (es. Sigmoide). Per qualsiasi funzione continua $f(x)$ definita su un insieme compatto $K \subset \mathbb{R}^D$ e per ogni $\epsilon > 0$, esiste un numero finito di neuroni $M$ ed un insieme di pesi $\{v_j, w_j, b_j\}$ tali che la rete neurale:
   $$g(x) = \sum_{j=1}^M v_j \sigma(w_j^T x + b_j)$$
   soddisfa l'approssimazione uniforme:
   $$\|g(x) - f(x)\|_\infty < \epsilon \quad \forall x \in K$$
@@ -83,7 +84,7 @@
 
 ### Q7: *"Scrivi la formula dell'equazione del Momentum. Cos'è e perché si usa?"*
 * **Formula Completa dell'Aggiornamento Pesi**:
-  $$\Delta w_{tu}(t) = -\eta \frac{\partial E}{\partial w_{tu}(t)} + \alpha \Delta w_{tu}(t-1) - \eta \lambda w_{tu}(t)$$
+  $$\mathbf{\Delta w_{tu}(t) = -\eta \frac{\partial E}{\partial w_{tu}(t)} + \alpha \Delta w_{tu}(t-1) - \eta \lambda w_{tu}(t)}$$
   $$w^{(t+1)} = w^{(t)} + \Delta w(t)$$
 * **Cos'è e Perché si Usa**:
   * Il Momentum $\alpha \in [0, 1)$ simula l'**inerzia fisica** di una sfera che rotola lungo la superficie dell'errore.
@@ -92,7 +93,7 @@
 ---
 
 ### Q8: *"Cos'è il Dropout (Srivastava 2014) e perché previene l'overfitting?"*
-* **Funzionamento**: Durante la fase di addestramento, per ogni mini-batch ciascun neurone dello strato nascosto viene "disattivato" (il suo output è impostato a zero) in modo stocastico ed indipendente con una probabilità $p$ (solitamente $p=0.5$).
+* **🗣️ Termini Chiave da Dire**: *"Disattivazione stocastica con probabilità $p$, **Prevenzione del Co-adattamento dei pesi**, **Ensemble implicito di $2^M$ sotto-reti**."*
 * **Formula dell'Attivazione in Training vs Test**:
   $$\tilde{h}_j = \begin{cases} 0 & \text{con probabilità } p \\ \frac{h_j}{1-p} & \text{con probabilità } 1-p \end{cases} \quad (\text{In test: } \tilde{h}_j = h_j)$$
 * **Perché funziona**:
@@ -112,8 +113,8 @@
 # 📌 MODULO 2: Support Vector Machines (SVM), SVR & Kernel Methods
 
 ### Q10: *"Qual è lo scopo delle SVM? Perché sono migliori di altri modelli lineari?"*
-* **Scopo**: Trovare l'iperpiano separatore che **massimizza il margine geometrico di separazione** $M = \frac{2}{\|w\|}$ tra le classi.
-* **Perché sono Migliori degli Altri Modelli Lineari**:
+* **🗣️ Termini Chiave da Dire**: *"Massimizzazione del **Margine Geometrico** $M = \frac{2}{\|w\|}$, **Unicità dell'iperpiano ottimale**, **Minimizzazione della VC-Dimension**, **Assenza di minimi locali**."*
+* **Risposta Dettagliata**:
   1. *Unicità ed Ottimale*: Il Perceptrone o la Delta Rule trovano un iperpiano separatore qualsiasi tra i tanti possibili. La SVM trova l'**unico iperpiano ottimale a massimo margine**.
   2. *Minimizzazione della VC-Dimension*: Massimizzare il margine $M = 2/\|w\|$ equivale a minimizzare $\|w\|^2$, il che riduce direttamente la VC-Dimension dello spazio delle ipotesi ($VC \le \min(D, R^2/\gamma^2) + 1$), garantendo il miglior bound di generalizzazione della SLT.
   3. *Assenza di Minimi Locali*: Il problema della SVM è una Programmazione Quadratica Convessa con un **unico minimo globale**.
@@ -121,24 +122,20 @@
 ---
 
 ### Q11: *"La SVM risolve la Maledizione della Dimensionalità (Curse of Dimensionality)? Perché?"*
-* **Risposta Modello**:
-  **SÌ!** La SVM soffre molto meno la Curse of Dimensionality per due motivi fondamentali:
-  1. *Indipendenza dalla Dimensione Fisica $D$*: La capacità espressiva e la VC-Dimension della SVM non dipendono dal numero teorico di feature fisiche $D$, ma dal margine geometrico $\gamma$: $VC \le \min\left(D, \frac{R^2}{\gamma^2}\right) + 1$. Se il margine $\gamma$ è ampio, la VC-dimension rimane piccolissima anche se $D \to \infty$.
-  2. *Sparsità KKT & Kernel Trick*: La funzione di decisione finale dipende **esclusivamente dal prodotto scalare tra i dati ed i Vettori di Supporto** ($\alpha_i > 0$), ignorando tutti gli altri punti del dataset.
+* **🗣️ Termini Chiave da Dire**: *"SÌ! La VC-dimension non dipende dal numero di feature fisiche $D$, ma dal **Margine Geometrico $\gamma$** ($VC \le \min(D, R^2/\gamma^2)+1$). Soluzione sparsa KKT che dipende solo dai Vettori di Supporto."*
+* **Risposta Dettagliata**:
+  1. *Indipendenza da $D$*: Se il margine geometrico $\gamma$ è ampio, la VC-dimension rimane piccolissima anche se la dimensione dello spazio $D \to \infty$.
+  2. *Sparsità KKT & Kernel Trick*: La funzione di decisione dipende **esclusivamente dal prodotto scalare con i Vettori di Supporto** ($\alpha_i > 0$), ignorando tutti gli altri punti del dataset.
 
 ---
 
 ### Q12: *"Scrivi le equazioni della Forma Primale della Hard Margin SVM (Obiettivo, Vincoli, Lagrangiana, Condizioni di Ottimalità)."*
-* **Problema di Ottimizzazione Primale**:
-  $$\min_{w, b} \frac{1}{2} \|w\|^2 \quad \text{sotto vincoli rigidi } y_i(w^T x_i + b) \ge 1 \quad \forall i=1\dots N$$
-* **Funzione Lagrangiana**:
-  $$L(w, b, \alpha) = \frac{1}{2} \|w\|^2 - \sum_{i=1}^N \alpha_i \big[ y_i(w^T x_i + b) - 1 \big] \quad \text{con } \alpha_i \ge 0$$
-* **Condizioni di Stazionarietà (Ottimalità di Primo Ordine)**:
+* **Problema Primale**: $\min_{w, b} \frac{1}{2} \|w\|^2$ s.t. $y_i(w^T x_i + b) \ge 1 \quad \forall i=1\dots N$.
+* **Lagrangiana**: $L(w, b, \alpha) = \frac{1}{2} \|w\|^2 - \sum_{i=1}^N \alpha_i \big[ y_i(w^T x_i + b) - 1 \big]$ con $\alpha_i \ge 0$.
+* **Stazionarietà**:
   1. $\nabla_w L = 0 \implies w = \sum_{i=1}^N \alpha_i y_i x_i$
   2. $\frac{\partial L}{\partial b} = 0 \implies \sum_{i=1}^N \alpha_i y_i = 0$
-* **Condizioni di Complementarietà KKT**:
-  $$\alpha_i \big[ y_i(w^T x_i + b) - 1 \big] = 0$$
-  *(Se $\alpha_i > 0$, il punto $x_i$ giace esattamente sul margine ed è un Vettore di Supporto).*
+* **Complementarietà KKT**: $\alpha_i \big[ y_i(w^T x_i + b) - 1 \big] = 0$. (Se $\alpha_i > 0$, $x_i$ è un Vettore di Supporto sul bordo del margine).
 
 ---
 
@@ -155,9 +152,9 @@
 ### Q14: *"Scrivi la Formulazione Duale della SVM con gli $\alpha$ ottimi. Perché si usano gli $\alpha$?"*
 * **Formulazione Duale**:
   $$\max_{\alpha} \sum_{i=1}^N \alpha_i - \frac{1}{2} \sum_{i=1}^N \sum_{j=1}^N \alpha_i \alpha_j y_i y_j K(x_i, x_j) \quad \text{sotto vincoli } 0 \le \alpha_i \le C, \,\, \sum_{i=1}^N \alpha_i y_i = 0$$
-* **Perché si usano i moltiplicatori $\alpha_i$ (Vantaggi del Duale)**:
+* **Vantaggi dei Moltiplicatori Duali $\alpha_i$**:
   1. *Dipendenza esclusiva da prodotti scalari*: I dati compaiono solo sotto forma di prodotti scalari $x_i^T x_j$, consentendo di applicare direttamente il **Kernel Trick** $K(x_i, x_j) = \Phi(x_i)^T \Phi(x_j)$.
-  2. *Sparsità della Soluzione*: Grazie alle condizioni KKT, solo per i pochi Vettori di Supporto si ha $\alpha_i > 0$. La predizione per un nuovo punto $x$ si calcola velocemente come:
+  2. *Sparsità della Soluzione*: Grazie alle condizioni KKT, solo per i pochi Vettori di Supporto si ha $\alpha_i > 0$. La predizione per un nuovo punto $x$ si calcola come:
      $$\mathbf{h(x) = \text{sign}\left( \sum_{i \in SV} \alpha_i y_i K(x_i, x) + b \right)}$$
 
 ---
@@ -194,9 +191,9 @@
 # 📌 MODULO 3: Statistical Learning Theory (SLT), VC-Dimension & SRM
 
 ### Q18: *"Fornisci la definizione esatta della VC-Dimension ($h_{VC}$)."*
+* **🗣️ Termini Chiave da Dire**: *"MASSIMA cardinalità $N$ per cui esiste ALMENO UN insieme di $N$ punti shatterabile (tutte le $2^N$ dicotomie realizzabili)."*
 * **Definizione Formale**:
   La **VC-Dimension** (Dimensione Vapnik-Chervonenkis) di una classe di ipotesi $\mathcal{H}$ è la **MASSIMA cardinalità $N$** per cui esiste ALMENO UN insieme di $N$ punti shatterato (frammentato) da $\mathcal{H}$, ovvero per cui $\mathcal{H}$ può realizzare tutte le $2^N$ possibili dicotomie binaria.
-  *(Se $\mathcal{H}$ può shatterare insiemi arbitrariamente grandi, allora $h_{VC} = \infty$).*
 
 ---
 
@@ -264,7 +261,7 @@
 * **Passaggio 2 (Lower Bound su $w_k^T w^*$)**:
   $w_k^T w^* = w_{k-1}^T w^* + \eta y_i (x_i^T w^*) \ge k \eta \gamma$.
 * **Passaggio 3 (Disuguaglianza di Cauchy-Schwarz)**:
-  $$(k \eta \gamma)^2 \le (w_k^T w^*)^2 \le \|w_k\|^2 \|w^*\|^2 \le k \eta^2 R^2 \implies k \le \frac{R^2}{\gamma^2}$$
+  $$(k \eta \gamma)^2 \le (w_k^T w^*)^2 \le \|w_k\|^2 \|w^*\|^2 \le k \eta^2 R^2 \implies \mathbf{k \le \frac{R^2}{\gamma^2}}$$
 
 ---
 

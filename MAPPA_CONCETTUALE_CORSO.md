@@ -1,3 +1,35 @@
+
+---
+
+## 🔣 LEGENDA DEI SIMBOLI FONDAMENTALI (Dal Report Formule di Damiano)
+
+Per facilitare la lettura di tutte le formule del corso, ecco il formulario dei simboli di riferimento:
+
+| Simbolo | Significato Teorico | Note e Dominio |
+| :--- | :--- | :--- |
+| $\mathcal{D} = \{(x_i, y_i)\}_{i=1}^N$ | Dataset di addestramento | $N$ campioni $(x_i, y_i) \in \mathcal{X} \times \mathcal{Y}$ |
+| $\mathcal{X} \subseteq \mathbb{R}^D$ | Spazio di Input (Feature) | Vettori $D$-dimensionali di caratteristiche |
+| $\mathcal{Y}$ | Spazio di Output (Target) | $\{-1, +1\}$ per classificazione binaria, $\mathbb{R}^K$ per regressione |
+| $\mathcal{H}$ | Spazio delle Ipotesi | Insieme di tutte le funzioni $h: \mathcal{X} \to \mathcal{Y}$ rappresentabili |
+| $h(x), f(x)$ | Ipotesi appresa / Funzione reale | Predizione generata dal modello |
+| $w, b$ | Vettore dei pesi e Bias | Parametri liberi del modello lineare/neurale |
+| $net = w^T x + b$ | Input netto al neurone | Somma pesata delle caratteristiche prima dell'attivazione |
+| $\eta$ | Learning Rate (Tasso di apprendimento) | Iperparametro $\eta > 0$ per la discesa del gradiente |
+| $\alpha$ | Fattore di Momentum | Momentum di Polyak / NAG ($\alpha \in [0, 1)$) |
+| $\lambda, C$ | Parametri di Regolarizzazione | $\lambda$ per Tikhonov $L_2$ (Weight Decay), $C$ per Soft Margin SVM |
+| $\delta_k, \delta_j$ | Segnali di errore locali in Backprop | Derivata dell'errore rispetto all'input netto $net$ |
+| $h_{VC}$ | VC-Dimension | Dimensione Vapnik-Chervonenkis (capacità dello spazio $\mathcal{H}$) |
+| $R_{emp}(h)$ | Rischio Empirico | Errore medio misurato sui dati di training |
+| $R(h)$ | Rischio Reale / Atteso | Errore atteso sulla distribuzione congiunta $P(x,y)$ |
+| $\Omega(N, h_{VC})$ | Confidenza VC (Vapnik) | Termine di penalità di complessità teorica |
+| $\xi_i, \xi_i^*$ | Slack Variables nelle SVM / SVR | Violazioni del margine di sicurezza per Soft Margin |
+| $K(x, z)$ | Funzione di Kernel | Prodotto scalare $\Phi(x)^T \Phi(z)$ in uno spazio Hilbert ad alta dimensione |
+| $\gamma$ | Parametro del Kernel RBF | $\gamma = \frac{1}{2\sigma^2}$ (inverso della larghezza della gaussiana) |
+| $S$ | Covarianza in Cascade Correlation | Covarianza tra attivazione del candidato ed errore residuo |
+| $h_{ic}(t)$ | Funzione di vicinato in SOM | Modello di vicinato gaussiano tra BMU $c$ e neurone $i$ |
+
+---
+
 # Mappa Concettuale e Compendio delle Formule: Machine Learning
 **Corso del Prof. Alessio Micheli — Università di Pisa**
 *(Guida Integrale Mappata 1:1 sulle Slide Ufficiali del Corso [ML-25], Teoria, Formule, Codice di Progetto e Dimostrazioni)*
